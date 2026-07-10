@@ -57,6 +57,8 @@ G_BEGIN_DECLS
       } \
     } G_STMT_END
 
+#define g_abort() abort ()
+
 #define g_assert_not_reached() \
     G_STMT_START { \
       fprintf (stderr, "%s:%d: code should not be reached\n", \
@@ -106,6 +108,14 @@ G_BEGIN_DECLS
       fprintf (stderr, "%s:%d: should not be reached\n", __FILE__, __LINE__); \
       return (val); \
     } G_STMT_END
+
+/* GError: the hook path never surfaces errors this way. Provide no-op
+ * stand-ins so extracted code that calls g_set_error still compiles. */
+#define g_set_error(err, domain, code, ...)      ((void) 0)
+#define g_set_error_literal(err, domain, code, m) ((void) 0)
+#define g_clear_error(err)                        ((void) 0)
+#define g_error_free(err)                         ((void) 0)
+#define g_propagate_error(dest, src)              ((void) 0)
 
 G_END_DECLS
 

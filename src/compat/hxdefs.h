@@ -26,6 +26,14 @@
 # define G_END_DECLS
 #endif
 
+/* Platform detection macros (GLib-style) that extracted gum code expects. */
+#if defined (_WIN32) && !defined (G_OS_WIN32)
+# define G_OS_WIN32 1
+#endif
+#if !defined (_WIN32) && !defined (G_OS_UNIX)
+# define G_OS_UNIX 1
+#endif
+
 G_BEGIN_DECLS
 
 /* ---- fundamental types -------------------------------------------------- */
@@ -62,6 +70,12 @@ typedef void *          gpointer;
 typedef const void *    gconstpointer;
 
 typedef guint32         gunichar;
+
+/* GObject/GLib type-system stand-ins: the hook path never registers or uses
+ * these, but extracted declarations reference the typedefs. */
+typedef guint32         GQuark;
+typedef gsize           GType;
+typedef struct _GError  GError;   /* opaque; only pointer decls survive */
 
 /* ---- callback typedefs -------------------------------------------------- */
 
@@ -168,6 +182,7 @@ typedef void     (* GCallback)      (void);
 # define G_ALIGNOF(t)             __alignof__ (t)
 # define G_GNUC_ALIGNED(n)        __attribute__ ((__aligned__ (n)))
 # define G_GNUC_PACKED            __attribute__ ((__packed__))
+# define G_NORETURN               __attribute__ ((__noreturn__))
 #else
 # define G_GNUC_UNUSED
 # define G_GNUC_NORETURN          __declspec (noreturn)
@@ -183,7 +198,10 @@ typedef void     (* GCallback)      (void);
 # define G_ALIGNOF(t)             __alignof (t)
 # define G_GNUC_ALIGNED(n)        __declspec (align (n))
 # define G_GNUC_PACKED
+# define G_NORETURN               __declspec (noreturn)
 #endif
+
+#define G_ANALYZER_NORETURN
 
 /* ---- statement wrappers ------------------------------------------------- */
 

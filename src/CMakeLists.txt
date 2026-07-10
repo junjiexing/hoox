@@ -28,12 +28,47 @@ if(HOOX_ARCH_FAMILY STREQUAL "x86")
     "${CMAKE_CURRENT_SOURCE_DIR}/disasm/hx_disasm_x86.c")
 endif()
 
+# --- core (extracted gum primitives) ----------------------------------------
+list(APPEND HOOX_SOURCES
+  "${CMAKE_CURRENT_SOURCE_DIR}/core/gumlibc.c"
+  "${CMAKE_CURRENT_SOURCE_DIR}/core/gumspinlock.c"
+  "${CMAKE_CURRENT_SOURCE_DIR}/core/gummetalarray.c"
+  "${CMAKE_CURRENT_SOURCE_DIR}/core/gummetalhash.c"
+  "${CMAKE_CURRENT_SOURCE_DIR}/core/gummemory.c"
+  "${CMAKE_CURRENT_SOURCE_DIR}/core/gumcodesegment.c"
+  "${CMAKE_CURRENT_SOURCE_DIR}/core/gumcloak-stub.c")
+
+set(HOOX_PRIVATE_INCLUDE_DIRS ${HOOX_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_CURRENT_SOURCE_DIR}/core")
+
+# --- backend (platform + arch) ----------------------------------------------
+if(WIN32)
+  list(APPEND HOOX_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/backend/windows/gummemory-windows.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/backend/windows/gumtls-windows.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/backend/windows/hoox_process-windows.c")
+  set(HOOX_PRIVATE_INCLUDE_DIRS ${HOOX_PRIVATE_INCLUDE_DIRS}
+    "${CMAKE_CURRENT_SOURCE_DIR}/backend/windows")
+endif()
+
+if(HOOX_ARCH_FAMILY STREQUAL "x86")
+  list(APPEND HOOX_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/backend/x86/gumcpucontext-x86.c")
+endif()
+
 add_library(hoox STATIC ${HOOX_SOURCES})
 target_include_directories(hoox
   PUBLIC ${HOOX_PUBLIC_INCLUDE_DIRS}
   PRIVATE ${HOOX_PRIVATE_INCLUDE_DIRS})
 
+# Platform / arch feature macros expected by the extracted gum code.
+# GUM_STATIC makes GUM_API empty (we build a static archive).
+target_compile_definitions(hoox PUBLIC GUM_STATIC)
+target_compile_definitions(hoox PRIVATE GUM_USE_SYSTEM_ALLOC)
 if(WIN32)
   target_link_libraries(hoox PRIVATE psapi)
-  target_compile_definitions(hoox PRIVATE _CRT_SECURE_NO_WARNINGS)
+  target_compile_definitions(hoox PRIVATE _CRT_SECURE_NO_WARNINGS HAVE_WINDOWS)
+endif()
+if(HOOX_ARCH_FAMILY STREQUAL "x86")
+  target_compile_definitions(hoox PRIVATE HAVE_I386)
 endif()
