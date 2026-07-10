@@ -77,6 +77,7 @@ gboolean g_ptr_array_remove_fast (GPtrArray * array, gpointer data);
 gpointer g_ptr_array_remove_index (GPtrArray * array, guint index_);
 gpointer g_ptr_array_remove_index_fast (GPtrArray * array, guint index_);
 void g_ptr_array_foreach (GPtrArray * array, GFunc func, gpointer user_data);
+void g_ptr_array_sort (GPtrArray * array, GCompareFunc compare_func);
 gboolean g_ptr_array_find (GPtrArray * array, gconstpointer needle,
     guint * index_);
 gpointer * g_ptr_array_steal (GPtrArray * array, gsize * len);

@@ -41,7 +41,12 @@ list(APPEND HOOX_SOURCES
   "${CMAKE_CURRENT_SOURCE_DIR}/core/gummetalhash.c"
   "${CMAKE_CURRENT_SOURCE_DIR}/core/gummemory.c"
   "${CMAKE_CURRENT_SOURCE_DIR}/core/gumcodesegment.c"
-  "${CMAKE_CURRENT_SOURCE_DIR}/core/gumcloak-stub.c")
+  "${CMAKE_CURRENT_SOURCE_DIR}/core/gumcloak-stub.c"
+  "${CMAKE_CURRENT_SOURCE_DIR}/core/gumcodeallocator.c"
+  "${CMAKE_CURRENT_SOURCE_DIR}/core/guminvocationcontext.c"
+  "${CMAKE_CURRENT_SOURCE_DIR}/core/guminvocationlistener.c"
+  "${CMAKE_CURRENT_SOURCE_DIR}/core/guminterceptor.c"
+  "${CMAKE_CURRENT_SOURCE_DIR}/core/gum.c")
 
 set(HOOX_PRIVATE_INCLUDE_DIRS ${HOOX_PRIVATE_INCLUDE_DIRS}
   "${CMAKE_CURRENT_SOURCE_DIR}/core")
@@ -51,7 +56,8 @@ if(WIN32)
   list(APPEND HOOX_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/backend/windows/gummemory-windows.c"
     "${CMAKE_CURRENT_SOURCE_DIR}/backend/windows/gumtls-windows.c"
-    "${CMAKE_CURRENT_SOURCE_DIR}/backend/windows/hoox_process-windows.c")
+    "${CMAKE_CURRENT_SOURCE_DIR}/backend/windows/hoox_process-windows.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/backend/windows/gum_msvc_intrinsics.c")
   set(HOOX_PRIVATE_INCLUDE_DIRS ${HOOX_PRIVATE_INCLUDE_DIRS}
     "${CMAKE_CURRENT_SOURCE_DIR}/backend/windows")
 endif()
@@ -59,7 +65,8 @@ endif()
 if(HOOX_ARCH_FAMILY STREQUAL "x86")
   list(APPEND HOOX_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/backend/x86/gumcpucontext-x86.c"
-    "${CMAKE_CURRENT_SOURCE_DIR}/backend/x86/gumcpu-x86.c")
+    "${CMAKE_CURRENT_SOURCE_DIR}/backend/x86/gumcpu-x86.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/backend/x86/guminterceptor-x86.c")
 endif()
 
 add_library(hoox STATIC ${HOOX_SOURCES})

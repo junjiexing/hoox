@@ -9,6 +9,7 @@
 #include "hxmessages.h"
 
 #include <string.h>
+#include <stdlib.h>
 
 /* ---- GArray ------------------------------------------------------------- */
 
@@ -575,6 +576,24 @@ g_ptr_array_foreach (GPtrArray * array,
 
   for (i = 0; i != array->len; i++)
     func (array->pdata[i], user_data);
+}
+
+/* GLib's g_ptr_array_sort passes pointers-to-elements to the comparator. */
+static GCompareFunc hx_ptr_sort_cmp;
+
+static int
+hx_ptr_sort_thunk (const void * a,
+                   const void * b)
+{
+  return hx_ptr_sort_cmp (a, b);
+}
+
+void
+g_ptr_array_sort (GPtrArray * array,
+                  GCompareFunc compare_func)
+{
+  hx_ptr_sort_cmp = compare_func;
+  qsort (array->pdata, array->len, sizeof (gpointer), hx_ptr_sort_thunk);
 }
 
 gboolean
