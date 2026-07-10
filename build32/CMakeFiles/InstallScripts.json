@@ -1,9 +1,0 @@
-{
-	"InstallScripts" : 
-	[
-		"E:/projects/hoox/build32/cmake_install.cmake",
-		"E:/projects/hoox/build32/src/cmake_install.cmake",
-		"E:/projects/hoox/build32/tests/cmake_install.cmake"
-	],
-	"Parallel" : false
-}

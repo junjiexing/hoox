@@ -1,6 +1,5 @@
 /_refs
-/build
-/build-*
+/build*
 /out
 *.o
 *.obj
