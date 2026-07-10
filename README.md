@@ -32,6 +32,18 @@ ctest --test-dir build --output-on-failure
 ```
 
 Windows: clang / clang-cl is the recommended toolchain (see `docs/PLAN.md` D5).
+The default build targets the host arch (x64). For a 32-bit (x86) build, target
+i686 and point `LIB` at the 32-bit MSVC/SDK library directories:
+
+```
+export LIB="<VC>/lib/x86;<SDK>/ucrt/x86;<SDK>/um/x86"
+cmake -B build32 -G Ninja -DCMAKE_C_COMPILER=clang \
+  -DCMAKE_C_FLAGS="--target=i686-pc-windows-msvc" -DHOOX_TARGET_ARCH=x86
+cmake --build build32 && ctest --test-dir build32 --output-on-failure
+```
+
+Both Windows x64 and x86 pass the full suite (interceptor, writer/relocator,
+decoder differential, amalgamation).
 
 ## Licence
 
