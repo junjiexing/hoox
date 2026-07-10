@@ -12,10 +12,14 @@ set(HOOX_PRIVATE_INCLUDE_DIRS
   "${CMAKE_CURRENT_SOURCE_DIR}/compat")
 
 # --- compat (nano-glib) -----------------------------------------------------
-# Populated in M1.
-
-# Placeholder so the archive is valid before real sources land (M0).
-list(APPEND HOOX_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/hoox_placeholder.c")
+list(APPEND HOOX_SOURCES
+  "${CMAKE_CURRENT_SOURCE_DIR}/compat/hxmem.c"
+  "${CMAKE_CURRENT_SOURCE_DIR}/compat/hxthread.c"
+  "${CMAKE_CURRENT_SOURCE_DIR}/compat/hxarray.c"
+  "${CMAKE_CURRENT_SOURCE_DIR}/compat/hxhash.c"
+  "${CMAKE_CURRENT_SOURCE_DIR}/compat/hxlist.c"
+  "${CMAKE_CURRENT_SOURCE_DIR}/compat/hxstring.c"
+  "${CMAKE_CURRENT_SOURCE_DIR}/compat/hxstrfuncs.c")
 
 add_library(hoox STATIC ${HOOX_SOURCES})
 target_include_directories(hoox
