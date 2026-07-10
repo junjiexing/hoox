@@ -17,3 +17,19 @@ target_link_libraries(hoox_testharness PUBLIC hoox)
 add_executable(test_harness_sample harness/test_harness_sample.c)
 target_link_libraries(test_harness_sample PRIVATE hoox_testharness)
 add_test(NAME harness_sample COMMAND test_harness_sample)
+
+# --- disasm differential test (M2) ------------------------------------------
+if(HOOX_ARCH_FAMILY STREQUAL "x86")
+  add_executable(hx_disasm_dump disasm/hx_disasm_dump.c)
+  target_link_libraries(hx_disasm_dump PRIVATE hoox)
+  target_include_directories(hx_disasm_dump PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/../src/disasm")
+
+  find_package(Python3 COMPONENTS Interpreter)
+  if(Python3_FOUND)
+    add_test(NAME disasm_diff
+      COMMAND ${Python3_EXECUTABLE}
+        "${CMAKE_CURRENT_SOURCE_DIR}/disasm/diff_capstone.py"
+        "$<TARGET_FILE:hx_disasm_dump>")
+  endif()
+endif()

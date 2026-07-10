@@ -9,7 +9,8 @@ set(HOOX_PUBLIC_INCLUDE_DIRS
   "${CMAKE_CURRENT_SOURCE_DIR}/../include")
 set(HOOX_PRIVATE_INCLUDE_DIRS
   "${CMAKE_CURRENT_SOURCE_DIR}"
-  "${CMAKE_CURRENT_SOURCE_DIR}/compat")
+  "${CMAKE_CURRENT_SOURCE_DIR}/compat"
+  "${CMAKE_CURRENT_SOURCE_DIR}/disasm")
 
 # --- compat (nano-glib) -----------------------------------------------------
 list(APPEND HOOX_SOURCES
@@ -20,6 +21,12 @@ list(APPEND HOOX_SOURCES
   "${CMAKE_CURRENT_SOURCE_DIR}/compat/hxlist.c"
   "${CMAKE_CURRENT_SOURCE_DIR}/compat/hxstring.c"
   "${CMAKE_CURRENT_SOURCE_DIR}/compat/hxstrfuncs.c")
+
+# --- disasm (compact x86/x64 decoder; capstone shim) ------------------------
+if(HOOX_ARCH_FAMILY STREQUAL "x86")
+  list(APPEND HOOX_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/disasm/hx_disasm_x86.c")
+endif()
 
 add_library(hoox STATIC ${HOOX_SOURCES})
 target_include_directories(hoox
