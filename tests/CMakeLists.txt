@@ -36,6 +36,18 @@ target_include_directories(test_interceptor_smoke PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}/../src/disasm")
 add_test(NAME interceptor_smoke COMMAND test_interceptor_smoke)
 
+# --- interceptor behaviour suite (M6) ---------------------------------------
+add_executable(test_interceptor
+  core/test_interceptor.c
+  core/interceptor-callbacklistener.c
+  core/interceptor-functiondatalistener.c
+  core/hoox_targetfunctions.c)
+target_link_libraries(test_interceptor PRIVATE hoox_testharness)
+target_include_directories(test_interceptor PRIVATE
+  "${CMAKE_CURRENT_SOURCE_DIR}/../src/core"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../src/disasm")
+add_test(NAME interceptor COMMAND test_interceptor)
+
 # --- disasm differential test (M2) ------------------------------------------
 if(HOOX_ARCH_FAMILY STREQUAL "x86")
   add_executable(hx_disasm_dump disasm/hx_disasm_dump.c)

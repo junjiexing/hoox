@@ -28,6 +28,9 @@ gboolean g_str_has_suffix (const gchar * str, const gchar * suffix);
 gsize g_strlcpy (gchar * dest, const gchar * src, gsize dest_size);
 gsize g_strlcat (gchar * dest, const gchar * src, gsize dest_size);
 
+#include <stdio.h>
+#define g_snprintf(str, n, ...) ((void) snprintf ((str), (n), __VA_ARGS__))
+
 G_END_DECLS
 
 #endif

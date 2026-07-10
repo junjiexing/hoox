@@ -39,6 +39,9 @@ struct _GumInvocationListener
   GDestroyNotify finalize;   /* per-instance cleanup; may be NULL */
 };
 
+/* Compatibility cast (was a GObject type-check macro in frida). */
+#define GUM_INVOCATION_LISTENER(obj) ((GumInvocationListener *) (obj))
+
 GUM_API void gum_invocation_listener_init (GumInvocationListener * self,
     const GumInvocationListenerInterface * iface, GDestroyNotify finalize);
 

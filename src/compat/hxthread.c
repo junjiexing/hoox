@@ -57,6 +57,18 @@ g_once_init_leave_impl (volatile void * location,
 
 G_STATIC_ASSERT (sizeof (SRWLOCK) == sizeof (void *));
 
+GThread *
+g_thread_self (void)
+{
+  return (GThread *) (gsize) GetCurrentThreadId ();
+}
+
+void
+g_usleep (gulong microseconds)
+{
+  Sleep ((DWORD) (microseconds / 1000));
+}
+
 /* ---- GMutex (SRWLOCK) --------------------------------------------------- */
 
 void
@@ -246,6 +258,19 @@ g_private_replace (GPrivate * key,
 #else /* POSIX */
 
 #include <pthread.h>
+#include <unistd.h>
+
+GThread *
+g_thread_self (void)
+{
+  return (GThread *) (gsize) pthread_self ();
+}
+
+void
+g_usleep (gulong microseconds)
+{
+  usleep (microseconds);
+}
 
 void
 g_mutex_init (GMutex * mutex)

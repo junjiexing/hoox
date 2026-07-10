@@ -19,6 +19,13 @@ G_BEGIN_DECLS
 typedef struct _GMutex GMutex;
 typedef struct _GRecMutex GRecMutex;
 typedef struct _GPrivate GPrivate;
+typedef void GThread;
+
+/* Opaque per-thread identity (current OS thread id as a pointer). */
+GThread * g_thread_self (void);
+
+#define G_USEC_PER_SEC 1000000
+void g_usleep (gulong microseconds);
 
 struct _GMutex
 {
