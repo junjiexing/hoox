@@ -25,7 +25,12 @@ list(APPEND HOOX_SOURCES
 # --- disasm (compact x86/x64 decoder; capstone shim) ------------------------
 if(HOOX_ARCH_FAMILY STREQUAL "x86")
   list(APPEND HOOX_SOURCES
-    "${CMAKE_CURRENT_SOURCE_DIR}/disasm/hx_disasm_x86.c")
+    "${CMAKE_CURRENT_SOURCE_DIR}/disasm/hx_disasm_x86.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/arch/x86/gumx86writer.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/arch/x86/gumx86reader.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/arch/x86/gumx86relocator.c")
+  set(HOOX_PRIVATE_INCLUDE_DIRS ${HOOX_PRIVATE_INCLUDE_DIRS}
+    "${CMAKE_CURRENT_SOURCE_DIR}/arch/x86")
 endif()
 
 # --- core (extracted gum primitives) ----------------------------------------
@@ -53,7 +58,8 @@ endif()
 
 if(HOOX_ARCH_FAMILY STREQUAL "x86")
   list(APPEND HOOX_SOURCES
-    "${CMAKE_CURRENT_SOURCE_DIR}/backend/x86/gumcpucontext-x86.c")
+    "${CMAKE_CURRENT_SOURCE_DIR}/backend/x86/gumcpucontext-x86.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/backend/x86/gumcpu-x86.c")
 endif()
 
 add_library(hoox STATIC ${HOOX_SOURCES})

@@ -59,6 +59,18 @@ gpointer g_private_get (GPrivate * key);
 void g_private_set (GPrivate * key, gpointer value);
 void g_private_replace (GPrivate * key, gpointer value);
 
+/* one-time initialisation (bracketing enter/leave). Simple global-lock
+ * implementation: correct for non-nesting inits (cpu features, etc.). */
+gboolean g_once_init_enter_impl (volatile void * location);
+void g_once_init_leave_impl (volatile void * location, gsize result);
+
+#define g_once_init_enter(location) \
+    (g_atomic_pointer_get ((gsize *) (void *) (location)) == 0 \
+        ? g_once_init_enter_impl ((location)) \
+        : FALSE)
+#define g_once_init_leave(location, result) \
+    g_once_init_leave_impl ((location), (gsize) (result))
+
 G_END_DECLS
 
 #endif

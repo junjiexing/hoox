@@ -240,6 +240,46 @@ typedef void     (* GCallback)      (void);
 #define G_STATIC_ASSERT(expr) \
     typedef char _GStaticAssert[(expr) ? 1 : -1] G_GNUC_UNUSED
 
+/* Byte order: hoox targets are little-endian (x86/ARM/ARM64/MIPSEL), so the
+ * LE conversions are identities; provide byte-swapping BE forms for
+ * completeness. */
+#if defined (__GNUC__) || defined (__clang__)
+# define GUINT16_SWAP(v) __builtin_bswap16 (v)
+# define GUINT32_SWAP(v) __builtin_bswap32 (v)
+# define GUINT64_SWAP(v) __builtin_bswap64 (v)
+#else
+# define GUINT16_SWAP(v) _byteswap_ushort (v)
+# define GUINT32_SWAP(v) _byteswap_ulong (v)
+# define GUINT64_SWAP(v) _byteswap_uint64 (v)
+#endif
+
+#if G_BYTE_ORDER == G_LITTLE_ENDIAN
+# define GUINT16_TO_LE(v)   ((guint16) (v))
+# define GUINT32_TO_LE(v)   ((guint32) (v))
+# define GUINT64_TO_LE(v)   ((guint64) (v))
+# define GUINT16_TO_BE(v)   ((guint16) GUINT16_SWAP (v))
+# define GUINT32_TO_BE(v)   ((guint32) GUINT32_SWAP (v))
+# define GUINT64_TO_BE(v)   ((guint64) GUINT64_SWAP (v))
+#else
+# define GUINT16_TO_LE(v)   ((guint16) GUINT16_SWAP (v))
+# define GUINT32_TO_LE(v)   ((guint32) GUINT32_SWAP (v))
+# define GUINT64_TO_LE(v)   ((guint64) GUINT64_SWAP (v))
+# define GUINT16_TO_BE(v)   ((guint16) (v))
+# define GUINT32_TO_BE(v)   ((guint32) (v))
+# define GUINT64_TO_BE(v)   ((guint64) (v))
+#endif
+#define GUINT16_FROM_LE(v)  GUINT16_TO_LE (v)
+#define GUINT32_FROM_LE(v)  GUINT32_TO_LE (v)
+#define GUINT64_FROM_LE(v)  GUINT64_TO_LE (v)
+#define GINT16_TO_LE(v)     ((gint16) GUINT16_TO_LE ((guint16) (v)))
+#define GINT32_TO_LE(v)     ((gint32) GUINT32_TO_LE ((guint32) (v)))
+#define GINT64_TO_LE(v)     ((gint64) GUINT64_TO_LE ((guint64) (v)))
+#define GINT16_FROM_LE(v)   GINT16_TO_LE (v)
+#define GINT32_FROM_LE(v)   GINT32_TO_LE (v)
+#define GINT64_FROM_LE(v)   GINT64_TO_LE (v)
+
+#define g_alloca(n) __builtin_alloca (n)
+
 #define G_STRINGIFY(macro_or_string) G_STRINGIFY_ARG (macro_or_string)
 #define G_STRINGIFY_ARG(contents) #contents
 

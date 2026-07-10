@@ -8,7 +8,7 @@ target_include_directories(test_compat PRIVATE
 add_test(NAME compat COMMAND test_compat)
 
 # --- test harness (M1.5) ----------------------------------------------------
-add_library(hoox_testharness STATIC harness/testrunner.c)
+add_library(hoox_testharness STATIC harness/testrunner.c harness/testutil.c)
 target_include_directories(hoox_testharness PUBLIC
   "${CMAKE_CURRENT_SOURCE_DIR}/harness"
   "${CMAKE_CURRENT_SOURCE_DIR}/../src/compat")
@@ -41,4 +41,19 @@ if(HOOX_ARCH_FAMILY STREQUAL "x86")
         "${CMAKE_CURRENT_SOURCE_DIR}/disasm/diff_capstone.py"
         "$<TARGET_FILE:hx_disasm_dump>")
   endif()
+
+  # --- arch-x86 writer / relocator tests (M4) -------------------------------
+  add_executable(test_arch_x86
+    core/arch-x86/x86writer.c
+    core/arch-x86/x86relocator.c
+    core/arch-x86/run_arch_x86.c)
+  target_link_libraries(test_arch_x86 PRIVATE hoox_testharness)
+  target_include_directories(test_arch_x86 PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/../src/arch/x86"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../src/core"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../src/disasm")
+  if(HAVE_I386_DEFS)
+  endif()
+  target_compile_definitions(test_arch_x86 PRIVATE HAVE_I386)
+  add_test(NAME arch_x86 COMMAND test_arch_x86)
 endif()

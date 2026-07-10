@@ -14,6 +14,40 @@
 #include "hxmem.h"
 #include "hxmessages.h"
 
+/* ---- one-time init (portable, above the platform split) ----------------- */
+
+static GMutex hx_once_mutex;
+
+gboolean
+g_once_init_enter_impl (volatile void * location)
+{
+  gsize * loc = (gsize *) location;
+  gboolean need_init;
+
+  g_mutex_lock (&hx_once_mutex);
+  if (*loc == 0)
+  {
+    need_init = TRUE;   /* keep the lock held until g_once_init_leave */
+  }
+  else
+  {
+    need_init = FALSE;
+    g_mutex_unlock (&hx_once_mutex);
+  }
+
+  return need_init;
+}
+
+void
+g_once_init_leave_impl (volatile void * location,
+                        gsize result)
+{
+  gsize * loc = (gsize *) location;
+
+  g_atomic_pointer_set (loc, result);
+  g_mutex_unlock (&hx_once_mutex);
+}
+
 #ifdef _WIN32
 
 #ifndef WIN32_LEAN_AND_MEAN

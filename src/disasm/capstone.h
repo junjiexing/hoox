@@ -106,10 +106,16 @@ typedef enum x86_insn
   X86_INS_LOOP, X86_INS_LOOPE, X86_INS_LOOPNE,
 
   X86_INS_CMPXCHG,
-  X86_INS_PUSH,
+  X86_INS_PUSH, X86_INS_POP,
   X86_INS_INT, X86_INS_INT3,
   X86_INS_SYSCALL, X86_INS_SYSENTER,
   X86_INS_NOP,
+
+  /* common data-processing ids some relocator/reader/test paths switch on */
+  X86_INS_MOV, X86_INS_LEA,
+  X86_INS_ADD, X86_INS_OR, X86_INS_ADC, X86_INS_SBB,
+  X86_INS_AND, X86_INS_SUB, X86_INS_XOR, X86_INS_CMP,
+  X86_INS_TEST, X86_INS_INC, X86_INS_DEC,
 
   X86_INS_OTHER,   /* any instruction not individually classified */
 

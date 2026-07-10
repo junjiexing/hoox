@@ -301,6 +301,45 @@ set_imm_target (cs_x86 * x86, int64_t target)
   x86->op_count = 1;
 }
 
+static const x86_insn alu_group[8] = {
+  X86_INS_ADD, X86_INS_OR, X86_INS_ADC, X86_INS_SBB,
+  X86_INS_AND, X86_INS_SUB, X86_INS_XOR, X86_INS_CMP
+};
+
+/* Classify common one-byte data-processing opcodes (best-effort; anything not
+ * recognised stays X86_INS_OTHER). */
+static x86_insn
+classify_dp_1byte (uint8_t p, uint8_t modrm, bool mode64)
+{
+  if (p < 0x40 && (p & 7) <= 5)
+    return alu_group[(p >> 3) & 7];      /* ADD..CMP r/imm forms */
+  if (p >= 0x88 && p <= 0x8B)
+    return X86_INS_MOV;
+  if (p == 0x8C || p == 0x8E)
+    return X86_INS_MOV;
+  if (p == 0x8D)
+    return X86_INS_LEA;
+  if (p >= 0xB0 && p <= 0xBF)
+    return X86_INS_MOV;
+  if (p == 0xC6 || p == 0xC7)
+    return X86_INS_MOV;
+  if (p >= 0xA0 && p <= 0xA3)
+    return X86_INS_MOV;
+  if (p == 0x84 || p == 0x85 || p == 0xA8 || p == 0xA9)
+    return X86_INS_TEST;
+  if (p >= 0x58 && p <= 0x5F)
+    return X86_INS_POP;
+  if (p == 0x80 || p == 0x81 || p == 0x82 || p == 0x83)
+    return alu_group[(modrm >> 3) & 7];  /* group 1 */
+  if (p == 0xFE)
+    return (((modrm >> 3) & 7) == 0) ? X86_INS_INC : X86_INS_DEC;
+  if (!mode64 && p >= 0x40 && p <= 0x47)
+    return X86_INS_INC;
+  if (!mode64 && p >= 0x48 && p <= 0x4F)
+    return X86_INS_DEC;
+  return X86_INS_OTHER;
+}
+
 /* Populate detail->regs_read/write for the curated set of RIP-capable
  * instructions that implicitly use GP registers, keeping the relocator
  * scratch-register selection (via cs_reg_read/write) safe. */
@@ -608,11 +647,18 @@ done:
         if (ext == 2 || ext == 3) insn->id = X86_INS_CALL;
         else if (ext == 4 || ext == 5) insn->id = X86_INS_JMP;
         else if (ext == 6) insn->id = X86_INS_PUSH;
+        else if (ext == 0) insn->id = X86_INS_INC;
+        else if (ext == 1) insn->id = X86_INS_DEC;
       }
+
+      if (insn->id == X86_INS_OTHER)
+        insn->id = classify_dp_1byte (primary, x86->modrm, st.mode64);
     }
     else if (!is_vex && two_byte)
     {
-      if (primary == 0x05) insn->id = X86_INS_SYSCALL;
+      if (primary >= 0x80 && primary <= 0x8F)
+        insn->id = jcc_map[primary - 0x80];   /* near Jcc (0F 8x rel32) */
+      else if (primary == 0x05) insn->id = X86_INS_SYSCALL;
       else if (primary == 0x34) insn->id = X86_INS_SYSENTER;
       else if (primary == 0x1F) insn->id = X86_INS_NOP;
       else if (primary == 0xB0 || primary == 0xB1) insn->id = X86_INS_CMPXCHG;
