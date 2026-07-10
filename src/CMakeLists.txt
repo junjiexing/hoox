@@ -85,3 +85,8 @@ endif()
 if(HOOX_ARCH_FAMILY STREQUAL "x86")
   target_compile_definitions(hoox PRIVATE HAVE_I386)
 endif()
+
+# Export the source list and private include dirs so the amalgamation test
+# (tests/CMakeLists.txt) can regenerate and build the single-file library.
+set(HOOX_ALL_SOURCES ${HOOX_SOURCES} PARENT_SCOPE)
+set(HOOX_ALL_INCLUDE_DIRS ${HOOX_PRIVATE_INCLUDE_DIRS} PARENT_SCOPE)

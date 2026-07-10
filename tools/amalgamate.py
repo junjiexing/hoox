@@ -29,7 +29,8 @@ PRAGMA_ONCE = re.compile(r'^\s*#\s*pragma\s+once\s*$')
 
 
 def find_header(name, include_dirs, current_dir):
-    for base in [current_dir] + include_dirs:
+    bases = ([current_dir] if current_dir is not None else []) + include_dirs
+    for base in bases:
         cand = os.path.normpath(os.path.join(base, name))
         if os.path.isfile(cand):
             return cand
@@ -60,11 +61,18 @@ class Amalgamator:
                 if PRAGMA_ONCE.match(stripped):
                     continue
 
-                # System includes are left in place (not hoisted): they carry
-                # their own include guards, and hoisting would wrongly pull
-                # includes out of #ifdef platform blocks.
-                if INCLUDE_SYSTEM.match(stripped):
-                    self.out.append(stripped)
+                m = INCLUDE_SYSTEM.match(stripped)
+                if m:
+                    # An angle-bracket include that resolves within our own
+                    # include dirs (e.g. the <capstone.h> shim) is a project
+                    # header — inline it. A real system header is left in
+                    # place (its own guard makes duplicates harmless, and this
+                    # keeps includes inside #ifdef platform blocks intact).
+                    hdr = find_header(m.group(1), self.include_dirs, None)
+                    if hdr is not None:
+                        self.inline_header(hdr)
+                    else:
+                        self.out.append(stripped)
                     continue
 
                 m = INCLUDE_LOCAL.match(stripped)

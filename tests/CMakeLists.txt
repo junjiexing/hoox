@@ -63,6 +63,56 @@ if(HOOX_ARCH_FAMILY STREQUAL "x86")
         "$<TARGET_FILE:hx_disasm_dump>")
   endif()
 
+  # --- amalgamation (single-file) build + test (M7) -------------------------
+  if(Python3_FOUND)
+    set(HOOX_AMALGAM_DIR "${CMAKE_BINARY_DIR}/amalgam")
+    set(HOOX_AMALGAM_C "${HOOX_AMALGAM_DIR}/hoox.c")
+    set(HOOX_AMALGAM_H "${HOOX_AMALGAM_DIR}/hoox.h")
+
+    set(_amalgam_inc_args "")
+    foreach(d ${HOOX_ALL_INCLUDE_DIRS})
+      list(APPEND _amalgam_inc_args --include-dir "${d}")
+    endforeach()
+
+    add_custom_command(
+      OUTPUT "${HOOX_AMALGAM_C}" "${HOOX_AMALGAM_H}"
+      COMMAND ${Python3_EXECUTABLE}
+        "${CMAKE_SOURCE_DIR}/tools/amalgamate.py"
+        --out-c "${HOOX_AMALGAM_C}" --out-h "${HOOX_AMALGAM_H}"
+        ${_amalgam_inc_args}
+        --header "${CMAKE_SOURCE_DIR}/src/core/gum.h"
+        ${HOOX_ALL_SOURCES}
+      DEPENDS ${HOOX_ALL_SOURCES}
+        "${CMAKE_SOURCE_DIR}/tools/amalgamate.py"
+        "${CMAKE_SOURCE_DIR}/src/core/gum.h"
+      COMMENT "Amalgamating hoox into a single .c/.h")
+
+    # Build the interceptor suite against the single-file library only (the
+    # test files still use the normal headers for declarations; hoox.c
+    # supplies every definition — proving the amalgamation is complete).
+    add_executable(test_amalgam
+      "${HOOX_AMALGAM_C}"
+      harness/testrunner.c
+      harness/testutil.c
+      core/test_interceptor.c
+      core/interceptor-callbacklistener.c
+      core/interceptor-functiondatalistener.c
+      core/hoox_targetfunctions.c)
+    target_include_directories(test_amalgam PRIVATE
+      "${CMAKE_CURRENT_SOURCE_DIR}/harness"
+      "${CMAKE_CURRENT_SOURCE_DIR}/../src/core"
+      "${CMAKE_CURRENT_SOURCE_DIR}/../src/compat"
+      "${CMAKE_CURRENT_SOURCE_DIR}/../src/disasm")
+    target_compile_definitions(test_amalgam PRIVATE
+      GUM_STATIC GUM_USE_SYSTEM_ALLOC HAVE_I386)
+    if(WIN32)
+      target_link_libraries(test_amalgam PRIVATE psapi)
+      target_compile_definitions(test_amalgam PRIVATE
+        _CRT_SECURE_NO_WARNINGS HAVE_WINDOWS)
+    endif()
+    add_test(NAME amalgam COMMAND test_amalgam)
+  endif()
+
   # --- arch-x86 writer / relocator tests (M4) -------------------------------
   add_executable(test_arch_x86
     core/arch-x86/x86writer.c
