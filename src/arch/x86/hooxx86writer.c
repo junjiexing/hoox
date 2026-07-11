@@ -1278,42 +1278,6 @@ hoox_x86_writer_put_dec_reg (HooxX86Writer * self,
 }
 /* hoox:test-only-end */
 
-static hx_boolean
-hoox_x86_writer_put_inc_or_dec_reg_ptr (HooxX86Writer * self,
-                                       HooxX86PtrTarget target,
-                                       HooxX86Reg reg,
-                                       hx_boolean increment)
-{
-  HooxX86RegInfo ri;
-
-  hoox_x86_writer_describe_cpu_reg (self, reg, &ri);
-
-  if (self->target_cpu == HOOX_CPU_AMD64)
-  {
-    if (target == HOOX_HX_PTR_QWORD)
-      hoox_x86_writer_put_u8 (self, 0x48 | (ri.index_is_extended ? 0x01 : 0x00));
-    else if (ri.index_is_extended)
-      hoox_x86_writer_put_u8 (self, 0x41);
-  }
-
-  switch (target)
-  {
-    case HOOX_HX_PTR_BYTE:
-      hoox_x86_writer_put_u8 (self, 0xfe);
-      break;
-    case HOOX_HX_PTR_QWORD:
-      if (self->target_cpu != HOOX_CPU_AMD64)
-        return FALSE;
-    case HOOX_HX_PTR_DWORD:
-      hoox_x86_writer_put_u8 (self, 0xff);
-      break;
-  }
-
-  hoox_x86_writer_put_u8 (self, (increment ? 0x00 : 0x08) | ri.index);
-
-  return TRUE;
-}
-
 /* hoox:test-only-begin */
 hx_boolean
 hoox_x86_writer_put_lock_xadd_reg_ptr_reg (HooxX86Writer * self,
@@ -1825,48 +1789,6 @@ hoox_x86_writer_put_mov_near_ptr_reg (HooxX86Writer * self,
   return TRUE;
 }
 /* hoox:test-only-end */
-
-static hx_boolean
-hoox_x86_writer_put_mov_reg_imm_ptr (HooxX86Writer * self,
-                                    HooxX86Reg dst_reg,
-                                    hx_uint32 address)
-{
-  HooxX86RegInfo dst;
-
-  hoox_x86_writer_describe_cpu_reg (self, dst_reg, &dst);
-
-  if (!hoox_x86_writer_put_prefix_for_registers (self, &dst, 32, &dst, NULL))
-    return FALSE;
-
-  self->code[0] = 0x8b;
-  self->code[1] = (dst.index << 3) | 0x04;
-  self->code[2] = 0x25;
-  *((hx_uint32 *) (self->code + 3)) = HX_UINT32_TO_LE (address);
-  hoox_x86_writer_commit (self, 7);
-
-  return TRUE;
-}
-
-static hx_boolean
-hoox_x86_writer_put_mov_imm_ptr_reg (HooxX86Writer * self,
-                                    hx_uint32 address,
-                                    HooxX86Reg src_reg)
-{
-  HooxX86RegInfo src;
-
-  hoox_x86_writer_describe_cpu_reg (self, src_reg, &src);
-
-  if (!hoox_x86_writer_put_prefix_for_registers (self, &src, 32, &src, NULL))
-    return FALSE;
-
-  self->code[0] = 0x89;
-  self->code[1] = (src.index << 3) | 0x04;
-  self->code[2] = 0x25;
-  *((hx_uint32 *) (self->code + 3)) = HX_UINT32_TO_LE (address);
-  hoox_x86_writer_commit (self, 7);
-
-  return TRUE;
-}
 
 hx_boolean
 hoox_x86_writer_put_lea_reg_reg_offset (HooxX86Writer * self,

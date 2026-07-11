@@ -91,11 +91,3 @@ hoox_metal_array_ensure_capacity (HooxMetalArray * self,
   self->data = new_data;
   self->capacity = (size_in_pages * page_size) / self->element_size;
 }
-
-static hx_uint
-hoox_round_up_to_page_size (hx_uint size)
-{
-  hx_uint page_mask = hoox_query_page_size () - 1;
-
-  return (size + page_mask) & ~page_mask;
-}

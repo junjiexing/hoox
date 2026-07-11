@@ -775,21 +775,6 @@ hoox_mprotect (hx_pointer address,
 
 #ifdef HOOX_USE_DLMALLOC
 
-hx_uint
-hoox_peek_private_memory_usage (void)
-{
-  hx_uint total = 0;
-  struct mallinfo info;
-
-  info = mspace_mallinfo (hoox_mspace_main);
-  total += (hx_uint) info.uordblks;
-
-  info = mspace_mallinfo (hoox_mspace_internal);
-  total += (hx_uint) info.uordblks;
-
-  return total;
-}
-
 hx_pointer
 hoox_malloc (hx_size size)
 {
@@ -802,43 +787,11 @@ hoox_malloc0 (hx_size size)
   return mspace_calloc (hoox_mspace_main, 1, size);
 }
 
-hx_size
-hoox_malloc_usable_size (hx_constpointer mem)
-{
-  return mspace_usable_size (mem);
-}
-
 hx_pointer
 hoox_calloc (hx_size count,
             hx_size size)
 {
   return mspace_calloc (hoox_mspace_main, count, size);
-}
-
-hx_pointer
-hoox_realloc (hx_pointer mem,
-             hx_size size)
-{
-  return mspace_realloc (hoox_mspace_main, mem, size);
-}
-
-hx_pointer
-hoox_memalign (hx_size alignment,
-              hx_size size)
-{
-  return mspace_memalign (hoox_mspace_main, alignment, size);
-}
-
-hx_pointer
-hoox_memdup (hx_constpointer mem,
-            hx_size byte_size)
-{
-  hx_pointer result;
-
-  result = mspace_malloc (hoox_mspace_main, byte_size);
-  memcpy (result, mem, byte_size);
-
-  return result;
 }
 
 void
@@ -860,13 +813,6 @@ hoox_internal_calloc (size_t count,
   return mspace_calloc (hoox_mspace_internal, count, size);
 }
 
-hx_pointer
-hoox_internal_realloc (hx_pointer mem,
-                      size_t size)
-{
-  return mspace_realloc (hoox_mspace_internal, mem, size);
-}
-
 void
 hoox_internal_free (hx_pointer mem)
 {
@@ -874,12 +820,6 @@ hoox_internal_free (hx_pointer mem)
 }
 
 #else
-
-hx_uint
-hoox_peek_private_memory_usage (void)
-{
-  return 0;
-}
 
 hx_pointer
 hoox_malloc (hx_size size)
@@ -893,46 +833,11 @@ hoox_malloc0 (hx_size size)
   return calloc (1, size);
 }
 
-hx_size
-hoox_malloc_usable_size (hx_constpointer mem)
-{
-  return 0;
-}
-
 hx_pointer
 hoox_calloc (hx_size count,
             hx_size size)
 {
   return calloc (count, size);
-}
-
-hx_pointer
-hoox_realloc (hx_pointer mem,
-             hx_size size)
-{
-  return realloc (mem, size);
-}
-
-hx_pointer
-hoox_memalign (hx_size alignment,
-              hx_size size)
-{
-  /* TODO: Implement this. */
-  hx_assert_not_reached ();
-
-  return NULL;
-}
-
-hx_pointer
-hoox_memdup (hx_constpointer mem,
-            hx_size byte_size)
-{
-  hx_pointer result;
-
-  result = malloc (byte_size);
-  memcpy (result, mem, byte_size);
-
-  return result;
 }
 
 void
@@ -952,13 +857,6 @@ hoox_internal_calloc (size_t count,
                      size_t size)
 {
   return hoox_calloc (count, size);
-}
-
-hx_pointer
-hoox_internal_realloc (hx_pointer mem,
-                      size_t size)
-{
-  return hoox_realloc (mem, size);
 }
 
 void

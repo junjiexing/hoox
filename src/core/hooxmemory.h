@@ -135,15 +135,10 @@ HOOX_API void hoox_clear_cache (hx_pointer address, hx_size size);
 #define hoox_new0(struct_type, n_structs) \
     ((struct_type *) hoox_malloc0 (n_structs * sizeof (struct_type)))
 
-HOOX_API hx_uint hoox_peek_private_memory_usage (void);
 
 HOOX_API hx_pointer hoox_malloc (hx_size size);
 HOOX_API hx_pointer hoox_malloc0 (hx_size size);
-HOOX_API hx_size hoox_malloc_usable_size (hx_constpointer mem);
 HOOX_API hx_pointer hoox_calloc (hx_size count, hx_size size);
-HOOX_API hx_pointer hoox_realloc (hx_pointer mem, hx_size size);
-HOOX_API hx_pointer hoox_memalign (hx_size alignment, hx_size size);
-HOOX_API hx_pointer hoox_memdup (hx_constpointer mem, hx_size byte_size);
 HOOX_API void hoox_free (hx_pointer mem);
 
 HOOX_API hx_pointer hoox_alloc_n_pages (hx_uint n_pages, HooxPageProtection prot);

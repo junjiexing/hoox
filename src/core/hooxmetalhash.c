@@ -206,32 +206,6 @@ hoox_metal_hash_table_lookup_node (HooxMetalHashTable    *hash_table,
 }
 
 static void
-hoox_metal_hash_table_remove_node (HooxMetalHashTable   *hash_table,
-                          hx_int          i,
-                          hx_boolean      notify)
-{
-  hx_pointer key;
-  hx_pointer value;
-
-  key = hash_table->keys[i];
-  value = hash_table->values[i];
-
-  hash_table->hashes[i] = TOMBSTONE_HASH_VALUE;
-
-  hash_table->keys[i] = NULL;
-  hash_table->values[i] = NULL;
-
-  hash_table->nnodes--;
-
-  if (notify && hash_table->key_destroy_func)
-    hash_table->key_destroy_func (key);
-
-  if (notify && hash_table->value_destroy_func)
-    hash_table->value_destroy_func (value);
-
-}
-
-static void
 hoox_metal_hash_table_remove_all_nodes (HooxMetalHashTable *hash_table,
                                hx_boolean    notify)
 {
@@ -375,16 +349,6 @@ hoox_metal_hash_table_new_full (HxHashFunc      hash_func,
   return hash_table;
 }
 
-static void
-iter_remove_or_steal (RealIter *ri, hx_boolean notify)
-{
-  hx_return_if_fail (ri != NULL);
-  hx_return_if_fail (ri->position >= 0);
-  hx_return_if_fail (ri->position < ri->hash_table->size);
-
-  hoox_metal_hash_table_remove_node (ri->hash_table, ri->position, notify);
-}
-
 static hx_boolean
 hoox_metal_hash_table_insert_node (HooxMetalHashTable *hash_table,
                           hx_uint       node_index,
@@ -507,27 +471,6 @@ hoox_metal_hash_table_insert (HooxMetalHashTable *hash_table,
   return hoox_metal_hash_table_insert_internal (hash_table, key, value, FALSE);
 }
 
-static hx_boolean
-hoox_metal_hash_table_remove_internal (HooxMetalHashTable    *hash_table,
-                              hx_constpointer  key,
-                              hx_boolean       notify)
-{
-  hx_uint node_index;
-  hx_uint node_hash;
-
-  hx_return_val_if_fail (hash_table != NULL, FALSE);
-
-  node_index = hoox_metal_hash_table_lookup_node (hash_table, key, &node_hash);
-
-  if (!HASH_IS_REAL (hash_table->hashes[node_index]))
-    return FALSE;
-
-  hoox_metal_hash_table_remove_node (hash_table, node_index, notify);
-  hoox_metal_hash_table_maybe_resize (hash_table);
-
-  return TRUE;
-}
-
 void
 hoox_metal_hash_table_remove_all (HooxMetalHashTable *hash_table)
 {
@@ -535,33 +478,5 @@ hoox_metal_hash_table_remove_all (HooxMetalHashTable *hash_table)
 
   hoox_metal_hash_table_remove_all_nodes (hash_table, TRUE);
   hoox_metal_hash_table_maybe_resize (hash_table);
-}
-
-static hx_uint
-hoox_metal_hash_table_foreach_remove_or_steal (HooxMetalHashTable *hash_table,
-                                      HxHRFunc     func,
-                                      hx_pointer    user_data,
-                                      hx_boolean    notify)
-{
-  hx_uint deleted = 0;
-  hx_int i;
-
-  for (i = 0; i < hash_table->size; i++)
-    {
-      hx_uint node_hash = hash_table->hashes[i];
-      hx_pointer node_key = hash_table->keys[i];
-      hx_pointer node_value = hash_table->values[i];
-
-      if (HASH_IS_REAL (node_hash) &&
-          (* func) (node_key, node_value, user_data))
-        {
-          hoox_metal_hash_table_remove_node (hash_table, i, notify);
-          deleted++;
-        }
-    }
-
-  hoox_metal_hash_table_maybe_resize (hash_table);
-
-  return deleted;
 }
 

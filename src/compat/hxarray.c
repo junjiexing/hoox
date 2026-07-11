@@ -414,22 +414,6 @@ hx_ptr_array_remove_index (HxPtrArray * array,
   return result;
 }
 
-hx_pointer
-hx_ptr_array_remove_index_fast (HxPtrArray * array,
-                               hx_uint index_)
-{
-  HxRealPtrArray * a = (HxRealPtrArray *) array;
-  hx_pointer result;
-
-  hx_return_val_if_fail (index_ < a->len, NULL);
-
-  result = a->pdata[index_];
-  a->pdata[index_] = a->pdata[a->len - 1];
-  a->len--;
-
-  return result;
-}
-
 /* GLib's hx_ptr_array_sort passes pointers-to-elements to the comparator. */
 static HxCompareFunc hx_ptr_sort_cmp;
 

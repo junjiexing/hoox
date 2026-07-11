@@ -68,7 +68,6 @@ void hx_ptr_array_unref (HxPtrArray * array);
 
 void hx_ptr_array_add (HxPtrArray * array, hx_pointer data);
 hx_pointer hx_ptr_array_remove_index (HxPtrArray * array, hx_uint index_);
-hx_pointer hx_ptr_array_remove_index_fast (HxPtrArray * array, hx_uint index_);
 void hx_ptr_array_sort (HxPtrArray * array, HxCompareFunc compare_func);
 
 #define hx_ptr_array_index(a, i) ((a)->pdata[(i)])

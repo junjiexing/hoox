@@ -136,43 +136,6 @@ struct _HooxModule
 
 static HooxModule hoox_main_module;
 
-static HooxModule *
-hoox_main_module_get (void)
-{
-  HooxModule * m = &hoox_main_module;
-  HMODULE handle;
-  MODULEINFO info;
-  DWORD len;
-
-  if (m->initialized)
-    return m;
-
-  handle = GetModuleHandleW (NULL);
-
-  len = GetModuleFileNameA (handle, m->path, sizeof (m->path));
-  if (len != 0)
-  {
-    const char * slash = m->path;
-    const char * p;
-    for (p = m->path; *p != '\0'; p++)
-    {
-      if (*p == '\\' || *p == '/')
-        slash = p + 1;
-    }
-    hx_strncpy (m->name, sizeof (m->name), slash, sizeof (m->name) - 1);
-  }
-
-  if (GetModuleInformation (GetCurrentProcess (), handle, &info,
-      sizeof (info)))
-  {
-    m->range.base_address = HOOX_ADDRESS (info.lpBaseOfDll);
-    m->range.size = info.SizeOfImage;
-  }
-
-  m->initialized = TRUE;
-  return m;
-}
-
 const HooxMemoryRange *
 hoox_module_get_range (HooxModule * self)
 {

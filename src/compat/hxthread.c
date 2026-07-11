@@ -89,12 +89,6 @@ hx_mutex_lock (HxMutex * mutex)
   AcquireSRWLockExclusive ((PSRWLOCK) &mutex->p);
 }
 
-hx_boolean
-hx_mutex_trylock (HxMutex * mutex)
-{
-  return TryAcquireSRWLockExclusive ((PSRWLOCK) &mutex->p);
-}
-
 void
 hx_mutex_unlock (HxMutex * mutex)
 {
@@ -243,18 +237,6 @@ hx_private_set (HxPrivate * key,
   slot->value = value;
 }
 
-void
-hx_private_replace (HxPrivate * key,
-                   hx_pointer value)
-{
-  HxPrivateSlot * slot = hx_private_slot (key, TRUE);
-
-  if (slot->value != NULL && slot->notify != NULL && slot->value != value)
-    slot->notify (slot->value);
-
-  slot->value = value;
-}
-
 #else /* POSIX */
 
 #include <pthread.h>
@@ -312,12 +294,6 @@ void
 hx_mutex_lock (HxMutex * mutex)
 {
   pthread_mutex_lock (hx_mutex_get (mutex));
-}
-
-hx_boolean
-hx_mutex_trylock (HxMutex * mutex)
-{
-  return pthread_mutex_trylock (hx_mutex_get (mutex)) == 0;
 }
 
 void
@@ -421,19 +397,6 @@ hx_private_set (HxPrivate * key,
                hx_pointer value)
 {
   pthread_setspecific (hx_private_key (key), value);
-}
-
-void
-hx_private_replace (HxPrivate * key,
-                   hx_pointer value)
-{
-  pthread_key_t k = hx_private_key (key);
-  hx_pointer old = pthread_getspecific (k);
-
-  if (old != NULL && key->notify != NULL && old != value)
-    key->notify (old);
-
-  pthread_setspecific (k, value);
 }
 
 #endif

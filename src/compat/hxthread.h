@@ -53,7 +53,6 @@ struct _HxPrivate
 void hx_mutex_init (HxMutex * mutex);
 void hx_mutex_clear (HxMutex * mutex);
 void hx_mutex_lock (HxMutex * mutex);
-hx_boolean hx_mutex_trylock (HxMutex * mutex);
 void hx_mutex_unlock (HxMutex * mutex);
 
 void hx_rec_mutex_init (HxRecMutex * mutex);
@@ -64,7 +63,6 @@ void hx_rec_mutex_unlock (HxRecMutex * mutex);
 
 hx_pointer hx_private_get (HxPrivate * key);
 void hx_private_set (HxPrivate * key, hx_pointer value);
-void hx_private_replace (HxPrivate * key, hx_pointer value);
 
 /* one-time initialisation (bracketing enter/leave). Simple global-lock
  * implementation: correct for non-nesting inits (cpu features, etc.). */

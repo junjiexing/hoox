@@ -23,7 +23,6 @@ HX_GNUC_INTERNAL void _hoox_memory_query_protections (HxPtrArray * sorted_pages,
 
 HX_GNUC_INTERNAL hx_pointer hoox_internal_malloc (size_t size);
 HX_GNUC_INTERNAL hx_pointer hoox_internal_calloc (size_t count, size_t size);
-HX_GNUC_INTERNAL hx_pointer hoox_internal_realloc (hx_pointer mem, size_t size);
 HX_GNUC_INTERNAL void hoox_internal_free (hx_pointer mem);
 
 HX_END_DECLS

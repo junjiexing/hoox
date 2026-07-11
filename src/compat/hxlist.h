@@ -65,13 +65,8 @@ void hx_slist_free (HxSList * list);
 
 /* ---- HxList -------------------------------------------------------------- */
 
-HxList * hx_list_append (HxList * list, hx_pointer data);
 HxList * hx_list_prepend (HxList * list, hx_pointer data);
 HxList * hx_list_remove_link (HxList * list, HxList * llink);
-HxList * hx_list_delete_link (HxList * list, HxList * link_);
-HxList * hx_list_find (HxList * list, hx_constpointer data);
-HxList * hx_list_last (HxList * list);
-HxList * hx_list_nth (HxList * list, hx_uint n);
 void hx_list_foreach (HxList * list, HxFunc func, hx_pointer user_data);
 void hx_list_free (HxList * list);
 
