@@ -32,7 +32,7 @@ gpointer g_slice_copy (gsize block_size, gconstpointer mem_block);
 void g_slice_free1 (gsize block_size, gpointer mem_block);
 
 #define g_newa(type, count) \
-    ((type *) __builtin_alloca (sizeof (type) * (gsize) (count)))
+    ((type *) g_alloca (sizeof (type) * (gsize) (count)))
 
 #define g_new(type, count)   ((type *) g_malloc (sizeof (type) * (gsize) (count)))
 #define g_new0(type, count)  ((type *) g_malloc0 (sizeof (type) * (gsize) (count)))

@@ -278,7 +278,12 @@ typedef void     (* GCallback)      (void);
 #define GINT32_FROM_LE(v)   GINT32_TO_LE (v)
 #define GINT64_FROM_LE(v)   GINT64_TO_LE (v)
 
-#define g_alloca(n) __builtin_alloca (n)
+#if defined (_MSC_VER)
+# include <malloc.h>
+# define g_alloca(n) _alloca (n)
+#else
+# define g_alloca(n) __builtin_alloca (n)
+#endif
 
 #define G_STRINGIFY(macro_or_string) G_STRINGIFY_ARG (macro_or_string)
 #define G_STRINGIFY_ARG(contents) #contents

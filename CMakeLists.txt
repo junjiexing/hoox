@@ -8,15 +8,25 @@ project(hoox
 # ---------------------------------------------------------------------------
 # Standard
 # ---------------------------------------------------------------------------
-set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_C_EXTENSIONS ON)  # gum uses GNU extensions; clang/gcc friendly
+# The engine uses a few GNU extensions (statement expressions / __typeof__ in
+# the atomics, __builtin_* on clang/gcc). Keep extensions on so gcc/clang use
+# gnu99; MSVC compiles the same sources via its own intrinsic fallbacks.
+set(CMAKE_C_EXTENSIONS ON)
 
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set(CMAKE_BUILD_TYPE Debug CACHE STRING "" FORCE)
 endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# MSVC: pool identical string literals so equal literals share one address,
+# matching the default behaviour of gcc/clang (a couple of tests compare a
+# stored user-data pointer against a string literal for identity).
+if(MSVC)
+  add_compile_options(/GF)
+endif()
 
 # ---------------------------------------------------------------------------
 # Target architecture detection (overridable with -DHOOX_TARGET_ARCH=...)

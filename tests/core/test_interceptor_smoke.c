@@ -20,7 +20,13 @@ static int g_failures = 0;
     } G_STMT_END
 
 /* Target function — kept out-of-line so it has a real prologue to hook. */
-__attribute__ ((noinline))
+#ifdef _MSC_VER
+# define GUM_NOINLINE __declspec (noinline)
+#else
+# define GUM_NOINLINE __attribute__ ((noinline))
+#endif
+
+GUM_NOINLINE
 static int
 target_add (int a, int b)
 {
