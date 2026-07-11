@@ -10,14 +10,13 @@
 #include "hooxmemory.h"
 
 typedef struct _HooxMatchToken HooxMatchToken;
-typedef enum _HooxMatchType HooxMatchType;
 
-enum _HooxMatchType
+typedef enum _HooxMatchType
 {
   HOOX_MATCH_EXACT,
   HOOX_MATCH_WILDCARD,
   HOOX_MATCH_MASK
-};
+} HooxMatchType;
 
 struct _HooxMatchToken
 {

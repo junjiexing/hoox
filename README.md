@@ -14,24 +14,29 @@ resolution, JS bindings, …).
 - **Cross-platform** — Windows / Linux / Android / macOS / iOS / FreeBSD / QNX ×
   x86 / x86_64 / ARM / ARM64 / MIPS (coverage staged, on par with Frida).
 - **Amalgamatable** — a script merges the sources into a single `hoox.c` + `hoox.h`
-  (SQLite-style).
-- **Pure C11**, built with **CMake**.
+  (SQLite-style); the public `hoox.h` exposes only the API.
+- **Pure C99**, built with **CMake**, on **MSVC / clang / gcc**.
+
+All public and engine symbols use the `hoox_`/`Hoox`/`HOOX_` prefix; the internal
+utility layers (nano-glib, decoder) use `hx_`/`Hx`/`HX_`. No third-party prefix
+(`gum_`, `cs_`, `g_`/GLib) survives in the code.
 
 ## Status
 
-Under active development. Vertical slice first: **Windows x64**, then horizontal
-roll-out to other platforms/architectures. See [`docs/PLAN.md`](docs/PLAN.md) and
+The Windows vertical slice is complete and green on **x86 and x64** across
+**MSVC 19.x, clang and gcc (MinGW)**: extraction → build → hooks firing → full
+test suite → single-file amalgamation → example. Horizontal roll-out to other
+platforms/architectures is next. See [`docs/PLAN.md`](docs/PLAN.md) and
 [`docs/TASKS.md`](docs/TASKS.md).
 
 ## Build
 
 ```
-cmake -B build -G Ninja
+cmake -B build -G Ninja        # or -DCMAKE_C_COMPILER=clang / gcc, or the VS generator for MSVC
 cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-Windows: clang / clang-cl is the recommended toolchain (see `docs/PLAN.md` D5).
 The default build targets the host arch (x64). For a 32-bit (x86) build, target
 i686 and point `LIB` at the 32-bit MSVC/SDK library directories:
 
@@ -43,7 +48,7 @@ cmake --build build32 && ctest --test-dir build32 --output-on-failure
 ```
 
 Both Windows x64 and x86 pass the full suite (interceptor, writer/relocator,
-decoder differential, amalgamation).
+decoder differential, amalgamation) on all three compilers.
 
 ## Licence
 

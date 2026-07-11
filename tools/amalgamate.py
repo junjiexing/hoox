@@ -13,9 +13,10 @@ Usage:
         --header PUBLIC.h [...] \
         SOURCE.c [SOURCE.c ...]
 
-The spike (M1.5 / T1.9) runs this over the compat layer to prove that the
-extracted gum code (which is not written amalgamation-friendly) can be merged
-into one TU without static-symbol / macro collisions.
+The engine sources (extracted from frida-gum, not written amalgamation-
+friendly) merge into one TU without static-symbol / macro collisions. out-c
+inlines the internal umbrella (--header) plus all sources; out-h emits only the
+curated public header (--public-header) so the shipped hoox.h is API-only.
 """
 
 import argparse

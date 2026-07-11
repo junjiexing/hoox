@@ -5,6 +5,16 @@
 
 本文档是总体规划与架构决策。可执行的任务拆分见 [`TASKS.md`](./TASKS.md)。
 
+> **进度更新（Windows 切片完成后）**：以下决策中关于命名与工具链的部分已被取代，
+> 以本 note 为准：
+> - **命名**：全量重构为 `hoox_`/`Hoox`/`HOOX_`（库 API + 引擎）与 `hx_`/`Hx`/`HX_`
+>   （nano-glib + 反汇编）。**代码中不再保留任何 `gum_`/`cs_`/`g_` 前缀**，也不再以与上游
+>   diff 对拍为目标（`frida-gum` 仅作 provenance 出现在注释/NOTICE）。因此**没有独立的
+>   facade 层**——引擎本身即 `hoox_*`；`include/hoox.h` 是手写的干净公共头（仅 API + 必需类型）。
+> - **语言标准**：**C99**（非 C11）。原子层用 `__atomic`/`_Interlocked*` 内建，非 `<stdatomic.h>`。
+> - **工具链**：**MSVC / clang / gcc 均支持**（非 clang-only）。`hx_alloca` 按编译器分派
+>   `_alloca`/`__builtin_alloca`；MSVC 开 `/GF`。
+
 ---
 
 ## 1. 项目目标（源自需求）
@@ -19,7 +29,7 @@
    （下称 **nano-glib / `hx_*`**）替代。无法移除的（如反汇编器
    **capstone**）则下载源码、提取并裁剪到最小。
    （注：经调研，capstone 抽取不可行，最终改为自研紧凑解码器替代 —— 见 §2.3 / 决策 D4。）
-4. **纯 C 开发**，C 标准与 frida-gum 保持一致（**C11**，GNU 扩展按需）。
+4. **纯 C 开发**，语言标准 **C99**（gnu99 级扩展按需；见顶部进度 note）。
    提供合并脚本，输出单一 `hoox.c` + `hoox.h`（amalgamation）。
 5. `_refs/` 只用于**参考/提取**代码，**不得** include / 链接 / 直接引用进项目。
 6. frida 引用但 `_refs/` 下缺失的项目可直接 clone 到 `_refs/`；找不到源码时提示用户。

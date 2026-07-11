@@ -15,12 +15,12 @@ example/
 
 The demo hooks a plain function, `compute(int, int)`, two different ways:
 
-1. **`gum_interceptor_attach`** — wraps the function with an *invocation
+1. **`hoox_interceptor_attach`** — wraps the function with an *invocation
    listener*. The original body still runs; the listener sees each call on the
    way in (`on_enter`) and out (`on_leave`), reads the arguments, and tampers
    with the return value (`+1`) without modifying `compute` at all.
 
-2. **`gum_interceptor_replace`** — swaps the function body for
+2. **`hoox_interceptor_replace`** — swaps the function body for
    `replacement_compute`, keeping a trampoline pointer (`original_compute`) that
    still reaches the real `compute`. The replacement calls the original and
    scales the result (`* 10`).
@@ -29,21 +29,19 @@ After each step it `detach`/`revert`s to prove the target returns to normal.
 
 ## Build & run
 
-Requires **clang / clang-cl** (the hook engine uses GNU builtins such as
-`__builtin_alloca` that MSVC's `cl` does not provide).
+Builds with **MSVC, clang, or gcc**.
 
 First generate the single-file library from the repo root (once):
 
 ```sh
-cmake -S .. -B ../build -G Ninja -DCMAKE_C_COMPILER=clang \
-      -DHOOX_BUILD_AMALGAMATION=ON
+cmake -S .. -B ../build -G Ninja -DHOOX_BUILD_AMALGAMATION=ON
 cmake --build ../build --target test_amalgam
 ```
 
 Then build and run the example, which links `../build/amalgam/hoox.c`:
 
 ```sh
-cmake -S . -B build -G Ninja -DCMAKE_C_COMPILER=clang
+cmake -S . -B build -G Ninja
 cmake --build build
 ./build/hook_example            # Windows: .\build\hook_example.exe
 ```
@@ -54,9 +52,9 @@ elsewhere.
 ### Or compile directly
 
 ```sh
-# Windows x64, from this directory
+# Windows x64, from this directory (clang/gcc; for MSVC use cl with the same -D flags)
 clang -I ../build/amalgam \
-      -DGUM_STATIC -DGUM_USE_SYSTEM_ALLOC -DHAVE_I386 -DHAVE_WINDOWS \
+      -DHOOX_STATIC -DHOOX_USE_SYSTEM_ALLOC -DHAVE_I386 -DHAVE_WINDOWS \
       ../build/amalgam/hoox.c hook_example.c -lpsapi -o hook_example
 ```
 
@@ -89,24 +87,24 @@ done.
 
 When embedding the amalgamation in your own build, define:
 
-| Define                 | Meaning                                             |
-|------------------------|-----------------------------------------------------|
-| `GUM_STATIC`           | Compile the engine straight in (no DLL import/export). |
-| `GUM_USE_SYSTEM_ALLOC` | Use the system allocator instead of a bundled one.  |
-| `HAVE_I386`            | Select the x86 / x86_64 backend.                    |
-| `HAVE_WINDOWS`         | Windows platform backend (link `psapi`).            |
+| Define                  | Meaning                                                |
+|-------------------------|--------------------------------------------------------|
+| `HOOX_STATIC`           | Compile the engine straight in (no DLL import/export). |
+| `HOOX_USE_SYSTEM_ALLOC` | Use the system allocator instead of a bundled one.     |
+| `HAVE_I386`             | Select the x86 / x86_64 backend.                       |
+| `HAVE_WINDOWS`          | Windows platform backend (link `psapi`).               |
 
 The `CMakeLists.txt` here sets these automatically from the detected platform
 and architecture.
 
 ## Public API used
 
-- `gum_init` / `gum_deinit`
-- `gum_interceptor_obtain` / `_ref` / `_unref`
-- `gum_make_call_listener`, `gum_invocation_listener_unref`
-- `gum_interceptor_attach` / `_detach`
-- `gum_interceptor_replace` / `_revert`
-- `gum_invocation_context_get_nth_argument`, `_get_return_value`,
+- `hoox_init` / `hoox_deinit`
+- `hoox_interceptor_obtain` / `_ref` / `_unref`
+- `hoox_make_call_listener`, `hoox_invocation_listener_unref`
+- `hoox_interceptor_attach` / `_detach`
+- `hoox_interceptor_replace` / `_revert`
+- `hoox_invocation_context_get_nth_argument`, `_get_return_value`,
   `_replace_return_value`, `_get_thread_id`, `_get_depth`
 
 See `hoox.h` for the full surface.
