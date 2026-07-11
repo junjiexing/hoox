@@ -28,6 +28,7 @@ static int hx_failures = 0;
  * Minimal "return a constant" function in native machine code:
  *   x86/x86-64: mov eax, imm32 ; ret   (B8 <imm32> C3)
  *   arm64:      mov w0, #imm   ; ret    (MOVZ 0x52800000|(imm<<5); RET D65F03C0)
+ *   arm (A32):  mov r0, #imm   ; bx lr  (E3A000xx ; E12FFF1E)
  */
 typedef int (* IntFunc) (void);
 
@@ -56,6 +57,13 @@ main (void)
       { 0x40, 0x05, 0x80, 0x52, 0xc0, 0x03, 0x5f, 0xd6 };
   const hx_uint8 code_99[8] =
       { 0x60, 0x0c, 0x80, 0x52, 0xc0, 0x03, 0x5f, 0xd6 };
+#elif defined (__arm__) || defined (_M_ARM)
+  /* A32: mov r0, #imm ; bx lr  (little-endian). Entered in ARM state because
+   * the page pointer is word-aligned (bit0 clear), so bx lr interworks back. */
+  const hx_uint8 code_42[8] =
+      { 0x2a, 0x00, 0xa0, 0xe3, 0x1e, 0xff, 0x2f, 0xe1 };
+  const hx_uint8 code_99[8] =
+      { 0x63, 0x00, 0xa0, 0xe3, 0x1e, 0xff, 0x2f, 0xe1 };
 #else
   const hx_uint8 code_42[6] = { 0xB8, 0x2A, 0x00, 0x00, 0x00, 0xC3 };
   const hx_uint8 code_99[6] = { 0xB8, 0x63, 0x00, 0x00, 0x00, 0xC3 };

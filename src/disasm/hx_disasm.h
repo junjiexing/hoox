@@ -46,6 +46,7 @@ typedef enum hx_mode
   HX_MODE_ARM = 0,
   HX_MODE_32 = 1 << 2,
   HX_MODE_64 = 1 << 3,
+  HX_MODE_THUMB = 1 << 4,
   HX_MODE_MIPS32 = 1 << 2,
   HX_MODE_MIPS64 = 1 << 3,
   HX_MODE_V8 = 1 << 6,
@@ -346,6 +347,149 @@ typedef struct hx_arm64
   hx_arm64_op operands[HX_ARM64_MAX_OPS];
 } hx_arm64;
 
+/* ---- arm (A32 / Thumb) registers ---------------------------------------- */
+
+/*
+ * R0..R12 must stay contiguous (the writer's reg helper does reg - R0). SP/LR/PC
+ * are matched by equality only, so their values are free. S/D/Q each form a
+ * contiguous block (reg - Sn/Dn/Qn). Values need not match upstream capstone.
+ */
+typedef enum hx_arm_reg
+{
+  HX_ARM_REG_INVALID = 0,
+
+  HX_ARM_REG_R0, HX_ARM_REG_R1, HX_ARM_REG_R2, HX_ARM_REG_R3,
+  HX_ARM_REG_R4, HX_ARM_REG_R5, HX_ARM_REG_R6, HX_ARM_REG_R7,
+  HX_ARM_REG_R8, HX_ARM_REG_R9, HX_ARM_REG_R10, HX_ARM_REG_R11,
+  HX_ARM_REG_R12,
+  HX_ARM_REG_SP, HX_ARM_REG_LR, HX_ARM_REG_PC,
+
+  HX_ARM_REG_S0, HX_ARM_REG_S1, HX_ARM_REG_S2, HX_ARM_REG_S3,
+  HX_ARM_REG_S4, HX_ARM_REG_S5, HX_ARM_REG_S6, HX_ARM_REG_S7,
+  HX_ARM_REG_S8, HX_ARM_REG_S9, HX_ARM_REG_S10, HX_ARM_REG_S11,
+  HX_ARM_REG_S12, HX_ARM_REG_S13, HX_ARM_REG_S14, HX_ARM_REG_S15,
+  HX_ARM_REG_S16, HX_ARM_REG_S17, HX_ARM_REG_S18, HX_ARM_REG_S19,
+  HX_ARM_REG_S20, HX_ARM_REG_S21, HX_ARM_REG_S22, HX_ARM_REG_S23,
+  HX_ARM_REG_S24, HX_ARM_REG_S25, HX_ARM_REG_S26, HX_ARM_REG_S27,
+  HX_ARM_REG_S28, HX_ARM_REG_S29, HX_ARM_REG_S30, HX_ARM_REG_S31,
+
+  HX_ARM_REG_D0, HX_ARM_REG_D1, HX_ARM_REG_D2, HX_ARM_REG_D3,
+  HX_ARM_REG_D4, HX_ARM_REG_D5, HX_ARM_REG_D6, HX_ARM_REG_D7,
+  HX_ARM_REG_D8, HX_ARM_REG_D9, HX_ARM_REG_D10, HX_ARM_REG_D11,
+  HX_ARM_REG_D12, HX_ARM_REG_D13, HX_ARM_REG_D14, HX_ARM_REG_D15,
+  HX_ARM_REG_D16, HX_ARM_REG_D17, HX_ARM_REG_D18, HX_ARM_REG_D19,
+  HX_ARM_REG_D20, HX_ARM_REG_D21, HX_ARM_REG_D22, HX_ARM_REG_D23,
+  HX_ARM_REG_D24, HX_ARM_REG_D25, HX_ARM_REG_D26, HX_ARM_REG_D27,
+  HX_ARM_REG_D28, HX_ARM_REG_D29, HX_ARM_REG_D30, HX_ARM_REG_D31,
+
+  HX_ARM_REG_Q0, HX_ARM_REG_Q1, HX_ARM_REG_Q2, HX_ARM_REG_Q3,
+  HX_ARM_REG_Q4, HX_ARM_REG_Q5, HX_ARM_REG_Q6, HX_ARM_REG_Q7,
+  HX_ARM_REG_Q8, HX_ARM_REG_Q9, HX_ARM_REG_Q10, HX_ARM_REG_Q11,
+  HX_ARM_REG_Q12, HX_ARM_REG_Q13, HX_ARM_REG_Q14, HX_ARM_REG_Q15,
+
+  HX_ARM_REG_ENDING
+} hx_arm_reg;
+
+/* ---- arm instruction ids (only those the hook engine references) --------- */
+
+typedef enum hx_arm_insn
+{
+  HX_ARM_INS_INVALID = 0,
+
+  HX_ARM_INS_ADD,
+  HX_ARM_INS_ADR,
+  HX_ARM_INS_B,
+  HX_ARM_INS_BL,
+  HX_ARM_INS_BLX,
+  HX_ARM_INS_BX,
+  HX_ARM_INS_CBNZ,
+  HX_ARM_INS_CBZ,
+  HX_ARM_INS_IT,
+  HX_ARM_INS_LDM,
+  HX_ARM_INS_LDR,
+  HX_ARM_INS_MOV,
+  HX_ARM_INS_POP,
+  HX_ARM_INS_PUSH,
+  HX_ARM_INS_SUB,
+  HX_ARM_INS_SVC,
+  HX_ARM_INS_TBB,
+  HX_ARM_INS_TBH,
+  HX_ARM_INS_VLDR,
+
+  HX_ARM_INS_ENDING
+} hx_arm_insn;
+
+/* condition codes: value == (encoded 4-bit cond field) + 1 */
+typedef enum hx_arm_cc
+{
+  HX_ARM_CC_INVALID = 0,
+  HX_ARM_CC_EQ, HX_ARM_CC_NE,
+  HX_ARM_CC_HS, HX_ARM_CC_LO,
+  HX_ARM_CC_MI, HX_ARM_CC_PL,
+  HX_ARM_CC_VS, HX_ARM_CC_VC,
+  HX_ARM_CC_HI, HX_ARM_CC_LS,
+  HX_ARM_CC_GE, HX_ARM_CC_LT,
+  HX_ARM_CC_GT, HX_ARM_CC_LE,
+  HX_ARM_CC_AL,
+} hx_arm_cc;
+
+typedef enum hx_arm_shifter
+{
+  HX_ARM_SFT_INVALID = 0,
+  HX_ARM_SFT_LSL,
+  HX_ARM_SFT_LSR,
+  HX_ARM_SFT_ASR,
+  HX_ARM_SFT_ROR,
+} hx_arm_shifter;
+
+typedef enum hx_arm_sysreg
+{
+  HX_ARM_SYSREG_INVALID = 0,
+  HX_ARM_SYSREG_APSR_NZCVQ,
+} hx_arm_sysreg;
+
+typedef enum hx_arm_op_type
+{
+  HX_ARM_OP_INVALID = 0,
+  HX_ARM_OP_REG,
+  HX_ARM_OP_IMM,
+  HX_ARM_OP_MEM,
+} hx_arm_op_type;
+
+typedef struct hx_arm_op_mem
+{
+  hx_arm_reg base;
+  hx_arm_reg index;
+  int32_t disp;
+} hx_arm_op_mem;
+
+typedef struct hx_arm_op
+{
+  hx_arm_op_type type;
+  union
+  {
+    hx_arm_reg reg;
+    int64_t imm;
+    hx_arm_op_mem mem;
+  };
+  bool subtracted;
+  struct
+  {
+    hx_arm_shifter type;
+    unsigned int value;
+  } shift;
+} hx_arm_op;
+
+#define HX_ARM_MAX_OPS 20
+
+typedef struct hx_arm
+{
+  hx_arm_cc cc;
+  bool writeback;
+  uint8_t op_count;
+  hx_arm_op operands[HX_ARM_MAX_OPS];
+} hx_arm;
+
 typedef struct hx_detail
 {
   uint16_t regs_read[16];
@@ -357,6 +501,7 @@ typedef struct hx_detail
   {
     hx_x86 x86;
     hx_arm64 arm64;
+    hx_arm arm;
   };
 } hx_detail;
 
@@ -392,6 +537,7 @@ bool hx_reg_write (hx_csh handle, const hx_insn * insn, unsigned int reg_id);
 
 void hx_arch_register_x86 (void);
 void hx_arch_register_arm64 (void);
+void hx_arch_register_arm (void);
 
 #ifdef __cplusplus
 }

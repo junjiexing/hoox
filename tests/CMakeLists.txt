@@ -60,6 +60,17 @@ if(WIN32)
 endif()
 add_test(NAME arm64_decode COMMAND test_arm64_decode)
 
+# --- arm (A32/Thumb) decoder golden test (arch-neutral, runs on every host) --
+add_executable(test_arm_decode
+  disasm/test_arm_decode.c
+  "${CMAKE_CURRENT_SOURCE_DIR}/../src/disasm/hx_disasm_arm.c")
+target_include_directories(test_arm_decode PRIVATE
+  "${CMAKE_CURRENT_SOURCE_DIR}/../src/disasm")
+if(WIN32)
+  target_compile_definitions(test_arm_decode PRIVATE _CRT_SECURE_NO_WARNINGS)
+endif()
+add_test(NAME arm_decode COMMAND test_arm_decode)
+
 # --- disasm differential test (M2) ------------------------------------------
 if(HOOX_ARCH_FAMILY STREQUAL "x86")
   add_executable(hx_disasm_dump disasm/hx_disasm_dump.c)
