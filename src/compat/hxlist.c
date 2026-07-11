@@ -126,6 +126,7 @@ hx_slist_nth (HxSList * list,
   return list;
 }
 
+/* hoox:test-only-begin */
 hx_pointer
 hx_slist_nth_data (HxSList * list,
                   hx_uint n)
@@ -133,7 +134,9 @@ hx_slist_nth_data (HxSList * list,
   HxSList * node = hx_slist_nth (list, n);
   return (node != NULL) ? node->data : NULL;
 }
+/* hoox:test-only-end */
 
+/* hoox:test-only-begin */
 hx_uint
 hx_slist_length (HxSList * list)
 {
@@ -145,6 +148,7 @@ hx_slist_length (HxSList * list)
   }
   return n;
 }
+/* hoox:test-only-end */
 
 void
 hx_slist_foreach (HxSList * list,
@@ -335,6 +339,7 @@ hx_queue_is_empty (HxQueue * queue)
   return queue->head == NULL;
 }
 
+/* hoox:test-only-begin */
 void
 hx_queue_push_head (HxQueue * queue,
                    hx_pointer data)
@@ -344,6 +349,7 @@ hx_queue_push_head (HxQueue * queue,
     queue->tail = queue->head;
   queue->length++;
 }
+/* hoox:test-only-end */
 
 void
 hx_queue_push_tail (HxQueue * queue,
@@ -388,6 +394,7 @@ hx_queue_pop_head (HxQueue * queue)
   return data;
 }
 
+/* hoox:test-only-begin */
 hx_pointer
 hx_queue_pop_tail (HxQueue * queue)
 {
@@ -411,3 +418,4 @@ hx_queue_pop_tail (HxQueue * queue)
 
   return data;
 }
+/* hoox:test-only-end */

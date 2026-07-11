@@ -115,7 +115,9 @@ HOOX_API hx_pointer hoox_memory_try_remap_writable_pages (hx_pointer first_page,
     hx_uint n_pages);
 HOOX_API void hoox_memory_dispose_writable_pages (hx_pointer first_page,
     hx_uint n_pages);
+/* hoox:test-only-begin */
 HOOX_API hx_boolean hoox_memory_mark_code (hx_pointer address, hx_size size);
+/* hoox:test-only-end */
 
 
 
@@ -146,8 +148,10 @@ HOOX_API void hoox_free (hx_pointer mem);
 
 HOOX_API hx_pointer hoox_alloc_n_pages (hx_uint n_pages, HooxPageProtection prot);
 HOOX_API hx_pointer hoox_try_alloc_n_pages (hx_uint n_pages, HooxPageProtection prot);
+/* hoox:test-only-begin */
 HOOX_API hx_pointer hoox_alloc_n_pages_near (hx_uint n_pages, HooxPageProtection prot,
     const HooxAddressSpec * spec);
+/* hoox:test-only-end */
 HOOX_API hx_pointer hoox_try_alloc_n_pages_near (hx_uint n_pages,
     HooxPageProtection prot, const HooxAddressSpec * spec);
 HOOX_API void hoox_query_page_allocation_range (hx_constpointer mem, hx_uint size,

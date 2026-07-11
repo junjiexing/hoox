@@ -291,12 +291,14 @@ hx_hash_table_unref (HxHashTable * hash_table)
   }
 }
 
+/* hoox:test-only-begin */
 void
 hx_hash_table_destroy (HxHashTable * hash_table)
 {
   hx_hash_table_remove_all (hash_table);
   hx_hash_table_unref (hash_table);
 }
+/* hoox:test-only-end */
 
 hx_uint
 hx_hash_table_size (HxHashTable * hash_table)
@@ -389,9 +391,11 @@ hx_direct_hash (hx_constpointer v)
   return (hx_uint) HX_POINTER_TO_SIZE (v);
 }
 
+/* hoox:test-only-begin */
 hx_boolean
 hx_direct_equal (hx_constpointer a,
                 hx_constpointer b)
 {
   return a == b;
 }
+/* hoox:test-only-end */

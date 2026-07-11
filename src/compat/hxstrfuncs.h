@@ -16,7 +16,9 @@
 HX_BEGIN_DECLS
 
 hx_char * hx_strdup (const hx_char * str);
+/* hoox:test-only-begin */
 hx_char * hx_strdup_printf (const hx_char * format, ...) HX_GNUC_PRINTF (1, 2);
+/* hoox:test-only-end */
 hx_char * hx_strdup_vprintf (const hx_char * format, va_list args);
 hx_char * hx_strconcat (const hx_char * string1, ...) HX_GNUC_NULL_TERMINATED;
 

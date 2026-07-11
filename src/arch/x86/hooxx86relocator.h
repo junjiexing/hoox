@@ -47,13 +47,19 @@ HOOX_API hx_uint hoox_x86_relocator_read_one (HooxX86Relocator * self,
 
 HOOX_API hx_insn * hoox_x86_relocator_peek_next_write_insn (
     HooxX86Relocator * self);
+/* hoox:test-only-begin */
 HOOX_API hx_pointer hoox_x86_relocator_peek_next_write_source (
     HooxX86Relocator * self);
+/* hoox:test-only-end */
+/* hoox:test-only-begin */
 HOOX_API void hoox_x86_relocator_skip_one (HooxX86Relocator * self);
+/* hoox:test-only-end */
 HOOX_API hx_boolean hoox_x86_relocator_write_one (HooxX86Relocator * self);
 HOOX_API void hoox_x86_relocator_write_all (HooxX86Relocator * self);
 
+/* hoox:test-only-begin */
 HOOX_API hx_boolean hoox_x86_relocator_eob (HooxX86Relocator * self);
+/* hoox:test-only-end */
 HOOX_API hx_boolean hoox_x86_relocator_eoi (HooxX86Relocator * self);
 
 HOOX_API hx_boolean hoox_x86_relocator_can_relocate (hx_pointer address,

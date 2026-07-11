@@ -34,7 +34,9 @@ HxHashTable * hx_hash_table_new_full (HxHashFunc hash_func,
     HxDestroyNotify value_destroy_func);
 
 void hx_hash_table_unref (HxHashTable * hash_table);
+/* hoox:test-only-begin */
 void hx_hash_table_destroy (HxHashTable * hash_table);
+/* hoox:test-only-end */
 
 hx_boolean hx_hash_table_insert (HxHashTable * hash_table, hx_pointer key,
     hx_pointer value);
@@ -55,7 +57,9 @@ void hx_hash_table_iter_remove (HxHashTableIter * iter);
 
 /* hash / equal helpers */
 hx_uint hx_direct_hash (hx_constpointer v);
+/* hoox:test-only-begin */
 hx_boolean hx_direct_equal (hx_constpointer a, hx_constpointer b);
+/* hoox:test-only-end */
 
 HX_END_DECLS
 

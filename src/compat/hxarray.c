@@ -222,6 +222,7 @@ hx_array_set_size (HxArray * array,
   return array;
 }
 
+/* hoox:test-only-begin */
 HxArray *
 hx_array_remove_index (HxArray * array,
                       hx_uint index_)
@@ -245,6 +246,7 @@ hx_array_remove_index (HxArray * array,
 
   return array;
 }
+/* hoox:test-only-end */
 
 HxArray *
 hx_array_remove_index_fast (HxArray * array,
@@ -319,6 +321,7 @@ hx_ptr_array_new (void)
   return hx_ptr_array_sized_new (0);
 }
 
+/* hoox:test-only-begin */
 HxPtrArray *
 hx_ptr_array_new_with_free_func (HxDestroyNotify element_free_func)
 {
@@ -326,6 +329,7 @@ hx_ptr_array_new_with_free_func (HxDestroyNotify element_free_func)
   ((HxRealPtrArray *) array)->element_free_func = element_free_func;
   return array;
 }
+/* hoox:test-only-end */
 
 HxPtrArray *
 hx_ptr_array_new_full (hx_uint reserved_size,

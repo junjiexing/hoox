@@ -54,8 +54,12 @@ HxSList * hx_slist_delete_link (HxSList * list, HxSList * link_);
 HxSList * hx_slist_find (HxSList * list, hx_constpointer data);
 HxSList * hx_slist_last (HxSList * list);
 HxSList * hx_slist_nth (HxSList * list, hx_uint n);
+/* hoox:test-only-begin */
 hx_pointer hx_slist_nth_data (HxSList * list, hx_uint n);
+/* hoox:test-only-end */
+/* hoox:test-only-begin */
 hx_uint hx_slist_length (HxSList * list);
+/* hoox:test-only-end */
 void hx_slist_foreach (HxSList * list, HxFunc func, hx_pointer user_data);
 void hx_slist_free (HxSList * list);
 
@@ -78,10 +82,14 @@ void hx_queue_init (HxQueue * queue);
 void hx_queue_clear (HxQueue * queue);
 void hx_queue_free (HxQueue * queue);
 hx_boolean hx_queue_is_empty (HxQueue * queue);
+/* hoox:test-only-begin */
 void hx_queue_push_head (HxQueue * queue, hx_pointer data);
+/* hoox:test-only-end */
 void hx_queue_push_tail (HxQueue * queue, hx_pointer data);
 hx_pointer hx_queue_pop_head (HxQueue * queue);
+/* hoox:test-only-begin */
 hx_pointer hx_queue_pop_tail (HxQueue * queue);
+/* hoox:test-only-end */
 
 HX_END_DECLS
 

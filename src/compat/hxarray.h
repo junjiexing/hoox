@@ -44,7 +44,9 @@ HxArray * hx_array_prepend_vals (HxArray * array, hx_constpointer data, hx_uint 
 HxArray * hx_array_insert_vals (HxArray * array, hx_uint index_,
     hx_constpointer data, hx_uint len);
 HxArray * hx_array_set_size (HxArray * array, hx_uint length);
+/* hoox:test-only-begin */
 HxArray * hx_array_remove_index (HxArray * array, hx_uint index_);
+/* hoox:test-only-end */
 HxArray * hx_array_remove_index_fast (HxArray * array, hx_uint index_);
 
 #define hx_array_append_val(a, v) hx_array_append_vals ((a), &(v), 1)
@@ -56,7 +58,9 @@ HxArray * hx_array_remove_index_fast (HxArray * array, hx_uint index_);
 
 HxPtrArray * hx_ptr_array_new (void);
 HxPtrArray * hx_ptr_array_sized_new (hx_uint reserved_size);
+/* hoox:test-only-begin */
 HxPtrArray * hx_ptr_array_new_with_free_func (HxDestroyNotify element_free_func);
+/* hoox:test-only-end */
 HxPtrArray * hx_ptr_array_new_full (hx_uint reserved_size,
     HxDestroyNotify element_free_func);
 hx_pointer * hx_ptr_array_free (HxPtrArray * array, hx_boolean free_segment);

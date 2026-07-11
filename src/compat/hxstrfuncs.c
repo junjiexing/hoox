@@ -47,6 +47,7 @@ hx_strdup_vprintf (const hx_char * format,
   return result;
 }
 
+/* hoox:test-only-begin */
 hx_char *
 hx_strdup_printf (const hx_char * format,
                  ...)
@@ -60,6 +61,7 @@ hx_strdup_printf (const hx_char * format,
 
   return result;
 }
+/* hoox:test-only-end */
 
 hx_char *
 hx_strconcat (const hx_char * string1,

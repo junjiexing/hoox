@@ -42,6 +42,7 @@ hx_string_sized_new (hx_size dfl_size)
   return s;
 }
 
+/* hoox:test-only-begin */
 HxString *
 hx_string_new (const hx_char * init)
 {
@@ -52,6 +53,7 @@ hx_string_new (const hx_char * init)
 
   return s;
 }
+/* hoox:test-only-end */
 
 hx_char *
 hx_string_free (HxString * string,
@@ -121,6 +123,7 @@ hx_string_append_c (HxString * string,
   return string;
 }
 
+/* hoox:test-only-begin */
 HxString *
 hx_string_prepend (HxString * string,
                   const hx_char * val)
@@ -134,6 +137,7 @@ hx_string_prepend (HxString * string,
 
   return string;
 }
+/* hoox:test-only-end */
 
 HxString *
 hx_string_append_vprintf (HxString * string,

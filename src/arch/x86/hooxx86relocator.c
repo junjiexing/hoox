@@ -201,6 +201,7 @@ hoox_x86_relocator_peek_next_write_insn (HooxX86Relocator * self)
   return self->input_insns[hoox_x86_relocator_outpos (self)];
 }
 
+/* hoox:test-only-begin */
 hx_pointer
 hoox_x86_relocator_peek_next_write_source (HooxX86Relocator * self)
 {
@@ -212,7 +213,9 @@ hoox_x86_relocator_peek_next_write_source (HooxX86Relocator * self)
 
   return HX_SIZE_TO_POINTER (next->address);
 }
+/* hoox:test-only-end */
 
+/* hoox:test-only-begin */
 void
 hoox_x86_relocator_skip_one (HooxX86Relocator * self)
 {
@@ -224,6 +227,7 @@ hoox_x86_relocator_skip_one (HooxX86Relocator * self)
 
   hoox_x86_relocator_put_label_for (self, next);
 }
+/* hoox:test-only-end */
 
 hx_boolean
 hoox_x86_relocator_write_one (HooxX86Relocator * self)
@@ -332,11 +336,13 @@ hoox_x86_relocator_write_all (HooxX86Relocator * self)
   hx_assert (count > 0);
 }
 
+/* hoox:test-only-begin */
 hx_boolean
 hoox_x86_relocator_eob (HooxX86Relocator * self)
 {
   return self->eob;
 }
+/* hoox:test-only-end */
 
 hx_boolean
 hoox_x86_relocator_eoi (HooxX86Relocator * self)

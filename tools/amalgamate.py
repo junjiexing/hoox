@@ -28,6 +28,13 @@ INCLUDE_LOCAL = re.compile(r'^\s*#\s*include\s*"([^"]+)"\s*$')
 INCLUDE_SYSTEM = re.compile(r'^\s*#\s*include\s*<([^>]+)>\s*$')
 PRAGMA_ONCE = re.compile(r'^\s*#\s*pragma\s+once\s*$')
 
+# Regions between these markers are test-only helpers (used by the test suite
+# but never by the hook engine). They stay in the normal sources — where they
+# can reach file-private static helpers — but are stripped from the single-file
+# amalgamation so hoox.c / hoox.h ship none of them.
+TESTONLY_BEGIN = re.compile(r'^\s*/\*\s*hoox:test-only-begin\s*\*/\s*$')
+TESTONLY_END = re.compile(r'^\s*/\*\s*hoox:test-only-end\s*\*/\s*$')
+
 
 def find_header(name, include_dirs, current_dir):
     bases = ([current_dir] if current_dir is not None else []) + include_dirs
@@ -55,9 +62,19 @@ class Amalgamator:
 
     def _emit_file(self, path):
         current_dir = os.path.dirname(path)
+        skipping = False
         with open(path, "r", encoding="utf-8") as f:
             for line in f:
                 stripped = line.rstrip("\n")
+
+                if TESTONLY_BEGIN.match(stripped):
+                    skipping = True
+                    continue
+                if TESTONLY_END.match(stripped):
+                    skipping = False
+                    continue
+                if skipping:
+                    continue
 
                 if PRAGMA_ONCE.match(stripped):
                     continue

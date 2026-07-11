@@ -680,6 +680,7 @@ skip:
   return TRUE;
 }
 
+/* hoox:test-only-begin */
 hx_boolean
 hoox_memory_mark_code (hx_pointer address,
                       hx_size size)
@@ -709,6 +710,7 @@ hoox_memory_mark_code (hx_pointer address,
 
   return success;
 }
+/* hoox:test-only-end */
 void
 hoox_ensure_code_readable (hx_constpointer address,
                           hx_size size)
@@ -979,6 +981,7 @@ hoox_alloc_n_pages (hx_uint n_pages,
   return result;
 }
 
+/* hoox:test-only-begin */
 hx_pointer
 hoox_alloc_n_pages_near (hx_uint n_pages,
                         HooxPageProtection prot,
@@ -991,6 +994,7 @@ hoox_alloc_n_pages_near (hx_uint n_pages,
 
   return result;
 }
+/* hoox:test-only-end */
 
 hx_boolean
 hoox_address_spec_is_satisfied_by (const HooxAddressSpec * spec,

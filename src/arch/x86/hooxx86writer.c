@@ -171,19 +171,23 @@ hoox_x86_writer_reset (HooxX86Writer * writer,
     hoox_metal_array_remove_all (&writer->label_refs);
 }
 
+/* hoox:test-only-begin */
 void
 hoox_x86_writer_set_target_cpu (HooxX86Writer * self,
                                HooxCpuType cpu_type)
 {
   self->target_cpu = cpu_type;
 }
+/* hoox:test-only-end */
 
+/* hoox:test-only-begin */
 void
 hoox_x86_writer_set_target_abi (HooxX86Writer * self,
                                HooxAbiType abi_type)
 {
   self->target_abi = abi_type;
 }
+/* hoox:test-only-end */
 
 hx_uint
 hoox_x86_writer_offset (HooxX86Writer * self)
@@ -301,6 +305,7 @@ hoox_x86_writer_add_label_reference_here (HooxX86Writer * self,
   r->size = size;
 }
 
+/* hoox:test-only-begin */
 hx_boolean
 hoox_x86_writer_put_call_address_with_arguments (HooxX86Writer * self,
                                                 HooxCallingConvention conv,
@@ -321,6 +326,7 @@ hoox_x86_writer_put_call_address_with_arguments (HooxX86Writer * self,
 
   return TRUE;
 }
+/* hoox:test-only-end */
 
 hx_boolean
 hoox_x86_writer_put_call_address_with_aligned_arguments (
@@ -344,6 +350,7 @@ hoox_x86_writer_put_call_address_with_aligned_arguments (
   return TRUE;
 }
 
+/* hoox:test-only-begin */
 hx_boolean
 hoox_x86_writer_put_call_reg_with_arguments (HooxX86Writer * self,
                                             HooxCallingConvention conv,
@@ -364,6 +371,7 @@ hoox_x86_writer_put_call_reg_with_arguments (HooxX86Writer * self,
 
   return TRUE;
 }
+/* hoox:test-only-end */
 
 static void
 hoox_x86_writer_put_argument_list_setup (HooxX86Writer * self,
@@ -613,6 +621,7 @@ hoox_x86_writer_get_needed_alignment_correction (HooxX86Writer * self,
   return (remainder != 0) ? 16 - remainder : 0;
 }
 
+/* hoox:test-only-begin */
 hx_boolean
 hoox_x86_writer_put_call_reg_offset_ptr_with_arguments (
     HooxX86Writer * self,
@@ -635,6 +644,7 @@ hoox_x86_writer_put_call_reg_offset_ptr_with_arguments (
 
   return TRUE;
 }
+/* hoox:test-only-end */
 
 hx_boolean
 hoox_x86_writer_put_call_address (HooxX86Writer * self,
@@ -788,6 +798,7 @@ hoox_x86_writer_put_call_indirect_label (HooxX86Writer * self,
   return TRUE;
 }
 
+/* hoox:test-only-begin */
 void
 hoox_x86_writer_put_call_near_label (HooxX86Writer * self,
                                     hx_constpointer label_id)
@@ -795,6 +806,7 @@ hoox_x86_writer_put_call_near_label (HooxX86Writer * self,
   hoox_x86_writer_put_call_address (self, self->pc);
   hoox_x86_writer_add_label_reference_here (self, label_id, HOOX_LREF_NEAR);
 }
+/* hoox:test-only-end */
 
 void
 hoox_x86_writer_put_ret (HooxX86Writer * self)
@@ -933,6 +945,7 @@ hoox_x86_writer_put_jmp_reg (HooxX86Writer * self,
   return TRUE;
 }
 
+/* hoox:test-only-begin */
 hx_boolean
 hoox_x86_writer_put_jmp_reg_ptr (HooxX86Writer * self,
                                 HooxX86Reg reg)
@@ -966,6 +979,7 @@ hoox_x86_writer_put_jmp_reg_ptr (HooxX86Writer * self,
 
   return TRUE;
 }
+/* hoox:test-only-end */
 
 hx_boolean
 hoox_x86_writer_put_jmp_reg_offset_ptr (HooxX86Writer * self,
@@ -1015,6 +1029,7 @@ hoox_x86_writer_put_jmp_reg_offset_ptr (HooxX86Writer * self,
   return TRUE;
 }
 
+/* hoox:test-only-begin */
 hx_boolean
 hoox_x86_writer_put_jmp_near_ptr (HooxX86Writer * self,
                                  HooxAddress address)
@@ -1042,6 +1057,7 @@ hoox_x86_writer_put_jmp_near_ptr (HooxX86Writer * self,
 
   return TRUE;
 }
+/* hoox:test-only-end */
 
 /*
  * This instruction causes a UD exception when executed, which isn't very
@@ -1115,6 +1131,7 @@ hoox_x86_writer_put_jcc_short_label (HooxX86Writer * self,
   hoox_x86_writer_add_label_reference_here (self, label_id, HOOX_LREF_SHORT);
 }
 
+/* hoox:test-only-begin */
 void
 hoox_x86_writer_put_jcc_near_label (HooxX86Writer * self,
                                    hx_x86_insn instruction_id,
@@ -1125,6 +1142,7 @@ hoox_x86_writer_put_jcc_near_label (HooxX86Writer * self,
       HX_SIZE_TO_POINTER (self->pc), hint);
   hoox_x86_writer_add_label_reference_here (self, label_id, HOOX_LREF_NEAR);
 }
+/* hoox:test-only-end */
 
 static hx_boolean
 hoox_x86_writer_put_add_or_sub_reg_imm (HooxX86Writer * self,
@@ -1174,6 +1192,7 @@ hoox_x86_writer_put_add_reg_imm (HooxX86Writer * self,
   return hoox_x86_writer_put_add_or_sub_reg_imm (self, reg, imm_value, TRUE);
 }
 
+/* hoox:test-only-begin */
 hx_boolean
 hoox_x86_writer_put_add_reg_reg (HooxX86Writer * self,
                                 HooxX86Reg dst_reg,
@@ -1197,6 +1216,7 @@ hoox_x86_writer_put_add_reg_reg (HooxX86Writer * self,
 
   return TRUE;
 }
+/* hoox:test-only-end */
 
 hx_boolean
 hoox_x86_writer_put_sub_reg_imm (HooxX86Writer * self,
@@ -1206,6 +1226,7 @@ hoox_x86_writer_put_sub_reg_imm (HooxX86Writer * self,
   return hoox_x86_writer_put_add_or_sub_reg_imm (self, reg, imm_value, FALSE);
 }
 
+/* hoox:test-only-begin */
 hx_boolean
 hoox_x86_writer_put_inc_reg (HooxX86Writer * self,
                             HooxX86Reg reg)
@@ -1229,7 +1250,9 @@ hoox_x86_writer_put_inc_reg (HooxX86Writer * self,
 
   return TRUE;
 }
+/* hoox:test-only-end */
 
+/* hoox:test-only-begin */
 hx_boolean
 hoox_x86_writer_put_dec_reg (HooxX86Writer * self,
                             HooxX86Reg reg)
@@ -1253,6 +1276,7 @@ hoox_x86_writer_put_dec_reg (HooxX86Writer * self,
 
   return TRUE;
 }
+/* hoox:test-only-end */
 
 static hx_boolean
 hoox_x86_writer_put_inc_or_dec_reg_ptr (HooxX86Writer * self,
@@ -1290,6 +1314,7 @@ hoox_x86_writer_put_inc_or_dec_reg_ptr (HooxX86Writer * self,
   return TRUE;
 }
 
+/* hoox:test-only-begin */
 hx_boolean
 hoox_x86_writer_put_lock_xadd_reg_ptr_reg (HooxX86Writer * self,
                                           HooxX86Reg dst_reg,
@@ -1323,6 +1348,7 @@ hoox_x86_writer_put_lock_xadd_reg_ptr_reg (HooxX86Writer * self,
 
   return TRUE;
 }
+/* hoox:test-only-end */
 
 static hx_boolean
 hoox_x86_writer_put_lock_inc_or_dec_imm32_ptr (HooxX86Writer * self,
@@ -1350,20 +1376,25 @@ hoox_x86_writer_put_lock_inc_or_dec_imm32_ptr (HooxX86Writer * self,
   return TRUE;
 }
 
+/* hoox:test-only-begin */
 hx_boolean
 hoox_x86_writer_put_lock_inc_imm32_ptr (HooxX86Writer * self,
                                        hx_pointer target)
 {
   return hoox_x86_writer_put_lock_inc_or_dec_imm32_ptr (self, target, TRUE);
 }
+/* hoox:test-only-end */
 
+/* hoox:test-only-begin */
 hx_boolean
 hoox_x86_writer_put_lock_dec_imm32_ptr (HooxX86Writer * self,
                                        hx_pointer target)
 {
   return hoox_x86_writer_put_lock_inc_or_dec_imm32_ptr (self, target, FALSE);
 }
+/* hoox:test-only-end */
 
+/* hoox:test-only-begin */
 hx_boolean
 hoox_x86_writer_put_and_reg_reg (HooxX86Writer * self,
                                 HooxX86Reg dst_reg,
@@ -1388,6 +1419,7 @@ hoox_x86_writer_put_and_reg_reg (HooxX86Writer * self,
 
   return TRUE;
 }
+/* hoox:test-only-end */
 
 hx_boolean
 hoox_x86_writer_put_and_reg_u32 (HooxX86Writer * self,
@@ -1418,6 +1450,7 @@ hoox_x86_writer_put_and_reg_u32 (HooxX86Writer * self,
   return TRUE;
 }
 
+/* hoox:test-only-begin */
 hx_boolean
 hoox_x86_writer_put_shl_reg_u8 (HooxX86Writer * self,
                                HooxX86Reg reg,
@@ -1437,6 +1470,7 @@ hoox_x86_writer_put_shl_reg_u8 (HooxX86Writer * self,
 
   return TRUE;
 }
+/* hoox:test-only-end */
 
 hx_boolean
 hoox_x86_writer_put_mov_reg_reg (HooxX86Writer * self,
@@ -1706,6 +1740,7 @@ hoox_x86_writer_put_mov_reg_reg_offset_ptr (HooxX86Writer * self,
   return TRUE;
 }
 
+/* hoox:test-only-begin */
 hx_boolean
 hoox_x86_writer_put_mov_reg_near_ptr (HooxX86Writer * self,
                                      HooxX86Reg dst_reg,
@@ -1746,7 +1781,9 @@ hoox_x86_writer_put_mov_reg_near_ptr (HooxX86Writer * self,
 
   return TRUE;
 }
+/* hoox:test-only-end */
 
+/* hoox:test-only-begin */
 hx_boolean
 hoox_x86_writer_put_mov_near_ptr_reg (HooxX86Writer * self,
                                      HooxAddress dst_address,
@@ -1787,6 +1824,7 @@ hoox_x86_writer_put_mov_near_ptr_reg (HooxX86Writer * self,
 
   return TRUE;
 }
+/* hoox:test-only-end */
 
 static hx_boolean
 hoox_x86_writer_put_mov_reg_imm_ptr (HooxX86Writer * self,
@@ -2094,6 +2132,7 @@ hoox_x86_writer_put_test_reg_reg (HooxX86Writer * self,
   return TRUE;
 }
 
+/* hoox:test-only-begin */
 hx_boolean
 hoox_x86_writer_put_cmp_reg_i32 (HooxX86Writer * self,
                                 HooxX86Reg reg,
@@ -2122,7 +2161,9 @@ hoox_x86_writer_put_cmp_reg_i32 (HooxX86Writer * self,
 
   return TRUE;
 }
+/* hoox:test-only-end */
 
+/* hoox:test-only-begin */
 hx_boolean
 hoox_x86_writer_put_cmp_reg_offset_ptr_reg (HooxX86Writer * self,
                                            HooxX86Reg reg_a,
@@ -2159,6 +2200,7 @@ hoox_x86_writer_put_cmp_reg_offset_ptr_reg (HooxX86Writer * self,
 
   return TRUE;
 }
+/* hoox:test-only-end */
 
 void
 hoox_x86_writer_put_cld (HooxX86Writer * self)
@@ -2166,17 +2208,21 @@ hoox_x86_writer_put_cld (HooxX86Writer * self)
   hoox_x86_writer_put_u8 (self, 0xfc);
 }
 
+/* hoox:test-only-begin */
 void
 hoox_x86_writer_put_nop (HooxX86Writer * self)
 {
   hoox_x86_writer_put_u8 (self, 0x90);
 }
+/* hoox:test-only-end */
 
+/* hoox:test-only-begin */
 void
 hoox_x86_writer_put_breakpoint (HooxX86Writer * self)
 {
   hoox_x86_writer_put_u8 (self, 0xcc);
 }
+/* hoox:test-only-end */
 
 /*
  * Whilst the 0x90 opcode for NOP is commonly known, the Intel Optimization
@@ -2247,19 +2293,23 @@ hoox_x86_writer_put_nop_padding (HooxX86Writer * self,
   }
 }
 
+/* hoox:test-only-begin */
 hx_boolean
 hoox_x86_writer_put_fxsave_reg_ptr (HooxX86Writer * self,
                                    HooxX86Reg reg)
 {
   return hoox_x86_writer_put_fx_save_or_restore_reg_ptr (self, 0, reg);
 }
+/* hoox:test-only-end */
 
+/* hoox:test-only-begin */
 hx_boolean
 hoox_x86_writer_put_fxrstor_reg_ptr (HooxX86Writer * self,
                                     HooxX86Reg reg)
 {
   return hoox_x86_writer_put_fx_save_or_restore_reg_ptr (self, 1, reg);
 }
+/* hoox:test-only-end */
 
 static hx_boolean
 hoox_x86_writer_put_fx_save_or_restore_reg_ptr (HooxX86Writer * self,
