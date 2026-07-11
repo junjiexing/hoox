@@ -155,9 +155,18 @@ jobs:
       - name: Build & test (macOS clang)
         if: ${{ matrix.supported && matrix.toolchain == 'macos-clang' }}
         run: |
-          cmake -B build -DCMAKE_C_COMPILER=clang
+          cmake -B build -DCMAKE_C_COMPILER=clang -DCMAKE_BUILD_TYPE=Debug
           cmake --build build
-          ctest --test-dir build --output-on-failure
+          if ! ctest --test-dir build --output-on-failure; then
+            echo "::group::interceptor suite (full run)"
+            ./build/tests/test_interceptor || echo "exit=$?"
+            echo "::endgroup::"
+            echo "::group::lldb: interceptor_smoke"
+            lldb --batch -o run -k "bt" -k quit \
+              ./build/tests/test_interceptor_smoke 2>&1 | tail -40 || true
+            echo "::endgroup::"
+            exit 1
+          fi
 
       # ---- Linux ARM 32-bit (cross-compile + run tests under qemu-arm) ---
       - name: Install ARM cross toolchain + qemu
