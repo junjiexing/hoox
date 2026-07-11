@@ -11,7 +11,6 @@
 
 #include "hooxdefs.h"
 
-#define HOOX_TYPE_MATCH_PATTERN (hoox_match_pattern_get_type ())
 #define HOOX_TYPE_MEMORY_RANGE (hoox_memory_range_get_type ())
 #define HOOX_MEMORY_RANGE_INCLUDES(r, a) ((a) >= (r)->base_address && \
     (a) < ((r)->base_address + (r)->size))
@@ -31,10 +30,6 @@ typedef struct _HooxAddressSpec HooxAddressSpec;
 typedef struct _HooxRangeDetails HooxRangeDetails;
 typedef struct _HooxMemoryRange HooxMemoryRange;
 typedef struct _HooxFileMapping HooxFileMapping;
-typedef struct _HooxMatchPattern HooxMatchPattern;
-typedef struct _HooxPointerMatch HooxPointerMatch;
-
-typedef hx_boolean (* HooxMemoryIsNearFunc) (hx_pointer memory, hx_pointer address);
 
 enum _HooxPtrauthSupport
 {
@@ -92,19 +87,11 @@ struct _HooxFileMapping
   hx_size size;
 };
 
-struct _HooxPointerMatch
-{
-  HooxAddress address;
-  hx_size value;
-};
-
 typedef hx_boolean (* HooxFoundRangeFunc) (const HooxRangeDetails * details,
     hx_pointer user_data);
 typedef void (* HooxMemoryPatchApplyFunc) (hx_pointer mem, hx_pointer user_data);
 typedef void (* HooxMemoryPatchPagesApplyFunc) (hx_pointer mem,
     hx_pointer target_page, hx_uint n_pages, hx_pointer user_data);
-typedef hx_boolean (* HooxMemoryScanMatchFunc) (HooxAddress address, hx_size size,
-    hx_pointer user_data);
 
 HOOX_API void hoox_internal_heap_ref (void);
 HOOX_API void hoox_internal_heap_unref (void);
@@ -130,20 +117,7 @@ HOOX_API void hoox_memory_dispose_writable_pages (hx_pointer first_page,
     hx_uint n_pages);
 HOOX_API hx_boolean hoox_memory_mark_code (hx_pointer address, hx_size size);
 
-HOOX_API void hoox_memory_scan (const HooxMemoryRange * range,
-    const HooxMatchPattern * pattern, HooxMemoryScanMatchFunc func,
-    hx_pointer user_data);
-HOOX_API HxArray * hoox_memory_find_pointers (const HooxMemoryRange * ranges,
-    hx_uint n_ranges, const hx_size * values, hx_uint n_values, hx_size mask);
 
-HOOX_API HxType hoox_match_pattern_get_type (void) HX_GNUC_CONST;
-HOOX_API HooxMatchPattern * hoox_match_pattern_new_from_string (
-    const hx_char * pattern_str);
-HOOX_API HooxMatchPattern * hoox_match_pattern_ref (HooxMatchPattern * pattern);
-HOOX_API void hoox_match_pattern_unref (HooxMatchPattern * pattern);
-HOOX_API hx_uint hoox_match_pattern_get_size (const HooxMatchPattern * pattern);
-HOOX_API HxPtrArray * hoox_match_pattern_get_tokens (
-    const HooxMatchPattern * pattern);
 
 HOOX_API void hoox_ensure_code_readable (hx_constpointer address, hx_size size);
 

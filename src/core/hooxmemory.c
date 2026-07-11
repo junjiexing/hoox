@@ -55,41 +55,9 @@
 # include "hoox/hooxdarwin.h"
 #endif
 
-#if defined (HAVE_I386) && HX_SIZEOF_VOID_P == 8
-# include <emmintrin.h>
-# define HOOX_HAVE_POINTER_SCAN_SIMD
-#elif defined (HAVE_ARM64)
-# include <arm_neon.h>
-# define HOOX_HAVE_POINTER_SCAN_SIMD
-#endif
-
-#ifdef HOOX_HAVE_POINTER_SCAN_SIMD
-# if defined (HAVE_I386)
-typedef __m128i HooxScanVec;
-#  define HOOX_SCAN_VEC_SET1(value) _mm_set1_epi64x (value)
-#  define HOOX_SCAN_VEC_LOAD(p) _mm_loadu_si128 ((const __m128i *) (p))
-#  define HOOX_SCAN_VEC_AND(a, b) _mm_and_si128 (a, b)
-#  define HOOX_SCAN_VEC_OR(a, b) _mm_or_si128 (a, b)
-# elif defined (HAVE_ARM64)
-typedef uint64x2_t HooxScanVec;
-#  define HOOX_SCAN_VEC_SET1(value) vdupq_n_u64 (value)
-#  define HOOX_SCAN_VEC_LOAD(p) vld1q_u64 ((const hx_uint64 *) (p))
-#  define HOOX_SCAN_VEC_AND(a, b) vandq_u64 (a, b)
-#  define HOOX_SCAN_VEC_OR(a, b) vorrq_u64 (a, b)
-# endif
-#endif
-
-#define HOOX_POINTER_SCAN_TILE_WORDS \
-    ((4 * 1024 * 1024) / sizeof (hx_pointer))
-#define HOOX_POINTER_SCAN_INLINE_LIMIT HOOX_POINTER_SCAN_TILE_WORDS
-#define HOOX_POINTER_SCAN_MAX_WORKERS 4
-
 typedef struct _HooxPatchCodeContext HooxPatchCodeContext;
 typedef struct _HooxPageLump HooxPageLump;
 typedef struct _HooxSuspendOperation HooxSuspendOperation;
-typedef struct _HooxPointerScan HooxPointerScan;
-typedef struct _HooxPointerScanTile HooxPointerScanTile;
-typedef struct _HooxPointerScanTask HooxPointerScanTask;
 
 
 struct _HooxPatchCodeContext
@@ -111,27 +79,6 @@ struct _HooxSuspendOperation
 {
   HooxThreadId current_thread_id;
   HooxMetalArray suspended_threads;
-};
-
-struct _HooxPointerScan
-{
-  const hx_size * values;
-  hx_uint n_values;
-  hx_size mask;
-  HxArray * tiles;
-};
-
-struct _HooxPointerScanTile
-{
-  const hx_size * words;
-  hx_size n_words;
-};
-
-struct _HooxPointerScanTask
-{
-  HooxPointerScan * scan;
-  const HooxPointerScanTile * tile;
-  HxArray * matches;
 };
 
 static void hoox_apply_patch_code (hx_pointer mem, hx_pointer target_page,
@@ -762,16 +709,6 @@ hoox_memory_mark_code (hx_pointer address,
 
   return success;
 }
-
-/**
- * hoox_memory_scan:
- * @range: the #HooxMemoryRange to scan
- * @pattern: the #HooxMatchPattern to look for occurrences of
- * @func: (scope call): function to process each match
- * @user_data: data to pass to @func
- *
- * Scans @range for occurrences of @pattern, calling @func with each match.
- */
 void
 hoox_ensure_code_readable (hx_constpointer address,
                           hx_size size)

@@ -12,7 +12,6 @@
 #include "hooxdefs.h"
 #include "hooxinvocationlistener.h"
 
-#include <hx_disasm.h>
 
 HX_BEGIN_DECLS
 
@@ -149,8 +148,6 @@ HOOX_API void hoox_interceptor_with_lock_held (HooxInterceptor * self,
     HooxInterceptorLockedFunc func, hx_pointer user_data);
 HOOX_API hx_boolean hoox_interceptor_is_locked (HooxInterceptor * self);
 
-HOOX_API hx_size hoox_interceptor_detect_hook_size (hx_constpointer code,
-    hx_csh capstone, hx_insn * insn);
 
 HX_END_DECLS
 

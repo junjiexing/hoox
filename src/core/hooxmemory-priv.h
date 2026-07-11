@@ -9,22 +9,6 @@
 
 #include "hooxmemory.h"
 
-typedef struct _HooxMatchToken HooxMatchToken;
-
-typedef enum _HooxMatchType
-{
-  HOOX_MATCH_EXACT,
-  HOOX_MATCH_WILDCARD,
-  HOOX_MATCH_MASK
-} HooxMatchType;
-
-struct _HooxMatchToken
-{
-  HooxMatchType type;
-  HxArray * bytes;
-  HxArray * masks;
-  hx_uint offset;
-};
 
 HX_BEGIN_DECLS
 

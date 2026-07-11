@@ -1277,24 +1277,6 @@ hoox_interceptor_is_locked (HooxInterceptor * self)
   return FALSE;
 }
 
-/**
- * hoox_interceptor_detect_hook_size: (skip)
- * @code: code address to analyze
- * @capstone: Capstone handle
- * @insn: Capstone instruction
- *
- * Detects the minimum hook size needed at the given code address.
- *
- * Returns: the hook size in bytes
- */
-hx_size
-hoox_interceptor_detect_hook_size (hx_constpointer code,
-                                  hx_csh capstone,
-                                  hx_insn * insn)
-{
-  return _hoox_interceptor_backend_detect_hook_size (code, capstone, insn);
-}
-
 hx_pointer
 _hoox_interceptor_peek_top_caller_return_address (void)
 {
