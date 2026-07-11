@@ -24,7 +24,11 @@ static int hx_failures = 0;
       } \
     } HX_STMT_END
 
-/* x86-64: mov eax, imm32 ; ret  (B8 <imm32> C3) */
+/*
+ * Minimal "return a constant" function in native machine code:
+ *   x86/x86-64: mov eax, imm32 ; ret   (B8 <imm32> C3)
+ *   arm64:      mov w0, #imm   ; ret    (MOVZ 0x52800000|(imm<<5); RET D65F03C0)
+ */
 typedef int (* IntFunc) (void);
 
 typedef struct
@@ -46,8 +50,16 @@ main (void)
   hx_uint page_size;
   hx_uint8 * page;
   IntFunc fn;
+#if defined (__aarch64__) || defined (_M_ARM64)
+  /* mov w0, #42 ; ret   and   mov w0, #99 ; ret  (little-endian) */
+  const hx_uint8 code_42[8] =
+      { 0x40, 0x05, 0x80, 0x52, 0xc0, 0x03, 0x5f, 0xd6 };
+  const hx_uint8 code_99[8] =
+      { 0x60, 0x0c, 0x80, 0x52, 0xc0, 0x03, 0x5f, 0xd6 };
+#else
   const hx_uint8 code_42[6] = { 0xB8, 0x2A, 0x00, 0x00, 0x00, 0xC3 };
   const hx_uint8 code_99[6] = { 0xB8, 0x63, 0x00, 0x00, 0x00, 0xC3 };
+#endif
   PatchData pd;
 
   hoox_internal_heap_ref ();
