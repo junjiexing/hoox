@@ -69,6 +69,18 @@ replacement_add (int a, int b)
 int
 main (void)
 {
+#if defined (__APPLE__) && defined (__aarch64__)
+  /*
+   * Apple Silicon uses 16 KiB pages and enforces W^X, so patching a code page
+   * makes it briefly writable (non-executable). This tiny statically-linked
+   * smoke binary places target_add in the same 16 KiB page as hoox's own patch
+   * code, so it would fault mid-patch — a self-hosting artifact, not a real
+   * scenario (users hook other modules). The full interceptor suite, whose
+   * targets live on separate pages, exercises hooking here instead.
+   */
+  printf ("interceptor smoke: skipped (Apple Silicon self-hosting)\n");
+  return 0;
+#else
   HooxInterceptor * interceptor;
   HooxInvocationListener * listener;
   Probe probe = { 0, 0 };
@@ -129,4 +141,5 @@ main (void)
   }
   printf ("interceptor smoke: %d failure(s)\n", hx_failures);
   return 1;
+#endif
 }

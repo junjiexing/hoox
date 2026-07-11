@@ -85,63 +85,34 @@ _hoox_memory_query_protections (HxPtrArray * sorted_pages,
   }
 }
 
+/*
+ * hoox patches code via mprotect + VM_PROT_COPY (see hoox_try_mprotect above),
+ * which yields a private, writable-then-executable copy of the target pages.
+ * The vm_remap "writable alias" alternative does not work on Apple Silicon:
+ * signed __TEXT pages have max_protection == RX, so an alias cannot be made
+ * writable (that requires the debugger page-plan mechanism, not shipped here).
+ */
 hx_boolean
 hoox_memory_can_remap_writable (void)
 {
-#if defined (HAVE_ARM64)
-  /*
-   * Apple Silicon enforces W^X: an executable page can never be made writable
-   * in place. Patch code through a separate writable vm_remap alias instead —
-   * always, not via a probe. (macOS uses 16 KiB pages, so a single target page
-   * can span unrelated __TEXT, including hoox's own code; mprotecting it to RW
-   * would drop execute on live code mid-patch.)
-   */
-  return TRUE;
-#else
-  /* Intel macOS permits the RWX / mprotect + VM_PROT_COPY path. */
   return FALSE;
-#endif
 }
 
-/*
- * Create a writable alias of the executable target pages (sharing the same
- * physical pages, copy == FALSE), so patches land in the code without ever
- * dropping execute permission on the running page — essential on Apple Silicon,
- * where the mprotect-to-writable path would fault any co-resident code.
- */
 hx_pointer
 hoox_memory_try_remap_writable_pages (hx_pointer first_page,
                                      hx_uint n_pages)
 {
-  mach_port_t task = mach_task_self ();
-  mach_vm_size_t size = (mach_vm_size_t) n_pages * hoox_query_page_size ();
-  mach_vm_address_t writable = 0;
-  vm_prot_t cur_prot = VM_PROT_NONE, max_prot = VM_PROT_NONE;
-
-  if (mach_vm_remap (task, &writable, size, 0, VM_FLAGS_ANYWHERE, task,
-      (mach_vm_address_t) (hx_uintptr) first_page, FALSE, &cur_prot, &max_prot,
-      VM_INHERIT_NONE) != KERN_SUCCESS)
-  {
-    return NULL;
-  }
-
-  if (mach_vm_protect (task, writable, size, FALSE,
-      VM_PROT_READ | VM_PROT_WRITE) != KERN_SUCCESS)
-  {
-    mach_vm_deallocate (task, writable, size);
-    return NULL;
-  }
-
-  return (hx_pointer) (hx_uintptr) writable;
+  (void) first_page;
+  (void) n_pages;
+  return NULL;
 }
 
 void
 hoox_memory_dispose_writable_pages (hx_pointer first_page,
                                    hx_uint n_pages)
 {
-  mach_vm_deallocate (mach_task_self (),
-      (mach_vm_address_t) (hx_uintptr) first_page,
-      (mach_vm_size_t) n_pages * hoox_query_page_size ());
+  (void) first_page;
+  (void) n_pages;
 }
 
 static vm_prot_t
