@@ -85,12 +85,22 @@ _hoox_memory_query_protections (HxPtrArray * sorted_pages,
   }
 }
 
-HX_GNUC_INTERNAL hx_boolean hoox_darwin_is_debugger_mapping_enforced (void);
-
 hx_boolean
 hoox_memory_can_remap_writable (void)
 {
-  return hoox_darwin_is_debugger_mapping_enforced ();
+#if defined (HAVE_ARM64)
+  /*
+   * Apple Silicon enforces W^X: an executable page can never be made writable
+   * in place. Patch code through a separate writable vm_remap alias instead —
+   * always, not via a probe. (macOS uses 16 KiB pages, so a single target page
+   * can span unrelated __TEXT, including hoox's own code; mprotecting it to RW
+   * would drop execute on live code mid-patch.)
+   */
+  return TRUE;
+#else
+  /* Intel macOS permits the RWX / mprotect + VM_PROT_COPY path. */
+  return FALSE;
+#endif
 }
 
 /*
