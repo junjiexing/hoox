@@ -220,9 +220,12 @@ jobs:
             run
             printf "\n=== CRASH BACKTRACE ===\n"
             bt full
+            printf "\n=== leave-side context ===\n"
+            print interceptor_ctx
+            print interceptor_ctx->stack
+            print interceptor_ctx->stack->len
             quit
             GDB
-              sed -i 's/^            //' /tmp/cmds.gdb
               gdb -batch -x /tmp/cmds.gdb "$t" 2>&1 | tail -80 || true
               exit 1
             fi
