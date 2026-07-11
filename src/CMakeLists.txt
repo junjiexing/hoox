@@ -102,6 +102,7 @@ elseif(HOOX_ARCH_FAMILY STREQUAL "arm64")
 elseif(HOOX_ARCH_FAMILY STREQUAL "arm")
   list(APPEND HOOX_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/backend/arm/hooxcpucontext-arm.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/backend/arm/hooxcpu-arm.c"
     "${CMAKE_CURRENT_SOURCE_DIR}/backend/arm/hooxinterceptor-arm.c")
 endif()
 
