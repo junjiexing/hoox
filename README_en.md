@@ -2,6 +2,12 @@
 
 [中文](README.md) · **English** — full API reference: [API_en.md](docs/API_en.md)
 
+> [!WARNING]
+> This project was **developed entirely by AI (vibe coding)** and has **not been
+> rigorously tested**. The in-tree test suite is green on the supported
+> platforms, but correctness and stability in production or edge-case scenarios
+> are not guaranteed. **Use with caution, at your own risk.**
+
 A minimal **inline-hooking** library in pure C, extracted and slimmed down from
 [frida-gum](https://github.com/frida/frida-gum). hoox keeps only the inline-hook
 (Interceptor) capability and drops everything else (Stalker, backtracer, symbol

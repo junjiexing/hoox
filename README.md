@@ -2,6 +2,11 @@
 
 **中文** · [English](README_en.md) — 完整 API 参考：[API.md](docs/API.md)
 
+> [!WARNING]
+> 本项目**完全由 AI（Vibe Coding）自动开发完成**，**未经过严格测试**。
+> 虽然仓库内的测试套件在已支持的平台上全绿，但不保证在生产环境或边缘场景下的
+> 正确性与稳定性。**请谨慎使用，风险自负。**
+
 一个用纯 C 编写的极简 **inline hook（内联挂钩）** 库，从
 [frida-gum](https://github.com/frida/frida-gum) 中精简提取而来。hoox 只保留
 inline hook（Interceptor）能力，去掉了其余一切（Stalker、backtracer、符号解析、
