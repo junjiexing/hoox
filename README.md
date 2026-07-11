@@ -74,6 +74,12 @@ dyld 模块枚举）；关键点是 patch 代码签名过的 `__TEXT` 页需用 
 CI 上验证，interceptor 行为套件全绿。ARM64 上还接入了自研 Darwin code-segment（`hooxcodesegment-darwin.c`，
 新内核默认走 mprotect+COPY 路径）。其它 OS 还需各自的 backend；MIPS 在 frida 本身即为部分/实验性支持。
 
+> **⚠️ Apple Silicon 已知限制(自宿主):** 在 Apple Silicon(16 KiB 页 + 强制 W^X)上,patch 一页代码时
+> 该页会短暂失去执行权限。若被 hook 的函数与 hoox **自身的 patch 代码**恰好落在同一个 16 KiB 页,补丁过程
+> 会崩溃。这只在"把 hoox 静态链接进目标、并 hook 同一二进制内、且恰好同页的函数"时发生;hook 其它模块/库
+> 不受影响。hoox 会在 attach/replace 时**检测到这种碰撞并返回错误(`HOOX_ATTACH_POLICY_VIOLATION` /
+> 对应的 replace 错误码),而不是崩溃**。彻底消除需要"经独立映射打补丁"机制(计划中)。
+
 ## 文档
 
 - **[API 参考（中文）](docs/API.md)** —— 每个公共函数、类型、选项，附线程安全说明。

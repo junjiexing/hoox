@@ -45,7 +45,10 @@ WRITE 时加 `VM_PROT_COPY`**（生成可写私有副本，绕过 W^X；`mprotec
 都走这条路径。**Apple Silicon 额外注意：16 KiB 页**——单个目标页可能横跨 hoox 自身代码，故不能把可执行页
 mprotect 成 RW（会掉 X）；vm_remap 可写别名也不行（签名 `__TEXT` 的 max_prot 为 RX，需 frida 未提取的
 page-plan-builder/调试器映射）。因此 `test_memory`（裸 RWX）与 `interceptor_smoke`（自宿主、目标与 hoox
-代码同页）在 Apple Silicon 上跳过——完整 interceptor 套件（目标在独立页）已充分验证。`arch/arm64` interceptor
+代码同页）在 Apple Silicon 上跳过——完整 interceptor 套件（目标在独立页）已充分验证。**运行时护栏**：
+`hoox_interceptor_instrument` 里 `hoox_interceptor_target_unsafe_to_patch()`（仅 `HAVE_DARWIN && HAVE_ARM64`
+编译)检测"目标页是否与 hoox 自身 patch 代码同页",若是则 attach/replace 返回 `POLICY_VIOLATION` 而非崩溃。
+彻底解决需"经独立映射打补丁"（page-plan / MAP_JIT stub），留待在 Apple Silicon 设备上开发。`arch/arm64` interceptor
 的 DarwinGrafter（Mach-O import 挂钩，hoox 不提供）用 `HOOX_HAVE_DARWIN_GRAFTER`（永不定义）门控掉。
 另提供 `hooxcodesegment-darwin.c`（老内核用；新内核 `is_supported` 返回 FALSE）。下一步：iOS/Android/其它平台。
 

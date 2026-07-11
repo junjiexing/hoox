@@ -86,6 +86,16 @@ Darwin code segment, `hooxcodesegment-darwin.c`, is also provided for older
 kernels.) Other OSes still need their own backend. MIPS is partial/experimental
 in frida itself.
 
+> **⚠️ Apple Silicon limitation (self-hosting):** on Apple Silicon (16 KiB pages
+> + enforced W^X), patching a page briefly removes its execute permission. If the
+> hooked function shares its 16 KiB page with hoox's *own* patch-time code, the
+> patch faults. This only happens when hoox is statically linked into the same
+> binary as the target and the two land on the same page; hooking other modules/
+> libraries is unaffected. hoox **detects this collision at attach/replace time
+> and returns an error (`HOOX_ATTACH_POLICY_VIOLATION` / the matching replace
+> code) instead of crashing**. Removing it entirely needs a patch-through-a-
+> separate-mapping mechanism (planned).
+
 ## Documentation
 
 - **[API reference (English)](docs/API_en.md)** — every public function, type

@@ -1312,6 +1312,55 @@ fallback:
   return return_address;
 }
 
+/*
+ * Guard against a self-hosting patch hazard on W^X platforms (Apple Silicon).
+ *
+ * There, patching a page temporarily strips execute permission from it (no RWX,
+ * no writable remap of signed __TEXT, and the code segment is unavailable on
+ * modern kernels). macOS also uses 16 KiB pages, so a single target page can
+ * span a lot of unrelated __TEXT. If the target function shares its page with
+ * hoox's own patch-time code, that code would fault the instant we make the
+ * page writable — mid-patch. Detect the collision up front and refuse to
+ * instrument (a graceful error) rather than crash.
+ *
+ * This only arises when hoox is statically linked into the same binary as the
+ * target and the two land on the same page; hooking other modules/libraries is
+ * unaffected. Removing the limitation needs the write-through-separate-mapping
+ * mechanism (see docs) — until then this converts a silent crash into an error.
+ */
+static hx_boolean
+hoox_interceptor_target_unsafe_to_patch (hx_constpointer target)
+{
+#if defined (HAVE_DARWIN) && defined (HAVE_ARM64)
+  const hx_pointer anchors[] = {
+    (hx_pointer) hoox_memory_patch_code_pages,
+    (hx_pointer) hoox_apply_updates,
+    (hx_pointer) hx_hash_table_lookup,
+  };
+  hx_size page_size, target_page;
+  hx_uint i;
+
+  /* No hazard if patching keeps the page executable. */
+  if (hoox_query_is_rwx_supported () || hoox_memory_can_remap_writable () ||
+      hoox_code_segment_is_supported ())
+    return FALSE;
+
+  page_size = hoox_query_page_size ();
+  target_page = HX_POINTER_TO_SIZE (target) & ~(page_size - 1);
+
+  for (i = 0; i != HX_N_ELEMENTS (anchors); i++)
+  {
+    if ((HX_POINTER_TO_SIZE (anchors[i]) & ~(page_size - 1)) == target_page)
+      return TRUE;
+  }
+
+  return FALSE;
+#else
+  (void) target;
+  return FALSE;
+#endif
+}
+
 static HooxFunctionContext *
 hoox_interceptor_instrument (HooxInterceptor * self,
                             HooxInterceptorType type,
@@ -1337,6 +1386,12 @@ hoox_interceptor_instrument (HooxInterceptor * self,
       return NULL;
     }
     return ctx;
+  }
+
+  if (hoox_interceptor_target_unsafe_to_patch (function_address))
+  {
+    *error = HOOX_INSTRUMENTATION_ERROR_POLICY_VIOLATION;
+    return NULL;
   }
 
   if (self->backend == NULL)
