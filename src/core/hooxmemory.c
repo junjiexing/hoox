@@ -10,7 +10,6 @@
 
 #include "hooxcloak-priv.h"
 #include "hooxcodesegment.h"
-#include "hooxlibc.h"
 #include "hooxmemory-priv.h"
 #include "hooxmetalarray.h"
 #include "hooxprocess-priv.h"

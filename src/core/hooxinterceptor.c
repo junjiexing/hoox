@@ -11,7 +11,6 @@
 
 #include "hooxcodesegment.h"
 #include "hooxinterceptor-priv.h"
-#include "hooxlibc.h"
 #include "hooxmemory.h"
 #include "hooxmetalarray.h"
 #include "hooxprocess-priv.h"
@@ -2294,10 +2293,10 @@ interceptor_thread_context_new (void)
 
   context = hx_slice_new0 (InterceptorThreadContext);
 
-  hoox_memcpy (&context->listener_backend,
+  memcpy (&context->listener_backend,
       &hoox_interceptor_listener_invocation_backend,
       sizeof (HooxInvocationBackend));
-  hoox_memcpy (&context->replacement_backend,
+  memcpy (&context->replacement_backend,
       &hoox_interceptor_replacement_invocation_backend,
       sizeof (HooxInvocationBackend));
   context->listener_backend.state = context;
@@ -2364,7 +2363,7 @@ interceptor_thread_context_get_listener_data (InterceptorThreadContext * self,
   }
   else
   {
-    hoox_memset (available_slot->data, 0, sizeof (available_slot->data));
+    memset (available_slot->data, 0, sizeof (available_slot->data));
   }
 
   available_slot->owner = listener;

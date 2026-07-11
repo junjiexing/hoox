@@ -28,7 +28,7 @@
 
 #include "hooxmetalhash.h"
 
-#include "hooxlibc.h"
+#include <string.h>
 #include "hooxmemory-priv.h"
 
 #define HASH_TABLE_MIN_SHIFT 3
@@ -246,9 +246,9 @@ hoox_metal_hash_table_remove_all_nodes (HooxMetalHashTable *hash_table,
       (hash_table->key_destroy_func == NULL &&
        hash_table->value_destroy_func == NULL))
     {
-      hoox_memset (hash_table->hashes, 0, hash_table->size * sizeof (hx_uint));
-      hoox_memset (hash_table->keys, 0, hash_table->size * sizeof (hx_pointer));
-      hoox_memset (hash_table->values, 0, hash_table->size * sizeof (hx_pointer));
+      memset (hash_table->hashes, 0, hash_table->size * sizeof (hx_uint));
+      memset (hash_table->keys, 0, hash_table->size * sizeof (hx_pointer));
+      memset (hash_table->values, 0, hash_table->size * sizeof (hx_pointer));
 
       return;
     }
@@ -483,7 +483,7 @@ hoox_metal_hash_table_insert_node (HooxMetalHashTable *hash_table,
   if (HX_UNLIKELY (hash_table->keys == hash_table->values && hash_table->keys[node_index] != new_value))
     {
       hash_table->values = hoox_metal_new0 (hx_pointer, hash_table->size);
-      hoox_memcpy (hash_table->values, hash_table->keys, hash_table->size * sizeof (hx_pointer));
+      memcpy (hash_table->values, hash_table->keys, hash_table->size * sizeof (hx_pointer));
     }
 
   hash_table->values[node_index] = new_value;

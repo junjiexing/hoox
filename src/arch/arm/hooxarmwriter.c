@@ -8,7 +8,7 @@
 #include "hooxarmwriter.h"
 
 #include "hooxarmreg.h"
-#include "hooxlibc.h"
+#include <string.h>
 #include "hooxmemory.h"
 #include "hooxprocess.h"
 
@@ -1122,7 +1122,7 @@ hoox_arm_writer_put_bytes (HooxArmWriter * self,
   if (n % 4 != 0)
     return FALSE;
 
-  hoox_memcpy (self->code, data, n);
+  memcpy (self->code, data, n);
   self->code += n / sizeof (hx_uint32);
   self->pc += n;
 

@@ -11,7 +11,7 @@
 #include "hooxarm64relocator.h"
 #include "hooxarm64writer.h"
 #include "hooxcloak.h"
-#include "hooxlibc.h"
+#include <string.h>
 #include "hooxmemory.h"
 #ifdef HAVE_DARWIN
 # include "hoox/hooxdarwin.h"
@@ -1001,7 +1001,7 @@ _hoox_interceptor_backend_create_trampoline (HooxInterceptorBackend * self,
 
   ctx->overwritten_prologue_len = reloc_bytes;
   ctx->overwritten_prologue = hx_malloc (reloc_bytes);
-  hoox_memcpy (ctx->overwritten_prologue, function_address, reloc_bytes);
+  memcpy (ctx->overwritten_prologue, function_address, reloc_bytes);
 
   return TRUE;
 }
@@ -1154,7 +1154,7 @@ _hoox_interceptor_backend_deactivate_trampoline (HooxInterceptorBackend * self,
   }
 #endif
 
-  hoox_memcpy (prologue, ctx->overwritten_prologue,
+  memcpy (prologue, ctx->overwritten_prologue,
       ctx->overwritten_prologue_len);
 }
 

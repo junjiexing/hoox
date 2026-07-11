@@ -6,7 +6,6 @@
 
 #include "hooxmetalarray.h"
 
-#include "hooxlibc.h"
 #include "hooxmemory.h"
 
 #include <string.h>
@@ -52,7 +51,7 @@ hoox_metal_array_insert_at (HooxMetalArray * self,
 
   element = hoox_metal_array_element_at (self, index_);
 
-  hoox_memmove (hoox_metal_array_element_at (self, index_ + 1), element,
+  memmove (hoox_metal_array_element_at (self, index_ + 1), element,
       (self->length - index_) * self->element_size);
 
   self->length++;
@@ -66,7 +65,7 @@ hoox_metal_array_remove_at (HooxMetalArray * self,
 {
   if (index_ != self->length - 1)
   {
-    hoox_memmove (hoox_metal_array_element_at (self, index_),
+    memmove (hoox_metal_array_element_at (self, index_),
         hoox_metal_array_element_at (self, index_ + 1),
         (self->length - index_ - 1) * self->element_size);
   }
@@ -121,7 +120,7 @@ hoox_metal_array_ensure_capacity (HooxMetalArray * self,
     size_in_pages++;
 
   new_data = hoox_alloc_n_pages (size_in_pages, HOOX_PAGE_RW);
-  hoox_memcpy (new_data, self->data, self->length * self->element_size);
+  memcpy (new_data, self->data, self->length * self->element_size);
 
   hoox_free_pages (self->data);
   self->data = new_data;

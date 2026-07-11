@@ -8,7 +8,7 @@
 #include "hooxthumbwriter.h"
 
 #include "hooxarmreg.h"
-#include "hooxlibc.h"
+#include <string.h>
 #include "hooxmemory.h"
 #include "hooxprocess.h"
 
@@ -1570,7 +1570,7 @@ hoox_thumb_writer_put_bytes (HooxThumbWriter * self,
   if (n % 2 != 0)
     return FALSE;
 
-  hoox_memcpy (self->code, data, n);
+  memcpy (self->code, data, n);
   self->code += n / sizeof (hx_uint16);
   self->pc += n;
 

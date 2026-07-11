@@ -35,7 +35,6 @@ endif()
 
 # --- core (extracted hoox primitives) ----------------------------------------
 list(APPEND HOOX_SOURCES
-  "${CMAKE_CURRENT_SOURCE_DIR}/core/hooxlibc.c"
   "${CMAKE_CURRENT_SOURCE_DIR}/core/hooxspinlock.c"
   "${CMAKE_CURRENT_SOURCE_DIR}/core/hooxmetalarray.c"
   "${CMAKE_CURRENT_SOURCE_DIR}/core/hooxmetalhash.c"

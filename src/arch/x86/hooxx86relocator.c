@@ -6,7 +6,6 @@
 
 #include "hooxx86relocator.h"
 
-#include "hooxlibc.h"
 #include "hooxmemory.h"
 #include "hooxx86reader.h"
 
@@ -639,8 +638,8 @@ hoox_x86_relocator_rewrite_if_rip_relative (HooxX86Relocator * self,
   if (offset >= HX_MININT32 && offset <= HX_MAXINT32)
   {
     const hx_int32 raw_offset = HX_INT32_TO_LE ((hx_int32) offset);
-    hoox_memcpy (code, insn->bytes, insn->size);
-    hoox_memcpy (code + x86->encoding.disp_offset, &raw_offset,
+    memcpy (code, insn->bytes, insn->size);
+    memcpy (code + x86->encoding.disp_offset, &raw_offset,
         sizeof (raw_offset));
     hoox_x86_writer_put_bytes (cw, code, insn->size);
     return TRUE;
@@ -656,7 +655,7 @@ hoox_x86_relocator_rewrite_if_rip_relative (HooxX86Relocator * self,
     hx_int32 distance;
     hx_uint64 * return_address_placeholder = NULL;
 
-    hoox_memcpy (i32.bytes, insn->bytes + insn->size - sizeof (hx_int32),
+    memcpy (i32.bytes, insn->bytes + insn->size - sizeof (hx_int32),
         sizeof (i32.bytes));
     distance = HX_INT32_FROM_LE (i32.value);
 
@@ -726,7 +725,7 @@ hoox_x86_relocator_rewrite_if_rip_relative (HooxX86Relocator * self,
   }
   else
   {
-    hoox_memcpy (code, insn->bytes, insn->size);
+    memcpy (code, insn->bytes, insn->size);
     code[x86->encoding.modrm_offset] = (mod << 6) | (reg << 3) | rm;
     hoox_x86_writer_put_bytes (cw, code, insn->size);
   }

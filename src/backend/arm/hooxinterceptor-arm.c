@@ -10,7 +10,6 @@
 #include "hooxarmreader.h"
 #include "hooxarmrelocator.h"
 #include "hooxarmwriter.h"
-#include "hooxlibc.h"
 #include "hooxmemory.h"
 #include "hooxthumbreader.h"
 #include "hooxthumbrelocator.h"
@@ -258,7 +257,7 @@ _hoox_interceptor_backend_create_trampoline (HooxInterceptorBackend * self,
     return FALSE;
 
   ctx->overwritten_prologue = hx_malloc (ctx->overwritten_prologue_len);
-  hoox_memcpy (ctx->overwritten_prologue, func, ctx->overwritten_prologue_len);
+  memcpy (ctx->overwritten_prologue, func, ctx->overwritten_prologue_len);
 
   return TRUE;
 }
@@ -773,7 +772,7 @@ _hoox_interceptor_backend_deactivate_trampoline (HooxInterceptorBackend * self,
                                                 HooxFunctionContext * ctx,
                                                 hx_pointer prologue)
 {
-  hoox_memcpy (prologue, ctx->overwritten_prologue,
+  memcpy (prologue, ctx->overwritten_prologue,
       ctx->overwritten_prologue_len);
 }
 

@@ -8,7 +8,7 @@
 
 #include "hooxx86writer.h"
 
-#include "hooxlibc.h"
+#include <string.h>
 #include "hooxmemory.h"
 
 typedef hx_uint HooxX86MetaReg;
@@ -2965,7 +2965,7 @@ void
 hoox_x86_writer_put_padding (HooxX86Writer * self,
                             hx_uint n)
 {
-  hoox_memset (self->code, 0xcc, n);
+  memset (self->code, 0xcc, n);
   hoox_x86_writer_commit (self, n);
 }
 
@@ -3028,12 +3028,12 @@ hoox_x86_writer_put_nop_padding (HooxX86Writer * self,
   {
     if (remaining < max_nop)
     {
-      hoox_memcpy (self->code, nop_index[remaining - 1], remaining);
+      memcpy (self->code, nop_index[remaining - 1], remaining);
       hoox_x86_writer_commit (self, remaining);
       break;
     }
 
-    hoox_memcpy (self->code, nop_index[max_nop - 1], max_nop);
+    memcpy (self->code, nop_index[max_nop - 1], max_nop);
     hoox_x86_writer_commit (self, max_nop);
   }
 }
@@ -3107,7 +3107,7 @@ hoox_x86_writer_put_bytes (HooxX86Writer * self,
                           const hx_uint8 * data,
                           hx_uint n)
 {
-  hoox_memcpy (self->code, data, n);
+  memcpy (self->code, data, n);
   hoox_x86_writer_commit (self, n);
 }
 
