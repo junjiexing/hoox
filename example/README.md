@@ -13,19 +13,25 @@ example/
 
 ## What it shows
 
-The demo hooks a plain function, `compute(int, int)`, two different ways:
+A guided tour of the public API, hooking two plain functions
+(`compute`/`mul`). Each part `detach`/`revert`s afterward so the target
+returns to normal:
 
-1. **`hoox_interceptor_attach`** — wraps the function with an *invocation
-   listener*. The original body still runs; the listener sees each call on the
-   way in (`on_enter`) and out (`on_leave`), reads the arguments, and tampers
-   with the return value (`+1`) without modifying `compute` at all.
-
-2. **`hoox_interceptor_replace`** — swaps the function body for
-   `replacement_compute`, keeping a trampoline pointer (`original_compute`) that
-   still reaches the real `compute`. The replacement calls the original and
-   scales the result (`* 10`).
-
-After each step it `detach`/`revert`s to prove the target returns to normal.
+1. **attach a call listener** — `on_enter`/`on_leave` read and *rewrite* an
+   argument (`replace_nth_argument`) and the return value
+   (`replace_return_value`), and read `get_return_address` / `get_thread_id` /
+   `get_depth`.
+2. **custom listener** — implement the `HooxInvocationListener` vtable
+   directly, branch on `get_point_cut`, and use all three data slots
+   (function data via `HooxAttachOptions`, per-thread, per-invocation).
+3. **probe listener** — a lightweight enter-only `hoox_make_probe_listener`.
+4. **transaction** — `begin_transaction`/`end_transaction` batch two attaches
+   so they activate as a unit.
+5. **replace** — swap the body, reach the original through a trampoline, and
+   read `replacement_data` via `get_current_invocation`.
+6. **replace_fast** — the lighter direct-replacement variant.
+7. **ignore current thread** — `ignore`/`unignore_current_thread` silences a
+   hook's listener for the calling thread.
 
 ## Build & run
 
@@ -63,24 +69,30 @@ clang -I ../build/amalgam \
 ## Expected output
 
 ```
-baseline: compute(3, 4) = 7
+baseline: compute(3, 4) = 7, mul(6, 7) = 42
 
-== attach listener ==
-  [listener] enter: compute(3, 4)  thread=... depth=0
-  [listener] leave: original returned 7, tampering -> 8
-caller sees: compute(3, 4) = 8  (7 from body, +1 from listener)
-  [listener] enter: compute(10, 20)  thread=... depth=0
-  [listener] leave: original returned 30, tampering -> 31
-caller sees: compute(10, 20) = 31
-listener observed 2 call(s)
-
-after detach: compute(3, 4) = 7  (back to normal)
-
-== replace function ==
-  [replace] intercepted compute(5, 6); original=11, returning 110
+== 1. attach a call listener ==
+  [listener] enter: compute(3, 4) -> forcing b=40  thread=... depth=0 ret_addr=...
+  [listener] leave: body returned 43, bumping -> 44
+caller sees: compute(3, 4) = 44  (3 + 4*10 = 43, +1 = 44)
+  ...
+== 2. custom listener + data slots + point-cut ==
+  [tap:compute] enter a=2 b=5  (call #1 on this thread)
+  [tap] leave: a+b(from enter)=7 result=7 cumulative=7
+  ...
+== 3. probe listener (counts calls) ==
+mul was called 4 time(s); results still correct (e.g. 6*7=42)
+== 4. transaction (batch two attaches) ==
+two hooks installed as one transaction; combined hits = 2
+== 5. replace function body ==
+  [replace:v1] compute(5, 6): original=11, returning 110
 caller sees: compute(5, 6) = 110  ((5+6) * 10)
-
 after revert: compute(5, 6) = 11  (back to normal)
+== 6. replace_fast ==
+caller sees: mul(6, 7) = 43  (42 + 1)
+after revert: mul(6, 7) = 42
+== 7. ignore current thread ==
+hits with one ignored + one observed call = 1 (expected 1)
 
 done.
 ```
@@ -102,12 +114,21 @@ Define a macro only to opt out of a default:
 
 ## Public API used
 
-- `hoox_init` / `hoox_deinit`
-- `hoox_interceptor_obtain` / `_ref` / `_unref`
-- `hoox_make_call_listener`, `hoox_invocation_listener_unref`
-- `hoox_interceptor_attach` / `_detach`
-- `hoox_interceptor_replace` / `_revert`
-- `hoox_invocation_context_get_nth_argument`, `_get_return_value`,
-  `_replace_return_value`, `_get_thread_id`, `_get_depth`
+- Lifecycle: `hoox_init` / `hoox_deinit`
+- Interceptor: `hoox_interceptor_obtain` / `_ref` / `_unref`, `_attach` /
+  `_detach`, `_replace` / `_replace_fast` / `_revert`,
+  `_begin_transaction` / `_end_transaction`,
+  `_ignore_current_thread` / `_unignore_current_thread`,
+  `_get_current_invocation`
+- Listeners: `hoox_make_call_listener`, `hoox_make_probe_listener`,
+  `hoox_invocation_listener_init` (custom vtable), `_unref`,
+  `HOOX_INVOCATION_LISTENER`
+- Options: `HooxAttachOptions.listener_function_data`,
+  `HooxReplaceOptions.replacement_data`
+- Invocation context: `get_point_cut`, `get_nth_argument`,
+  `replace_nth_argument`, `get_return_value`, `replace_return_value`,
+  `get_return_address`, `get_thread_id`, `get_depth`,
+  `get_listener_function_data` / `_thread_data` / `_invocation_data`,
+  `get_replacement_data`
 
 See `hoox.h` for the full surface.
