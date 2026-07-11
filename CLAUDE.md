@@ -50,7 +50,21 @@ page-plan-builder/调试器映射）。因此 `test_memory`（裸 RWX）与 `int
 编译)检测"目标页是否与 hoox 自身 patch 代码同页",若是则 attach/replace 返回 `POLICY_VIOLATION` 而非崩溃。
 彻底解决需"经独立映射打补丁"（page-plan / MAP_JIT stub），留待在 Apple Silicon 设备上开发。`arch/arm64` interceptor
 的 DarwinGrafter（Mach-O import 挂钩，hoox 不提供）用 `HOOX_HAVE_DARWIN_GRAFTER`（永不定义）门控掉。
-另提供 `hooxcodesegment-darwin.c`（老内核用；新内核 `is_supported` 返回 FALSE）。下一步：iOS/Android/其它平台。
+另提供 `hooxcodesegment-darwin.c`（老内核用；新内核 `is_supported` 返回 FALSE）。
+
+**FreeBSD x86 与 x86_64 已打通（amd64 FreeBSD VM，clang，实测全绿）：** backend 位于
+`src/backend/freebsd/`（`hooxmemory-freebsd.c`/`hoox_process-freebsd.c`），复用 `backend/posix`
+（mmap + pthread TLS）。走 RWX 路径（`mprotect`，**无需** `VM_PROT_COPY`——不同于 macOS）；页保护查询
+与 near-alloc 走 `sysctl {CTL_KERN,KERN_PROC,KERN_PROC_VMMAP,pid}`（迭代变长 `struct kinfo_vmentry`，
+按 `kve_structsize` 步进；**非 `/proc`**），线程 id 用 `pthread_getthreadid_np`（`<pthread_np.h>`）、
+挂起/枚举用 `thr_kill` + `sysctl KERN_PROC`，模块枚举用 `dl_iterate_phdr`（FreeBSD 用原生
+`Elf_Addr/Elf_Half/Elf_Phdr`，**非 glibc 的 `ElfW()`**）。CMake 以 `CMAKE_SYSTEM_NAME STREQUAL
+"FreeBSD"` 分派 OS backend（`HAVE_FREEBSD` 由 `__FreeBSD__` 自动推导），以 `HOOX_ARCH_FAMILY` 分派 arch。
+CI 无托管 FreeBSD runner，故用 `vmactions/freebsd-vm` 在 ubuntu 宿主上启动 amd64 FreeBSD VM：x86_64 原生
+跑完整套件，x86（32 位）用 `clang -m32`（freebsd32/lib32）同样跑完整套件；ARM/ARM64 FreeBSD 共用同一
+arch-agnostic backend + 在 Linux/macOS ARM 验证过的 arch 层（VM 无 sysroot 交叉运行，CI 未执行）。
+
+下一步：iOS/Android/其它平台。
 
 > 命名已完成一次性重构：**所有 `gum`/`cs`/glib 前缀均已清除**（见 D2）。仓库不再以
 > 与上游 diff 对拍为目标——以行为一致 + 测试通过为准。

@@ -103,6 +103,15 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
   set(HOOX_PRIVATE_INCLUDE_DIRS ${HOOX_PRIVATE_INCLUDE_DIRS}
     "${CMAKE_CURRENT_SOURCE_DIR}/backend/posix"
     "${CMAKE_CURRENT_SOURCE_DIR}/backend/darwin")
+elseif(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+  list(APPEND HOOX_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/backend/posix/hooxmemory-posix.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/backend/posix/hooxtls-posix.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/backend/freebsd/hooxmemory-freebsd.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/backend/freebsd/hoox_process-freebsd.c")
+  set(HOOX_PRIVATE_INCLUDE_DIRS ${HOOX_PRIVATE_INCLUDE_DIRS}
+    "${CMAKE_CURRENT_SOURCE_DIR}/backend/posix"
+    "${CMAKE_CURRENT_SOURCE_DIR}/backend/freebsd")
 endif()
 
 if(HOOX_ARCH_FAMILY STREQUAL "x86")
@@ -141,6 +150,10 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
   find_package(Threads REQUIRED)
   target_link_libraries(hoox PUBLIC Threads::Threads)
   target_compile_definitions(hoox PRIVATE HAVE_DARWIN)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+  find_package(Threads REQUIRED)
+  target_link_libraries(hoox PUBLIC Threads::Threads)
+  target_compile_definitions(hoox PRIVATE HAVE_FREEBSD)
 endif()
 if(HOOX_ARCH_FAMILY STREQUAL "x86")
   target_compile_definitions(hoox PRIVATE HAVE_I386)

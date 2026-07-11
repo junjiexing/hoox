@@ -44,7 +44,9 @@ gcc/clang; ARM64 built and fully tested on the native `ubuntu-24.04-arm` CI; ARM
 (32-bit, A32 + Thumb) cross-compiled (`gcc-arm-linux-gnueabihf`) and run through
 the full ctest suite under `qemu-arm`. **macOS now covers x86_64 and ARM64**
 (native `macos-15-intel` and Apple Silicon `macos-15` CI, AppleClang; interceptor
-behaviour suite green on both). Horizontal roll-out to other platforms is next.
+behaviour suite green on both). **FreeBSD now covers x86 / x86_64** (an amd64
+FreeBSD VM, clang, including 32-bit via `-m32`; ARM/ARM64 share the same backend,
+see below). Horizontal roll-out to other platforms is next.
 
 ## Platform support
 
@@ -59,10 +61,12 @@ Legend: ✅ supported (builds & passes the full test suite) · 🧩 extracted
 | **Android** | 📋 | 📋 | 📋 | 📋 |
 | **macOS** | ➖ | ✅ | ➖ | ✅ |
 | **iOS / tvOS** | ➖ | ➖ | ➖ | 📋 |
-| **FreeBSD / QNX** | 📋 | 📋 | 📋 | 📋 |
+| **FreeBSD** | ✅ | ✅ | 🧩 | 🧩 |
+| **QNX** | 📋 | 📋 | 📋 | 📋 |
 
 Directly usable today: **Windows × (x86 / x86_64 / ARM64)**,
-**Linux × (x86 / x86_64 / ARM / ARM64)** and **macOS × (x86_64 / ARM64)**. Windows ARM64 is built and fully
+**Linux × (x86 / x86_64 / ARM / ARM64)**, **macOS × (x86_64 / ARM64)** and
+**FreeBSD × (x86 / x86_64)**. Windows ARM64 is built and fully
 tested on the native `windows-11-arm` runner; it reuses the same
 `src/backend/windows` (TLS falls back to `TlsGetValue` off x86) and adds an
 in-tree AArch64 decoder (`src/disasm/hx_disasm_arm64.c`) that drives the
@@ -83,7 +87,19 @@ with `VM_PROT_COPY` (a private, writable-then-executable copy — sidestepping
 W^X). x86_64 is verified on `macos-15-intel` and ARM64 on the Apple Silicon
 `macos-15` runner; the interceptor behaviour suite is green on both. (An in-tree
 Darwin code segment, `hooxcodesegment-darwin.c`, is also provided for older
-kernels.) Other OSes still need their own backend.
+kernels.) **FreeBSD** reuses the x86/arm64 decoders and arch, the POSIX allocator
++ pthread TLS, and adds `src/backend/freebsd`: it takes the RWX path (`mprotect`,
+no `VM_PROT_COPY` needed), drives page-protection queries and near-allocation off
+`sysctl KERN_PROC_VMMAP` (not `/proc`), gets the thread id via
+`pthread_getthreadid_np`, suspends/enumerates threads with `thr_kill` +
+`sysctl KERN_PROC`, and enumerates modules with `dl_iterate_phdr`. As there is no
+hosted FreeBSD runner, CI boots an amd64 FreeBSD VM on the ubuntu host
+(`vmactions`): **x86_64 builds and runs the full suite natively, and x86 (32-bit)
+builds and runs the full suite via `clang -m32` (freebsd32/lib32)**. ARM / ARM64
+FreeBSD share this (validated) OS backend plus the arch layers validated on the
+Linux/macOS ARM jobs; cross-running them needs a sysroot the VM lacks, so they are
+covered by construction rather than executed in CI. Other OSes still need their
+own backend.
 
 > **⚠️ Apple Silicon limitation (self-hosting):** on Apple Silicon (16 KiB pages
 > + enforced W^X), patching a page briefly removes its execute permission. If the
