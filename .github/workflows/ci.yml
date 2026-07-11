@@ -194,11 +194,36 @@ jobs:
             cmake -B build -DCMAKE_C_COMPILER=clang -DCMAKE_BUILD_TYPE=Debug
             cmake --build build
             if ! ctest --test-dir build --output-on-failure; then
-              echo "=== ctest failed — capturing backtrace for test_amalgam ==="
+              echo "=== ctest failed — tracing begin/push/end for test_amalgam ==="
               t=$(find build -name test_amalgam -type f | head -1)
               echo "binary: $t"; file "$t" || true
-              gdb -batch -ex 'run' -ex 'bt full' -ex 'info registers' -ex 'quit' \
-                "$t" 2>&1 | tail -100 || true
+              cat > /tmp/cmds.gdb <<'GDB'
+            set pagination off
+            break _hoox_function_context_begin_invocation
+            commands
+            silent
+            printf "BEGIN fctx=%p\n", function_ctx
+            cont
+            end
+            break hoox_invocation_stack_push
+            commands
+            silent
+            printf "PUSH  fctx=%p stack=%p oldlen=%d\n", function_ctx, stack, stack->len
+            cont
+            end
+            break _hoox_function_context_end_invocation
+            commands
+            silent
+            printf "END   fctx=%p\n", function_ctx
+            cont
+            end
+            run
+            printf "\n=== CRASH BACKTRACE ===\n"
+            bt full
+            quit
+            GDB
+              sed -i 's/^            //' /tmp/cmds.gdb
+              gdb -batch -x /tmp/cmds.gdb "$t" 2>&1 | tail -80 || true
               exit 1
             fi
             echo "::endgroup::"
