@@ -89,6 +89,11 @@ if(HOOX_ARCH_FAMILY STREQUAL "x86")
         "${CMAKE_SOURCE_DIR}/include/hoox.h"
       COMMENT "Amalgamating hoox into a single .c/.h")
 
+    # A standalone target that only *generates* hoox.c / hoox.h (pure text
+    # merge, no compilation) — used by the release workflow to package the
+    # amalgamation on any runner that has Python.
+    add_custom_target(amalgam DEPENDS "${HOOX_AMALGAM_C}" "${HOOX_AMALGAM_H}")
+
     # Build the interceptor suite against the single-file library only (the
     # test files still use the normal headers for declarations; hoox.c
     # supplies every definition — proving the amalgamation is complete).

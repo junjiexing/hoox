@@ -1,0 +1,171 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+    tags: ['v*']
+  pull_request:
+
+# Needed by the release job to create a Release and upload assets.
+permissions:
+  contents: write
+
+jobs:
+  # ==========================================================================
+  # Build + test matrix.
+  #
+  # Every OS / CPU-arch combination hoox targets is listed. Only the ones that
+  # are actually implemented today (Windows x86 / x86_64) build and run the
+  # test suite; the rest are shown as explicitly *skipped* placeholders so the
+  # matrix documents the roadmap and stays green until each backend lands.
+  # ==========================================================================
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Name format: <OS> · <arch> · <toolchain>
+          # ---- supported: builds + runs the full ctest suite ---------------
+          - { name: 'Windows · x86_64 · MSVC',        runner: windows-latest, supported: true, toolchain: msvc,  arch: x64   }
+          - { name: 'Windows · x86 (32-bit) · MSVC',  runner: windows-latest, supported: true, toolchain: msvc,  arch: Win32 }
+          - { name: 'Windows · x86_64 · Clang',       runner: windows-latest, supported: true, toolchain: clang }
+          - { name: 'Windows · x86_64 · GCC (MinGW)', runner: windows-latest, supported: true, toolchain: gcc   }
+          - { name: 'Linux · x86_64 · GCC',           runner: ubuntu-latest,  supported: true, toolchain: linux-gcc   }
+          - { name: 'Linux · x86_64 · Clang',         runner: ubuntu-latest,  supported: true, toolchain: linux-clang }
+          - { name: 'Linux · x86 (32-bit) · GCC',     runner: ubuntu-latest,  supported: true, toolchain: linux-gcc32 }
+
+          # ---- planned: not implemented yet, skipped -----------------------
+          - { name: 'Linux · ARM64 · (planned)',      runner: ubuntu-latest, supported: false }
+          - { name: 'Linux · ARM · (planned)',        runner: ubuntu-latest, supported: false }
+          - { name: 'Linux · MIPS · (planned)',       runner: ubuntu-latest, supported: false }
+          - { name: 'Android · ARM64 · (planned)',    runner: ubuntu-latest, supported: false }
+          - { name: 'Android · ARM · (planned)',      runner: ubuntu-latest, supported: false }
+          - { name: 'Android · x86_64 · (planned)',   runner: ubuntu-latest, supported: false }
+          - { name: 'macOS · ARM64 · (planned)',      runner: ubuntu-latest, supported: false }
+          - { name: 'macOS · x86_64 · (planned)',     runner: ubuntu-latest, supported: false }
+          - { name: 'iOS · ARM64 · (planned)',        runner: ubuntu-latest, supported: false }
+          - { name: 'tvOS · ARM64 · (planned)',       runner: ubuntu-latest, supported: false }
+          - { name: 'FreeBSD · x86_64 · (planned)',   runner: ubuntu-latest, supported: false }
+          - { name: 'QNX · ARM64 · (planned)',        runner: ubuntu-latest, supported: false }
+          - { name: 'Windows · ARM64 · (planned)',    runner: ubuntu-latest, supported: false }
+
+    steps:
+      - name: Skip (not implemented yet)
+        if: ${{ !matrix.supported }}
+        run: echo "::notice title=Skipped::${{ matrix.name }} is not implemented yet — placeholder in the support matrix."
+
+      - uses: actions/checkout@v5
+        if: ${{ matrix.supported }}
+
+      - uses: actions/setup-python@v6
+        if: ${{ matrix.supported }}
+        with:
+          python-version: '3.x'
+
+      # ---- MSVC (Visual Studio generator) --------------------------------
+      - name: Build & test (MSVC ${{ matrix.arch }})
+        if: ${{ matrix.supported && matrix.toolchain == 'msvc' }}
+        shell: pwsh
+        run: |
+          cmake -B build -G "Visual Studio 17 2022" -A ${{ matrix.arch }}
+          cmake --build build --config Debug
+          ctest --test-dir build -C Debug --output-on-failure
+
+      # ---- clang (LLVM + Ninja, using the MSVC toolchain/SDK) ------------
+      # The MSVC headers/libs are made available via VS's own DevShell module
+      # (a shell step — avoids the Node-based msvc-dev-cmd action).
+      - name: Install clang + ninja
+        if: ${{ matrix.supported && matrix.toolchain == 'clang' }}
+        shell: pwsh
+        run: choco install -y --no-progress llvm ninja
+      - name: Build & test (clang)
+        if: ${{ matrix.supported && matrix.toolchain == 'clang' }}
+        shell: pwsh
+        run: |
+          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+          Import-Module "$vs\Common7\Tools\Microsoft.VisualStudio.DevShell.dll"
+          Enter-VsDevShell -VsInstallPath "$vs" -DevCmdArguments '-arch=x64 -host_arch=x64' -SkipAutomaticLocation
+          cmake -B build -G Ninja -DCMAKE_C_COMPILER=clang
+          cmake --build build
+          ctest --test-dir build --output-on-failure
+
+      # ---- gcc (MSYS2 / MinGW-w64) ---------------------------------------
+      - uses: msys2/setup-msys2@v2
+        if: ${{ matrix.supported && matrix.toolchain == 'gcc' }}
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+            python
+      - name: Build & test (gcc)
+        if: ${{ matrix.supported && matrix.toolchain == 'gcc' }}
+        shell: msys2 {0}
+        run: |
+          cmake -B build -G Ninja -DCMAKE_C_COMPILER=gcc
+          cmake --build build
+          ctest --test-dir build --output-on-failure
+
+      # ---- Linux x86_64 (gcc / clang) ------------------------------------
+      - name: Install clang
+        if: ${{ matrix.supported && matrix.toolchain == 'linux-clang' }}
+        run: sudo apt-get update && sudo apt-get install -y clang
+      - name: Build & test (Linux ${{ matrix.toolchain == 'linux-clang' && 'clang' || 'gcc' }})
+        if: ${{ matrix.supported && (matrix.toolchain == 'linux-gcc' || matrix.toolchain == 'linux-clang') }}
+        run: |
+          cc=${{ matrix.toolchain == 'linux-clang' && 'clang' || 'gcc' }}
+          cmake -B build -DCMAKE_C_COMPILER=$cc
+          cmake --build build
+          ctest --test-dir build --output-on-failure
+
+      # ---- Linux x86 (32-bit, gcc + multilib) ----------------------------
+      - name: Install 32-bit toolchain
+        if: ${{ matrix.supported && matrix.toolchain == 'linux-gcc32' }}
+        run: sudo apt-get update && sudo apt-get install -y gcc-multilib
+      - name: Build & test (Linux x86, gcc -m32)
+        if: ${{ matrix.supported && matrix.toolchain == 'linux-gcc32' }}
+        run: |
+          cmake -B build -DCMAKE_C_COMPILER=gcc \
+            -DCMAKE_C_FLAGS=-m32 -DCMAKE_EXE_LINKER_FLAGS=-m32
+          cmake --build build
+          ctest --test-dir build --output-on-failure
+
+  # ==========================================================================
+  # On a version tag (vX.Y.Z): generate the single-file amalgamation and attach
+  # it to the GitHub Release as a zip. Generated on Windows so the Windows
+  # backend sources are included (the only currently-supported platform).
+  # ==========================================================================
+  release-amalgamation:
+    name: Package amalgamation
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+
+      - name: Generate hoox.c / hoox.h
+        shell: pwsh
+        run: |
+          cmake -B build -G "Visual Studio 17 2022" -A x64
+          cmake --build build --target amalgam
+
+      - name: Assemble package
+        shell: pwsh
+        run: |
+          $dir = "hoox-${{ github.ref_name }}-amalgamation"
+          New-Item -ItemType Directory -Force -Path $dir | Out-Null
+          Copy-Item build/amalgam/hoox.c, build/amalgam/hoox.h, COPYING, NOTICE $dir
+          Compress-Archive -Path "$dir/*" -DestinationPath "$dir.zip" -Force
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: hoox-${{ github.ref_name }}-amalgamation.zip
+          fail_on_unmatched_files: true

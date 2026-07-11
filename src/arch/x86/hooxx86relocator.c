@@ -566,7 +566,7 @@ hoox_x86_relocator_rewrite_if_rip_relative (HooxX86Relocator * self,
     return FALSE;
 
   address = ctx->pc + x86->disp;
-  offset = address - (cw->pc + insn->size);
+  offset = (hx_ssize) (address - (cw->pc + insn->size));
 
   if (offset >= HX_MININT32 && offset <= HX_MAXINT32)
   {
@@ -650,7 +650,8 @@ hoox_x86_relocator_rewrite_if_rip_relative (HooxX86Relocator * self,
 
   if (insn->id == HX_INS_PUSH)
   {
-    hoox_x86_writer_put_mov_reg_reg_offset_ptr (cw, rip_reg, rip_reg, x86->disp);
+    hoox_x86_writer_put_mov_reg_reg_offset_ptr (cw, rip_reg, rip_reg,
+        (hx_ssize) x86->disp);
     hoox_x86_writer_put_mov_reg_offset_ptr_reg (cw,
         HOOX_HX_RSP,
         0x08 + ((target_abi == HOOX_ABI_UNIX) ? HOOX_RED_ZONE_SIZE : 0),

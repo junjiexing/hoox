@@ -436,7 +436,8 @@ _hoox_interceptor_backend_detect_hook_size (hx_constpointer code,
           dst->mem.scale == 1 &&
           dst->mem.disp == 2)
       {
-        const hx_size inline_data_size = dst->mem.disp + sizeof (hx_pointer);
+        const hx_size inline_data_size =
+            (hx_size) (dst->mem.disp + sizeof (hx_pointer));
 
         cursor += inline_data_size;
         addr += inline_data_size;
