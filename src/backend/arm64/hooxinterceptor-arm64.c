@@ -13,7 +13,12 @@
 #include "hooxcloak.h"
 #include <string.h>
 #include "hooxmemory.h"
-#ifdef HAVE_DARWIN
+/*
+ * hoox does not ship the Darwin grafter (Mach-O import-table hooking). It is
+ * gated behind HOOX_HAVE_DARWIN_GRAFTER (never defined), so on macOS the plain
+ * inline-hook path is used — same as the other non-Darwin backends.
+ */
+#if defined (HAVE_DARWIN) && defined (HOOX_HAVE_DARWIN_GRAFTER)
 # include "hoox/hooxdarwin.h"
 # include "hooxdarwingrafter-priv.h"
 #endif
@@ -127,7 +132,7 @@ _hoox_interceptor_backend_destroy (HooxInterceptorBackend * backend)
   hx_slice_free (HooxInterceptorBackend, backend);
 }
 
-#ifdef HAVE_DARWIN
+#if defined (HAVE_DARWIN) && defined (HOOX_HAVE_DARWIN_GRAFTER)
 
 typedef struct _HooxImportTarget HooxImportTarget;
 typedef struct _HooxImportEntry HooxImportEntry;
@@ -1039,7 +1044,7 @@ void
 _hoox_interceptor_backend_destroy_trampoline (HooxInterceptorBackend * self,
                                              HooxFunctionContext * ctx)
 {
-#ifdef HAVE_DARWIN
+#if defined (HAVE_DARWIN) && defined (HOOX_HAVE_DARWIN_GRAFTER)
   if (ctx->grafted_hook != NULL)
   {
     HooxGraftedHook * func = ctx->grafted_hook;
@@ -1074,7 +1079,7 @@ _hoox_interceptor_backend_activate_trampoline (HooxInterceptorBackend * self,
   else
     on_enter = HOOX_ADDRESS (ctx->on_enter_trampoline);
 
-#ifdef HAVE_DARWIN
+#if defined (HAVE_DARWIN) && defined (HOOX_HAVE_DARWIN_GRAFTER)
   if (ctx->grafted_hook != NULL)
   {
     _hoox_grafted_hook_activate (ctx->grafted_hook);
@@ -1140,7 +1145,7 @@ _hoox_interceptor_backend_deactivate_trampoline (HooxInterceptorBackend * self,
                                                 HooxFunctionContext * ctx,
                                                 hx_pointer prologue)
 {
-#ifdef HAVE_DARWIN
+#if defined (HAVE_DARWIN) && defined (HOOX_HAVE_DARWIN_GRAFTER)
   if (ctx->grafted_hook != NULL)
   {
     _hoox_grafted_hook_deactivate (ctx->grafted_hook);

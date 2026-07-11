@@ -315,6 +315,10 @@ typedef void     (* HxCallback)      (void);
 #define HX_STRINGIFY(macro_or_string) HX_STRINGIFY_ARG (macro_or_string)
 #define HX_STRINGIFY_ARG(contents) #contents
 
+#define HX_PASTE(identifier1, identifier2) \
+    HX_PASTE_ARGS (identifier1, identifier2)
+#define HX_PASTE_ARGS(identifier1, identifier2) identifier1 ## identifier2
+
 /* hx_steal_pointer / hx_clear_pointer live with the memory helpers but the
  * inline forms are handy from headers, so declare them here. */
 static inline hx_pointer

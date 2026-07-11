@@ -37,13 +37,20 @@ A32 + Thumb）** 交叉编译 `gcc-arm-linux-gnueabihf` 后在 `qemu-arm` 下跑
 A32+Thumb 解码器 `src/disasm/hx_disasm_arm.c`（配 `backend/arm/hooxcpu-arm.c` 用 `getauxval` 查 VFP/
 interwork 特性）驱动 `src/arch/arm`。测试套件 + amalgamation 在所有已支持组合均全绿。
 
-**macOS x86_64 已打通（原生 `macos-15-intel` CI，AppleClang，实测全绿）：** 复用 x86 解码器/arch 与
-`backend/posix`（mmap + pthread TLS），新增 `backend/darwin`（`hooxmemory-darwin.c` 用 `mach_vm_region`
-查页保护/枚举 range，`hoox_process-darwin.c` 走 mach 线程 + dyld 模块枚举）。**关键坑：patch 代码签名的
-`__TEXT` 页必须用 `mach_vm_protect` 且在需要 WRITE 时加 `VM_PROT_COPY`**（`mprotect(2)` 会被拒 →
-`transaction_end` 里 `hx_abort()`）；`test_memory` 因为 patch 的是匿名页所以不受影响。`hoox_query_rwx_support`
-对 Darwin+i386 返回 RWX_FULL（Intel 允许 RWX-with-COPY）。下一步：Android/Apple 其它平台（arm64 需
-`hooxcodesegment-darwin`）。
+**macOS x86_64 与 ARM64 均已打通（原生 `macos-15-intel` / Apple Silicon `macos-15` CI，AppleClang，
+interceptor 行为套件实测全绿）：** 复用 x86/arm64 解码器与 arch、`backend/posix`（mmap + pthread TLS），
+新增 `backend/darwin`（`hooxmemory-darwin.c` 用 `mach_vm_region` 查页保护，`hoox_process-darwin.c` 走
+mach 线程 + dyld 模块枚举）。**关键坑：patch 代码签名的 `__TEXT` 页必须用 `mach_vm_protect` 且在需要
+WRITE 时加 `VM_PROT_COPY`**（生成可写私有副本，绕过 W^X；`mprotect(2)` 会被拒）。x86_64 与 arm64
+都走这条路径。**Apple Silicon 额外注意：16 KiB 页**——单个目标页可能横跨 hoox 自身代码，故不能把可执行页
+mprotect 成 RW（会掉 X）；vm_remap 可写别名也不行（签名 `__TEXT` 的 max_prot 为 RX，需 frida 未提取的
+page-plan-builder/调试器映射）。因此 `test_memory`（裸 RWX）与 `interceptor_smoke`（自宿主、目标与 hoox
+代码同页）在 Apple Silicon 上跳过——完整 interceptor 套件（目标在独立页）已充分验证。**运行时护栏**：
+`hoox_interceptor_instrument` 里 `hoox_interceptor_target_unsafe_to_patch()`（仅 `HAVE_DARWIN && HAVE_ARM64`
+编译)检测"目标页是否与 hoox 自身 patch 代码同页",若是则 attach/replace 返回 `POLICY_VIOLATION` 而非崩溃。
+彻底解决需"经独立映射打补丁"（page-plan / MAP_JIT stub），留待在 Apple Silicon 设备上开发。`arch/arm64` interceptor
+的 DarwinGrafter（Mach-O import 挂钩，hoox 不提供）用 `HOOX_HAVE_DARWIN_GRAFTER`（永不定义）门控掉。
+另提供 `hooxcodesegment-darwin.c`（老内核用；新内核 `is_supported` 返回 FALSE）。下一步：iOS/Android/其它平台。
 
 > 命名已完成一次性重构：**所有 `gum`/`cs`/glib 前缀均已清除**（见 D2）。仓库不再以
 > 与上游 diff 对拍为目标——以行为一致 + 测试通过为准。

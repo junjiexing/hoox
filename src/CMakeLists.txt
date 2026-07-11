@@ -94,6 +94,12 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     "${CMAKE_CURRENT_SOURCE_DIR}/backend/posix/hooxtls-posix.c"
     "${CMAKE_CURRENT_SOURCE_DIR}/backend/darwin/hooxmemory-darwin.c"
     "${CMAKE_CURRENT_SOURCE_DIR}/backend/darwin/hoox_process-darwin.c")
+  # macOS needs the real code segment (RX + ad-hoc code signing + vm_remap),
+  # not the non-Darwin stub, so W^X targets (esp. Apple Silicon) can be patched.
+  list(REMOVE_ITEM HOOX_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/core/hooxcodesegment.c")
+  list(APPEND HOOX_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/backend/darwin/hooxcodesegment-darwin.c")
   set(HOOX_PRIVATE_INCLUDE_DIRS ${HOOX_PRIVATE_INCLUDE_DIRS}
     "${CMAKE_CURRENT_SOURCE_DIR}/backend/posix"
     "${CMAKE_CURRENT_SOURCE_DIR}/backend/darwin")

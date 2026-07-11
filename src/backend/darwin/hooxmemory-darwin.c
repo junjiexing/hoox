@@ -85,6 +85,13 @@ _hoox_memory_query_protections (HxPtrArray * sorted_pages,
   }
 }
 
+/*
+ * hoox patches code via mprotect + VM_PROT_COPY (see hoox_try_mprotect above),
+ * which yields a private, writable-then-executable copy of the target pages.
+ * The vm_remap "writable alias" alternative does not work on Apple Silicon:
+ * signed __TEXT pages have max_protection == RX, so an alias cannot be made
+ * writable (that requires the debugger page-plan mechanism, not shipped here).
+ */
 hx_boolean
 hoox_memory_can_remap_writable (void)
 {
