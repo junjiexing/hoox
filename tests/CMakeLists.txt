@@ -48,6 +48,18 @@ target_include_directories(test_interceptor PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}/../src/disasm")
 add_test(NAME interceptor COMMAND test_interceptor)
 
+# --- arm64 decoder golden test (arch-neutral: validates hx_disasm_arm64 on
+# every host, including x86 CI, since AArch64 decoding is host-independent) ---
+add_executable(test_arm64_decode
+  disasm/test_arm64_decode.c
+  "${CMAKE_CURRENT_SOURCE_DIR}/../src/disasm/hx_disasm_arm64.c")
+target_include_directories(test_arm64_decode PRIVATE
+  "${CMAKE_CURRENT_SOURCE_DIR}/../src/disasm")
+if(WIN32)
+  target_compile_definitions(test_arm64_decode PRIVATE _CRT_SECURE_NO_WARNINGS)
+endif()
+add_test(NAME arm64_decode COMMAND test_arm64_decode)
+
 # --- disasm differential test (M2) ------------------------------------------
 if(HOOX_ARCH_FAMILY STREQUAL "x86")
   add_executable(hx_disasm_dump disasm/hx_disasm_dump.c)
