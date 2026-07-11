@@ -108,6 +108,27 @@ hoox_memory_dispose_writable_pages (hx_pointer first_page,
   (void) n_pages;
 }
 
+static vm_prot_t
+hoox_page_protection_to_mach (HooxPageProtection prot)
+{
+  vm_prot_t mach_prot = VM_PROT_NONE;
+
+  if ((prot & HOOX_PAGE_READ) != 0)
+    mach_prot |= VM_PROT_READ;
+  /*
+   * VM_PROT_COPY forces a private, modifiable copy of the target pages. On
+   * macOS this is what lets us patch code-signed __TEXT: without it, protecting
+   * a signed executable page writable is refused. (mprotect(2) cannot express
+   * this, so we go through mach_vm_protect directly.)
+   */
+  if ((prot & HOOX_PAGE_WRITE) != 0)
+    mach_prot |= VM_PROT_WRITE | VM_PROT_COPY;
+  if ((prot & HOOX_PAGE_EXECUTE) != 0)
+    mach_prot |= VM_PROT_EXECUTE;
+
+  return mach_prot;
+}
+
 hx_boolean
 hoox_try_mprotect (hx_pointer address,
                   hx_size size,
@@ -116,8 +137,7 @@ hoox_try_mprotect (hx_pointer address,
   hx_size page_size;
   hx_pointer aligned_address;
   hx_size aligned_size;
-  hx_int posix_prot;
-  hx_int result;
+  kern_return_t kr;
 
   hx_assert (size != 0);
 
@@ -127,11 +147,13 @@ hoox_try_mprotect (hx_pointer address,
   aligned_size =
       (1 + (((hx_uint8 *) address + size - 1 - (hx_uint8 *) aligned_address) /
       page_size)) * page_size;
-  posix_prot = _hoox_page_protection_to_posix (prot);
 
-  result = mprotect (aligned_address, aligned_size, posix_prot);
+  kr = mach_vm_protect (mach_task_self (),
+      (mach_vm_address_t) (hx_uintptr) aligned_address,
+      (mach_vm_size_t) aligned_size, FALSE,
+      hoox_page_protection_to_mach (prot));
 
-  return result == 0;
+  return kr == KERN_SUCCESS;
 }
 
 void
