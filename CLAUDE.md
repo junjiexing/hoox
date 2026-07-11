@@ -18,6 +18,15 @@
 测试全绿 → 单文件合并 (`hoox.c`/`hoox.h`) → example 闭环。
 构建在 **MSVC / clang / gcc** 三套工具链下全部通过。
 
+**Windows ARM64 已打通（原生 `windows-11-arm` CI，MSVC，实测全绿）：** 复用同一份
+`src/backend/windows`（TLS 在非 x86 上回退 `TlsGetValue`，并补上 `hoox_process_get_native_os`），
+新增自研 AArch64 解码器 `src/disasm/hx_disasm_arm64.c` 驱动 `src/arch/arm64` 的
+relocator/reader/writer 与 `src/backend/arm64` 的 interceptor/cpucontext（frida 的非-Darwin 路径）。
+解码器只精确解码 relocator 关心的 PC-relative/分支/控制指令 + STP/MOV，其余指令原样拷贝但仍
+保守上报 GP 寄存器以保证 scratch 选择安全；因是定长指令、解码与架构无关，可用
+`clang --target=aarch64-pc-windows-msvc -Wshorten-64-to-32` 在 x64 主机上本地校验（连同 golden
+向量测试 `tests/disasm/test_arm64_decode.c`）。**Windows on ARM 仅 ARM64，32 位 ARM 不适用。**
+
 **Linux x86 与 x86_64 已打通（gcc，实测全绿）：** backend 位于 `src/backend/posix/`
 （`hooxmemory-posix.c`/`hooxtls-posix.c`）与 `src/backend/linux/`
 （`hooxmemory-linux.c`/`hoox_process-linux.c`/`hooxlinux-priv.h`）。Linux 走 RWX 路径，
@@ -36,7 +45,7 @@ TLS 用 pthread key。同一份 arch-agnostic backend 覆盖两种位宽：x86_6
 | D1 | GLib → **自研 nano-glib `hx_*`** | 仓库内纯 C 重写容器/原子/锁/类型；符号统一 `hx_` 前缀（`hx_pointer`/`hx_uint`/`HxArray`/…） |
 | D2 | **全量 hoox/hx 命名** | 库 API + 引擎 = `hoox_`/`Hoox`/`HOOX_`（长前缀）；内部工具层（nano-glib + 反汇编）= `hx_`/`Hx`/`HX_`（短前缀）。**不再保留任何 `gum_`/`cs_` 内部名。** |
 | D3 | **MSVC / clang / gcc 全支持，语言标准 C99** | 唯一 MSVC 拦路虎是 `__builtin_alloca`（`hx_alloca` 已按编译器分派 `_alloca`/`__builtin_alloca`）。原子层已有 `_Interlocked*` 分支。 |
-| D4 | 反汇编 → **自研紧凑解码器 `hx_disasm`**（参考 Detours，弃用 capstone） | 提供 capstone 兼容子集的 C 重写（`src/disasm/hx_disasm.h`，枚举 `HX_INS_*`/`HX_REG_*`、类型 `hx_insn`/`hx_x86` 等） |
+| D4 | 反汇编 → **自研紧凑解码器 `hx_disasm`**（参考 Detours，弃用 capstone） | 提供 capstone 兼容子集的 C 重写（`src/disasm/hx_disasm.h`，枚举 `HX_INS_*`/`HX_REG_*`、类型 `hx_insn`/`hx_x86` 等）。**按架构分文件**：x86 = `hx_disasm_x86.c`；arm64 = `hx_disasm_arm64.c`（只解码 hook relocator 所需子集）。两者提供同一套 `hx_open`/`hx_disasm_iter`/… API，按 `HOOX_ARCH_FAMILY` 择一编译 |
 
 ## 提取基线（provenance）
 
