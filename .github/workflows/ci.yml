@@ -40,7 +40,7 @@ jobs:
           - { name: 'Linux · ARM64 · Clang',          runner: ubuntu-24.04-arm, supported: true, toolchain: linux-clang }
 
           - { name: 'Linux · ARM (32-bit) · GCC',     runner: ubuntu-latest, supported: true, toolchain: linux-arm32 }
-          - { name: 'macOS · x86_64 · Clang',         runner: macos-13, supported: true, toolchain: macos-clang }
+          - { name: 'macOS · x86_64 · Clang',         runner: macos-15-intel, supported: true, toolchain: macos-clang }
 
           # ---- planned: not implemented yet, skipped -----------------------
           - { name: 'Linux · MIPS · (planned)',       runner: ubuntu-latest, supported: false }
