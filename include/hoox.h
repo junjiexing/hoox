@@ -1,0 +1,301 @@
+/*
+ * hoox — public API.
+ *
+ * The complete inline-hooking surface: library init/deinit, the Interceptor
+ * (attach a listener or replace a function), and the invocation context passed
+ * to listeners. This is the only header a consumer needs to include; the
+ * amalgamated hoox.c provides every definition.
+ *
+ * Licence: wxWindows Library Licence, Version 3.1 (see COPYING).
+ * Portions of the instruction decoder derive from Microsoft Detours (MIT);
+ * see NOTICE.
+ */
+
+#ifndef HOOX_H
+#define HOOX_H
+
+#include <stddef.h>
+#include <stdint.h>
+#include <stdbool.h>
+
+#if !defined (HOOX_STATIC) && defined (_WIN32)
+#  ifdef HOOX_EXPORTS
+#    define HOOX_API __declspec (dllexport)
+#  else
+#    define HOOX_API __declspec (dllimport)
+#  endif
+#else
+#  define HOOX_API
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* ---- scalar types used across the API ----------------------------------- */
+
+typedef int             hx_int;
+typedef unsigned int    hx_uint;
+typedef size_t          hx_size;
+typedef int             hx_boolean;
+typedef void *          hx_pointer;
+typedef const void *    hx_constpointer;
+
+typedef void (* HxDestroyNotify) (hx_pointer data);
+
+/* Opaque handles: their layout is private to the implementation. */
+typedef struct _HxArray               HooxInvocationStack;
+typedef struct _HooxCpuContext        HooxCpuContext;
+typedef struct _HooxInvocationBackend HooxInvocationBackend;
+typedef struct _HooxInterceptor       HooxInterceptor;
+
+/* ======================================================================== *
+ * Invocation context — passed to a listener's on_enter / on_leave.
+ * ======================================================================== */
+
+typedef struct _HooxInvocationContext HooxInvocationContext;
+typedef hx_uint HooxPointCut;
+
+enum _HooxPointCut
+{
+  HOOX_POINT_ENTER,
+  HOOX_POINT_LEAVE
+};
+
+struct _HooxInvocationContext
+{
+  hx_pointer function;
+  HooxCpuContext * cpu_context;
+  hx_int system_error;
+
+  /*< private >*/
+  HooxInvocationBackend * backend;
+};
+
+HOOX_API HooxPointCut hoox_invocation_context_get_point_cut (
+    HooxInvocationContext * context);
+
+HOOX_API hx_pointer hoox_invocation_context_get_nth_argument (
+    HooxInvocationContext * context, hx_uint n);
+HOOX_API void hoox_invocation_context_replace_nth_argument (
+    HooxInvocationContext * context, hx_uint n, hx_pointer value);
+HOOX_API hx_pointer hoox_invocation_context_get_return_value (
+    HooxInvocationContext * context);
+HOOX_API void hoox_invocation_context_replace_return_value (
+    HooxInvocationContext * context, hx_pointer value);
+
+HOOX_API hx_pointer hoox_invocation_context_get_return_address (
+    HooxInvocationContext * context);
+
+HOOX_API hx_uint hoox_invocation_context_get_thread_id (
+    HooxInvocationContext * context);
+HOOX_API hx_uint hoox_invocation_context_get_depth (
+    HooxInvocationContext * context);
+
+HOOX_API hx_pointer hoox_invocation_context_get_listener_thread_data (
+    HooxInvocationContext * context, hx_size required_size);
+HOOX_API hx_pointer hoox_invocation_context_get_listener_function_data (
+    HooxInvocationContext * context);
+HOOX_API hx_pointer hoox_invocation_context_get_listener_invocation_data (
+    HooxInvocationContext * context, hx_size required_size);
+
+HOOX_API hx_pointer hoox_invocation_context_get_replacement_data (
+    HooxInvocationContext * context);
+
+/* ======================================================================== *
+ * Invocation listener.
+ *
+ * The convenience constructors below cover the common cases. To implement a
+ * custom listener, embed HooxInvocationListener as the first member of your
+ * struct and call hoox_invocation_listener_init with your vtable.
+ * ======================================================================== */
+
+typedef struct _HooxInvocationListener HooxInvocationListener;
+typedef struct _HooxInvocationListenerInterface HooxInvocationListenerInterface;
+
+typedef void (* HooxInvocationCallback) (HooxInvocationContext * context,
+    hx_pointer user_data);
+
+struct _HooxInvocationListenerInterface
+{
+  void (* on_enter) (HooxInvocationListener * self,
+      HooxInvocationContext * context);
+  void (* on_leave) (HooxInvocationListener * self,
+      HooxInvocationContext * context);
+};
+
+struct _HooxInvocationListener
+{
+  const HooxInvocationListenerInterface * iface;
+  hx_int ref_count;
+  HxDestroyNotify finalize;   /* per-instance cleanup; may be NULL */
+};
+
+#define HOOX_INVOCATION_LISTENER(obj) ((HooxInvocationListener *) (obj))
+
+HOOX_API void hoox_invocation_listener_init (HooxInvocationListener * self,
+    const HooxInvocationListenerInterface * iface, HxDestroyNotify finalize);
+
+HOOX_API HooxInvocationListener * hoox_make_call_listener (
+    HooxInvocationCallback on_enter, HooxInvocationCallback on_leave,
+    hx_pointer data, HxDestroyNotify data_destroy);
+HOOX_API HooxInvocationListener * hoox_make_probe_listener (
+    HooxInvocationCallback on_hit, hx_pointer data, HxDestroyNotify data_destroy);
+
+HOOX_API HooxInvocationListener * hoox_invocation_listener_ref (
+    HooxInvocationListener * self);
+HOOX_API void hoox_invocation_listener_unref (HooxInvocationListener * self);
+
+HOOX_API void hoox_invocation_listener_on_enter (HooxInvocationListener * self,
+    HooxInvocationContext * context);
+HOOX_API void hoox_invocation_listener_on_leave (HooxInvocationListener * self,
+    HooxInvocationContext * context);
+
+/* ======================================================================== *
+ * Interceptor.
+ * ======================================================================== */
+
+typedef hx_uint HooxInvocationState;
+typedef void (* HooxInterceptorLockedFunc) (hx_pointer user_data);
+
+typedef enum {
+  HOOX_INTERCEPTOR_SCENARIO_DEFAULT,
+  HOOX_INTERCEPTOR_SCENARIO_ONLINE,
+  HOOX_INTERCEPTOR_SCENARIO_OFFLINE,
+} HooxInterceptorScenario;
+
+typedef enum {
+  HOOX_INVOCATION_IGNORABLE,
+  HOOX_INVOCATION_UNIGNORABLE,
+} HooxInvocationIgnorability;
+
+typedef enum {
+  HOOX_RELOCATION_DEFAULT,
+  HOOX_RELOCATION_CHECKED,
+  HOOX_RELOCATION_UNCHECKED,
+  HOOX_RELOCATION_FORCED,
+} HooxRelocationPolicy;
+
+typedef enum _HooxRedirectWriteResult {
+  HOOX_REDIRECT_WRITTEN,
+  HOOX_REDIRECT_DECLINED,
+} HooxRedirectWriteResult;
+
+typedef struct _HooxRedirectWriteDetails HooxRedirectWriteDetails;
+
+struct _HooxRedirectWriteDetails
+{
+  hx_pointer writer;
+  hx_pointer target;
+  hx_int scratch_register;
+  hx_uint capacity;
+};
+
+typedef HooxRedirectWriteResult (* HooxWriteRedirectFunc) (
+    const HooxRedirectWriteDetails * details, hx_pointer user_data);
+
+typedef struct _HooxInterceptorOptions
+{
+  hx_int scratch_register;
+  HooxInterceptorScenario scenario;
+  HooxRelocationPolicy relocation_policy;
+  HooxWriteRedirectFunc write_redirect;
+  hx_pointer write_redirect_data;
+  hx_uint redirect_space_hint;
+} HooxInterceptorOptions;
+
+typedef struct _HooxAttachOptions
+{
+  HooxInterceptorOptions instrumentation;
+  hx_pointer listener_function_data;
+  HooxInvocationIgnorability ignorability;
+} HooxAttachOptions;
+
+typedef struct _HooxReplaceOptions
+{
+  HooxInterceptorOptions instrumentation;
+  hx_pointer replacement_data;
+} HooxReplaceOptions;
+
+typedef enum
+{
+  HOOX_ATTACH_OK               =  0,
+  HOOX_ATTACH_WRONG_SIGNATURE  = -1,
+  HOOX_ATTACH_ALREADY_ATTACHED = -2,
+  HOOX_ATTACH_POLICY_VIOLATION = -3,
+  HOOX_ATTACH_WRONG_TYPE       = -4,
+} HooxAttachReturn;
+
+typedef enum
+{
+  HOOX_REPLACE_OK               =  0,
+  HOOX_REPLACE_WRONG_SIGNATURE  = -1,
+  HOOX_REPLACE_ALREADY_REPLACED = -2,
+  HOOX_REPLACE_POLICY_VIOLATION = -3,
+  HOOX_REPLACE_WRONG_TYPE       = -4,
+} HooxReplaceReturn;
+
+HOOX_API HooxInterceptor * hoox_interceptor_obtain (void);
+HOOX_API HooxInterceptor * hoox_interceptor_ref (HooxInterceptor * self);
+HOOX_API void hoox_interceptor_unref (HooxInterceptor * self);
+
+HOOX_API void hoox_interceptor_set_default_options (HooxInterceptor * self,
+    const HooxInterceptorOptions * options);
+
+HOOX_API HooxAttachReturn hoox_interceptor_attach (HooxInterceptor * self,
+    hx_pointer target, HooxInvocationListener * listener,
+    const HooxAttachOptions * options);
+HOOX_API void hoox_interceptor_detach (HooxInterceptor * self,
+    HooxInvocationListener * listener);
+
+HOOX_API HooxReplaceReturn hoox_interceptor_replace (HooxInterceptor * self,
+    hx_pointer function_address, hx_pointer replacement_function,
+    hx_pointer * original_function, const HooxReplaceOptions * options);
+HOOX_API HooxReplaceReturn hoox_interceptor_replace_fast (HooxInterceptor * self,
+    hx_pointer function_address, hx_pointer replacement_function,
+    hx_pointer * original_function, const HooxInterceptorOptions * options);
+HOOX_API void hoox_interceptor_revert (HooxInterceptor * self,
+    hx_pointer target);
+
+HOOX_API void hoox_interceptor_begin_transaction (HooxInterceptor * self);
+HOOX_API void hoox_interceptor_end_transaction (HooxInterceptor * self);
+HOOX_API hx_boolean hoox_interceptor_flush (HooxInterceptor * self);
+
+HOOX_API HooxInvocationContext * hoox_interceptor_get_current_invocation (void);
+HOOX_API HooxInvocationStack * hoox_interceptor_get_current_stack (void);
+
+HOOX_API void hoox_interceptor_ignore_current_thread (HooxInterceptor * self);
+HOOX_API void hoox_interceptor_unignore_current_thread (HooxInterceptor * self);
+HOOX_API void hoox_interceptor_ignore_other_threads (HooxInterceptor * self);
+HOOX_API void hoox_interceptor_unignore_other_threads (HooxInterceptor * self);
+
+HOOX_API hx_pointer hoox_invocation_stack_translate (HooxInvocationStack * self,
+    hx_pointer return_address);
+
+HOOX_API void hoox_interceptor_save (HooxInvocationState * state);
+HOOX_API void hoox_interceptor_restore (HooxInvocationState * state);
+
+HOOX_API void hoox_interceptor_with_lock_held (HooxInterceptor * self,
+    HooxInterceptorLockedFunc func, hx_pointer user_data);
+HOOX_API hx_boolean hoox_interceptor_is_locked (HooxInterceptor * self);
+
+/* ======================================================================== *
+ * Library lifecycle.
+ * ======================================================================== */
+
+HOOX_API void hoox_init (void);
+HOOX_API void hoox_shutdown (void);
+HOOX_API void hoox_deinit (void);
+
+HOOX_API void hoox_init_embedded (void);
+HOOX_API void hoox_deinit_embedded (void);
+
+HOOX_API void hoox_prepare_to_fork (void);
+HOOX_API void hoox_recover_from_fork_in_parent (void);
+HOOX_API void hoox_recover_from_fork_in_child (void);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif

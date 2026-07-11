@@ -118,8 +118,11 @@ def main():
     ap.add_argument("--out-h")
     ap.add_argument("--include-dir", action="append", default=[])
     ap.add_argument("--header", action="append", default=[],
-                    help="public headers to inline first (into out-c, and "
-                         "into out-h if given)")
+                    help="internal umbrella headers to inline first into out-c")
+    ap.add_argument("--public-header", action="append", default=[],
+                    help="curated public headers to emit as out-h (the clean "
+                         "API surface). If omitted, out-h falls back to "
+                         "--header.")
     ap.add_argument("sources", nargs="+")
     args = ap.parse_args()
 
@@ -137,10 +140,12 @@ def main():
     print("wrote %s (%d headers inlined)" %
           (args.out_c, len(a.header_inlined)))
 
-    # Public header (optional).
-    if args.out_h and args.header:
+    # Public header: prefer the curated --public-header set; fall back to the
+    # internal umbrella only if none was given.
+    out_h_headers = args.public_header if args.public_header else args.header
+    if args.out_h and out_h_headers:
         ah = Amalgamator(inc)
-        for h in args.header:
+        for h in out_h_headers:
             ah.inline_header(os.path.abspath(h))
         with open(args.out_h, "w", encoding="utf-8") as f:
             f.write(ah.render(BANNER))
