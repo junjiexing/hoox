@@ -73,7 +73,7 @@ int main (void) {
 | `HOOX_SHARED` | 以 Windows DLL 方式消费 hoox —— `HOOX_API` 变为 `__declspec(dllimport)`。默认是静态链接（`HOOX_API` 为空）。 |
 | `HOOX_EXPORTS` | 在**构建** hoox DLL 时（配合 `HOOX_SHARED`）定义 → `__declspec(dllexport)`。 |
 | `HOOX_USE_DLMALLOC` | 使用内置 dlmalloc 而非系统分配器。你需要自行在 include 路径上提供 `dlmalloc.c`。默认：系统 `malloc`。 |
-| `HAVE_I386` / `HAVE_ARM` / `HAVE_ARM64` / `HAVE_MIPS`，`HAVE_WINDOWS` / `HAVE_LINUX` / `HAVE_DARWIN` | 强制指定目标架构/OS。通常会从编译器内置宏（`_M_X64`、`__aarch64__`、`_WIN32` 等）自动推导；仅当无法自动判断时才需要定义。 |
+| `HAVE_I386` / `HAVE_ARM` / `HAVE_ARM64`，`HAVE_WINDOWS` / `HAVE_LINUX` / `HAVE_DARWIN` | 强制指定目标架构/OS。通常会从编译器内置宏（`_M_X64`、`__aarch64__`、`_WIN32` 等）自动推导；仅当无法自动判断时才需要定义。 |
 
 Windows 上需链接 `psapi`。
 

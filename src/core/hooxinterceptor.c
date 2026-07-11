@@ -21,11 +21,7 @@
 # include <mach/mach.h>
 #endif
 
-#ifdef HAVE_MIPS
-# define HOOX_INTERCEPTOR_CODE_SLICE_SIZE 1024
-#else
-# define HOOX_INTERCEPTOR_CODE_SLICE_SIZE 256
-#endif
+#define HOOX_INTERCEPTOR_CODE_SLICE_SIZE 256
 
 #define HOOX_INTERCEPTOR_LOCK(o) hx_rec_mutex_lock (&(o)->mutex)
 #define HOOX_INTERCEPTOR_UNLOCK(o) hx_rec_mutex_unlock (&(o)->mutex)
@@ -2178,8 +2174,6 @@ hoox_function_context_fixup_cpu_context (HooxFunctionContext * function_ctx,
 #elif defined (HAVE_ARM)
   cpu_context->pc = pc;
 #elif defined (HAVE_ARM64)
-  cpu_context->pc = pc;
-#elif defined (HAVE_MIPS)
   cpu_context->pc = pc;
 #else
 # error Unsupported architecture

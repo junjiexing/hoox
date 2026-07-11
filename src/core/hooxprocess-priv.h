@@ -61,16 +61,6 @@ HX_GNUC_INTERNAL void _hoox_arm64_set_watchpoint (HooxArm64CtrlReg * wcr,
     HooxWatchConditions conditions);
 HX_GNUC_INTERNAL void _hoox_arm64_unset_watchpoint (HooxArm64CtrlReg * wcr,
     hx_uint64 * wvr, hx_uint watchpoint_id);
-#elif defined (HAVE_MIPS)
-HX_GNUC_INTERNAL void _hoox_mips_set_breakpoint (hx_size * watch_lo,
-    hx_uint16 * watch_hi, hx_uint breakpoint_id, HooxAddress address);
-HX_GNUC_INTERNAL void _hoox_mips_unset_breakpoint (hx_size * watch_lo,
-    hx_uint16 * watch_hi, hx_uint breakpoint_id);
-HX_GNUC_INTERNAL void _hoox_mips_set_watchpoint (hx_size * watch_lo,
-    hx_uint16 * watch_hi, hx_uint watchpoint_id, HooxAddress address, hx_size size,
-    HooxWatchConditions conditions);
-HX_GNUC_INTERNAL void _hoox_mips_unset_watchpoint (hx_size * watch_lo,
-    hx_uint16 * watch_hi, hx_uint watchpoint_id);
 #endif
 
 HX_END_DECLS

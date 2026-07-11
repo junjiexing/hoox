@@ -20,7 +20,7 @@ resolution, JS bindings, …).
   (`hx_disasm`, informed by Microsoft Detours' relocation engine).
 - **No third-party runtime dependencies.**
 - **Cross-platform** — Windows / Linux / Android / macOS / iOS / FreeBSD / QNX ×
-  x86 / x86_64 / ARM / ARM64 / MIPS (coverage staged, on par with Frida).
+  x86 / x86_64 / ARM / ARM64 (coverage staged).
 - **Amalgamatable** — a script merges the sources into a single `hoox.c` + `hoox.h`
   (SQLite-style); the public `hoox.h` exposes only the API.
 - **Zero-config to consume** — static linkage, the system allocator, and the
@@ -52,14 +52,14 @@ Legend: ✅ supported (builds & passes the full test suite) · 🧩 extracted
 (sources are in-tree but not yet compiled/verified) · 📋 planned (not started) ·
 ➖ N/A (no such architecture on this platform)
 
-| OS ＼ Arch | x86 | x86_64 | ARM | ARM64 | MIPS |
-|---|:-:|:-:|:-:|:-:|:-:|
-| **Windows** | ✅ | ✅ | ➖ | ✅ | 📋 |
-| **Linux** | ✅ | ✅ | ✅ | ✅ | 📋 |
-| **Android** | 📋 | 📋 | 📋 | 📋 | 📋 |
-| **macOS** | ➖ | ✅ | ➖ | ✅ | ➖ |
-| **iOS / tvOS** | ➖ | ➖ | ➖ | 📋 | ➖ |
-| **FreeBSD / QNX** | 📋 | 📋 | 📋 | 📋 | 📋 |
+| OS ＼ Arch | x86 | x86_64 | ARM | ARM64 |
+|---|:-:|:-:|:-:|:-:|
+| **Windows** | ✅ | ✅ | ➖ | ✅ |
+| **Linux** | ✅ | ✅ | ✅ | ✅ |
+| **Android** | 📋 | 📋 | 📋 | 📋 |
+| **macOS** | ➖ | ✅ | ➖ | ✅ |
+| **iOS / tvOS** | ➖ | ➖ | ➖ | 📋 |
+| **FreeBSD / QNX** | 📋 | 📋 | 📋 | 📋 |
 
 Directly usable today: **Windows × (x86 / x86_64 / ARM64)**,
 **Linux × (x86 / x86_64 / ARM / ARM64)** and **macOS × (x86_64 / ARM64)**. Windows ARM64 is built and fully
@@ -83,8 +83,7 @@ with `VM_PROT_COPY` (a private, writable-then-executable copy — sidestepping
 W^X). x86_64 is verified on `macos-15-intel` and ARM64 on the Apple Silicon
 `macos-15` runner; the interceptor behaviour suite is green on both. (An in-tree
 Darwin code segment, `hooxcodesegment-darwin.c`, is also provided for older
-kernels.) Other OSes still need their own backend. MIPS is partial/experimental
-in frida itself.
+kernels.) Other OSes still need their own backend.
 
 > **⚠️ Apple Silicon limitation (self-hosting):** on Apple Silicon (16 KiB pages
 > + enforced W^X), patching a page briefly removes its execute permission. If the

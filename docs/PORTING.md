@@ -9,7 +9,6 @@
 | Linux/macOS x86_64 | ✅ (arch-shared) | ✅ | — backend | — | backend pending (M8) |
 | **arm64** | ⏳ needed | ✅ extracted+adapted | ✅ extracted+adapted | — | **sources in-tree; decoder+shim pending** |
 | **arm/thumb** | ⏳ needed | ✅ extracted+adapted | ✅ extracted+adapted | — | **sources in-tree; decoder+shim pending** |
-| mips | — | — | — | — | not started |
 
 The x86/x64 path is fully working and tested (inline hooking: attach/detach/
 replace/revert; writer/relocator vs frida's 91 tests; decoder vs capstone;

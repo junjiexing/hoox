@@ -246,7 +246,7 @@ typedef void     (* HxCallback)      (void);
 #define HX_STATIC_ASSERT(expr) \
     typedef char _GStaticAssert[(expr) ? 1 : -1] HX_GNUC_UNUSED
 
-/* Byte order: hoox targets are little-endian (x86/ARM/ARM64/MIPSEL), so the
+/* Byte order: hoox targets are little-endian (x86/ARM/ARM64), so the
  * LE conversions are identities; provide byte-swapping BE forms for
  * completeness. */
 #if defined (__GNUC__) || defined (__clang__)
