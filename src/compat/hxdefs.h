@@ -291,6 +291,18 @@ typedef void     (* HxCallback)      (void);
 # define hx_alloca(n) __builtin_alloca (n)
 #endif
 
+/* Bounded string copy. MSVC deprecates strncpy (C4996), so route to the
+ * bounds-checked strncpy_s there; every other toolchain uses plain strncpy.
+ * `dst` must hold `dst_size` bytes; at most `count` chars are copied. */
+#include <string.h>
+#if defined (_MSC_VER)
+# define hx_strncpy(dst, dst_size, src, count) \
+    strncpy_s ((dst), (dst_size), (src), (count))
+#else
+# define hx_strncpy(dst, dst_size, src, count) \
+    strncpy ((dst), (src), (count))
+#endif
+
 #define HX_STRINGIFY(macro_or_string) HX_STRINGIFY_ARG (macro_or_string)
 #define HX_STRINGIFY_ARG(contents) #contents
 

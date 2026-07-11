@@ -159,7 +159,7 @@ hoox_main_module_get (void)
       if (*p == '\\' || *p == '/')
         slash = p + 1;
     }
-    strncpy (m->name, slash, sizeof (m->name) - 1);
+    hx_strncpy (m->name, sizeof (m->name), slash, sizeof (m->name) - 1);
   }
 
   if (GetModuleInformation (GetCurrentProcess (), handle, &info,

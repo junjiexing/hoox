@@ -47,7 +47,6 @@ target_include_directories(hook_example PRIVATE "${HOOX_AMALGAM_DIR}")
 # Consumers only link the platform's process API.
 if(WIN32)
   target_link_libraries(hook_example PRIVATE psapi)
-  target_compile_definitions(hook_example PRIVATE _CRT_SECURE_NO_WARNINGS)
 elseif(UNIX AND NOT APPLE)
   target_link_libraries(hook_example PRIVATE pthread)
 endif()
