@@ -39,8 +39,9 @@ jobs:
           - { name: 'Linux · ARM64 · GCC',            runner: ubuntu-24.04-arm, supported: true, toolchain: linux-gcc   }
           - { name: 'Linux · ARM64 · Clang',          runner: ubuntu-24.04-arm, supported: true, toolchain: linux-clang }
 
+          - { name: 'Linux · ARM (32-bit) · GCC',     runner: ubuntu-latest, supported: true, toolchain: linux-arm32 }
+
           # ---- planned: not implemented yet, skipped -----------------------
-          - { name: 'Linux · ARM · (planned)',        runner: ubuntu-latest, supported: false }
           - { name: 'Linux · MIPS · (planned)',       runner: ubuntu-latest, supported: false }
           - { name: 'Android · ARM64 · (planned)',    runner: ubuntu-latest, supported: false }
           - { name: 'Android · ARM · (planned)',      runner: ubuntu-latest, supported: false }
@@ -147,6 +148,21 @@ jobs:
         run: |
           cmake -B build -DCMAKE_C_COMPILER=gcc \
             -DCMAKE_C_FLAGS=-m32 -DCMAKE_EXE_LINKER_FLAGS=-m32
+          cmake --build build
+          ctest --test-dir build --output-on-failure
+
+      # ---- Linux ARM 32-bit (cross-compile + run tests under qemu-arm) ---
+      - name: Install ARM cross toolchain + qemu
+        if: ${{ matrix.supported && matrix.toolchain == 'linux-arm32' }}
+        run: sudo apt-get update && sudo apt-get install -y gcc-arm-linux-gnueabihf qemu-user-static
+      - name: Build & test (Linux ARM32, cross + qemu)
+        if: ${{ matrix.supported && matrix.toolchain == 'linux-arm32' }}
+        run: |
+          cmake -B build \
+            -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=arm \
+            -DCMAKE_C_COMPILER=arm-linux-gnueabihf-gcc \
+            -DHOOX_TARGET_ARCH=arm \
+            "-DCMAKE_CROSSCOMPILING_EMULATOR=/usr/bin/qemu-arm-static;-L;/usr/arm-linux-gnueabihf"
           cmake --build build
           ctest --test-dir build --output-on-failure
 

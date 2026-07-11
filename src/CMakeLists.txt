@@ -39,6 +39,18 @@ elseif(HOOX_ARCH_FAMILY STREQUAL "arm64")
     "${CMAKE_CURRENT_SOURCE_DIR}/arch/arm64/hooxarm64relocator.c")
   set(HOOX_PRIVATE_INCLUDE_DIRS ${HOOX_PRIVATE_INCLUDE_DIRS}
     "${CMAKE_CURRENT_SOURCE_DIR}/arch/arm64")
+elseif(HOOX_ARCH_FAMILY STREQUAL "arm")
+  list(APPEND HOOX_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/disasm/hx_disasm_arm.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/arch/arm/hooxarmreg.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/arch/arm/hooxarmwriter.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/arch/arm/hooxarmreader.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/arch/arm/hooxarmrelocator.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/arch/arm/hooxthumbwriter.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/arch/arm/hooxthumbreader.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/arch/arm/hooxthumbrelocator.c")
+  set(HOOX_PRIVATE_INCLUDE_DIRS ${HOOX_PRIVATE_INCLUDE_DIRS}
+    "${CMAKE_CURRENT_SOURCE_DIR}/arch/arm")
 endif()
 
 # --- core (extracted hoox primitives) ----------------------------------------
@@ -87,6 +99,10 @@ elseif(HOOX_ARCH_FAMILY STREQUAL "arm64")
   list(APPEND HOOX_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/backend/arm64/hooxcpucontext-arm64.c"
     "${CMAKE_CURRENT_SOURCE_DIR}/backend/arm64/hooxinterceptor-arm64.c")
+elseif(HOOX_ARCH_FAMILY STREQUAL "arm")
+  list(APPEND HOOX_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/backend/arm/hooxcpucontext-arm.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/backend/arm/hooxinterceptor-arm.c")
 endif()
 
 add_library(hoox STATIC ${HOOX_SOURCES})
@@ -110,6 +126,8 @@ if(HOOX_ARCH_FAMILY STREQUAL "x86")
   target_compile_definitions(hoox PRIVATE HAVE_I386)
 elseif(HOOX_ARCH_FAMILY STREQUAL "arm64")
   target_compile_definitions(hoox PRIVATE HAVE_ARM64)
+elseif(HOOX_ARCH_FAMILY STREQUAL "arm")
+  target_compile_definitions(hoox PRIVATE HAVE_ARM)
 endif()
 
 # Export the source list and private include dirs so the amalgamation test
