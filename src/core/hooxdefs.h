@@ -63,7 +63,7 @@ typedef hx_uint HooxRelocationScenario;
 #if defined (_M_IX86) || defined (__i386__)
 # define HOOX_NATIVE_CPU HOOX_CPU_IA32
 # define HOOX_DEFAULT_HX_ARCH HX_ARCH_X86
-# define hoox_cs_arch_register_native hx_arch_register_x86
+# define hoox_arch_register_native hx_arch_register_x86
 /**
  * HOOX_DEFAULT_HX_MODE: (skip)
  */
@@ -72,7 +72,7 @@ typedef HooxIA32CpuContext HooxCpuContext;
 #elif defined (_M_X64) || defined (__x86_64__)
 # define HOOX_NATIVE_CPU HOOX_CPU_AMD64
 # define HOOX_DEFAULT_HX_ARCH HX_ARCH_X86
-# define hoox_cs_arch_register_native hx_arch_register_x86
+# define hoox_arch_register_native hx_arch_register_x86
 /**
  * HOOX_DEFAULT_HX_MODE: (skip)
  */
@@ -81,7 +81,7 @@ typedef HooxX64CpuContext HooxCpuContext;
 #elif defined (_M_ARM) || defined (__arm__)
 # define HOOX_NATIVE_CPU HOOX_CPU_ARM
 # define HOOX_DEFAULT_HX_ARCH HX_ARCH_ARM
-# define hoox_cs_arch_register_native hx_arch_register_arm
+# define hoox_arch_register_native hx_arch_register_arm
 /**
  * HOOX_DEFAULT_HX_MODE: (skip)
  */
@@ -92,7 +92,7 @@ typedef HooxArmCpuContext HooxCpuContext;
 #elif defined (_M_ARM64) || defined (__aarch64__)
 # define HOOX_NATIVE_CPU HOOX_CPU_ARM64
 # define HOOX_DEFAULT_HX_ARCH HX_ARCH_ARM64
-# define hoox_cs_arch_register_native hx_arch_register_arm64
+# define hoox_arch_register_native hx_arch_register_arm64
 /**
  * HOOX_DEFAULT_HX_MODE: (skip)
  */
@@ -101,7 +101,7 @@ typedef HooxArm64CpuContext HooxCpuContext;
 #elif defined (__mips__)
 # define HOOX_NATIVE_CPU HOOX_CPU_MIPS
 # define HOOX_DEFAULT_HX_ARCH HX_ARCH_MIPS
-# define hoox_cs_arch_register_native cs_arch_register_mips
+# define hoox_arch_register_native hx_arch_register_mips
 # if HX_SIZEOF_VOID_P == 4
 /**
  * HOOX_DEFAULT_HX_MODE: (skip)
