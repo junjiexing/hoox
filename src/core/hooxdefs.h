@@ -17,8 +17,7 @@
  * derive it from the compiler's built-in macros so the amalgamated library
  * needs no -D flags on common targets. Define the macro yourself only if
  * auto-detection cannot classify your target. */
-#if !defined (HAVE_I386) && !defined (HAVE_ARM) && \
-    !defined (HAVE_ARM64) && !defined (HAVE_MIPS)
+#if !defined (HAVE_I386) && !defined (HAVE_ARM) && !defined (HAVE_ARM64)
 # if defined (_M_IX86) || defined (__i386__) || \
      defined (_M_X64) || defined (__x86_64__)
 #  define HAVE_I386
@@ -26,8 +25,6 @@
 #  define HAVE_ARM64
 # elif defined (_M_ARM) || defined (__arm__)
 #  define HAVE_ARM
-# elif defined (__mips__)
-#  define HAVE_MIPS
 # endif
 #endif
 
@@ -89,7 +86,6 @@ typedef struct _HooxArmCpuContext HooxArmCpuContext;
 typedef union _HooxArmVectorReg HooxArmVectorReg;
 typedef struct _HooxArm64CpuContext HooxArm64CpuContext;
 typedef union _HooxArm64VectorReg HooxArm64VectorReg;
-typedef struct _HooxMipsCpuContext HooxMipsCpuContext;
 typedef hx_uint HooxRelocationScenario;
 
 #if defined (_M_IX86) || defined (__i386__)
@@ -130,24 +126,6 @@ typedef HooxArmCpuContext HooxCpuContext;
  */
 # define HOOX_DEFAULT_HX_MODE HOOX_DEFAULT_HX_ENDIAN
 typedef HooxArm64CpuContext HooxCpuContext;
-#elif defined (__mips__)
-# define HOOX_NATIVE_CPU HOOX_CPU_MIPS
-# define HOOX_DEFAULT_HX_ARCH HX_ARCH_MIPS
-# define hoox_arch_register_native hx_arch_register_mips
-# if HX_SIZEOF_VOID_P == 4
-/**
- * HOOX_DEFAULT_HX_MODE: (skip)
- */
-#  define HOOX_DEFAULT_HX_MODE ((hx_mode) \
-    (HX_MODE_MIPS32 | HOOX_DEFAULT_HX_ENDIAN))
-# else
-/**
- * HOOX_DEFAULT_HX_MODE: (skip)
- */
-#  define HOOX_DEFAULT_HX_MODE ((hx_mode) \
-    (HX_MODE_MIPS64 | HOOX_DEFAULT_HX_ENDIAN))
-# endif
-typedef HooxMipsCpuContext HooxCpuContext;
 #else
 # error Unsupported architecture.
 #endif
@@ -208,8 +186,7 @@ typedef enum {
   HOOX_CPU_IA32,
   HOOX_CPU_AMD64,
   HOOX_CPU_ARM,
-  HOOX_CPU_ARM64,
-  HOOX_CPU_MIPS
+  HOOX_CPU_ARM64
 } HooxCpuType;
 
 enum _HooxCpuFeatures
@@ -346,61 +323,6 @@ struct _HooxArm64CpuContext
    * there the trampolines stay integer-only and skip the vector registers. */
   HooxArm64VectorReg v[32];
 #endif
-};
-
-struct _HooxMipsCpuContext
-{
-  /*
-   * This structure represents the register state pushed onto the stack by the
-   * trampoline which allows us to vector from the original minimal assembly
-   * hook to architecture agnostic C code inside frida-gum. These registers are
-   * natively sized. Even if some have not been expanded to 64-bits from the
-   * MIPS32 architecture MIPS can only perform aligned data access and as such
-   * pushing zero extended values is simpler than attempting to push minimally
-   * sized data types.
-   */
-  hx_size pc;
-
-  hx_size gp;
-  hx_size sp;
-  hx_size fp;
-  hx_size ra;
-
-  hx_size hi;
-  hx_size lo;
-
-  hx_size at;
-
-  hx_size v0;
-  hx_size v1;
-
-  hx_size a0;
-  hx_size a1;
-  hx_size a2;
-  hx_size a3;
-
-  hx_size t0;
-  hx_size t1;
-  hx_size t2;
-  hx_size t3;
-  hx_size t4;
-  hx_size t5;
-  hx_size t6;
-  hx_size t7;
-  hx_size t8;
-  hx_size t9;
-
-  hx_size s0;
-  hx_size s1;
-  hx_size s2;
-  hx_size s3;
-  hx_size s4;
-  hx_size s5;
-  hx_size s6;
-  hx_size s7;
-
-  hx_size k0;
-  hx_size k1;
 };
 
 enum _HooxRelocationScenario

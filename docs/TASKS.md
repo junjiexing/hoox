@@ -276,9 +276,7 @@
 - **T9.2** ARM/Thumb：`hx_disasm_arm.c`（arm+thumb，参考 Detours Thumb-2）、
   `arch-arm/*`（含 `gumarmreg`）、`backend-arm/*`；移植 arm/thumb writer/relocator +
   `interceptor-arm` 测试。验收：全绿。
-- **T9.3** MIPS：`hx_disasm_mips.c`（定长 4B、~20 个分支/跳转 id 手写，capstone 差分）、
-  `arch-mips/*`、`backend-mips/*`。验收：全绿。
-- **T9.4** Android（linux backend + `gumandroid.c`）、FreeBSD、QNX backend。
+- **T9.3** Android（linux backend + `gumandroid.c`）、FreeBSD、QNX backend。
   验收：各平台构建 + 可用测试通过。
 
 ## M10 · 收尾

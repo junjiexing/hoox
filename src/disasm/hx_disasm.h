@@ -32,7 +32,6 @@ typedef enum hx_arch
 {
   HX_ARCH_ARM = 0,
   HX_ARCH_AARCH64 = 1,
-  HX_ARCH_MIPS = 2,
   HX_ARCH_X86 = 3,
 } hx_arch;
 
@@ -47,8 +46,6 @@ typedef enum hx_mode
   HX_MODE_32 = 1 << 2,
   HX_MODE_64 = 1 << 3,
   HX_MODE_THUMB = 1 << 4,
-  HX_MODE_MIPS32 = 1 << 2,
-  HX_MODE_MIPS64 = 1 << 3,
   HX_MODE_V8 = 1 << 6,
   HX_MODE_BIG_ENDIAN = 1 << 31,
 } hx_mode;

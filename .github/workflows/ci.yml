@@ -44,7 +44,6 @@ jobs:
           - { name: 'macOS · ARM64 · Clang',          runner: macos-15, supported: true, toolchain: macos-clang }
 
           # ---- planned: not implemented yet, skipped -----------------------
-          - { name: 'Linux · MIPS · (planned)',       runner: ubuntu-latest, supported: false }
           - { name: 'Android · ARM64 · (planned)',    runner: ubuntu-latest, supported: false }
           - { name: 'Android · ARM · (planned)',      runner: ubuntu-latest, supported: false }
           - { name: 'Android · x86_64 · (planned)',   runner: ubuntu-latest, supported: false }

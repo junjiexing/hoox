@@ -127,7 +127,7 @@ void
 hoox_clear_cache (hx_pointer address,
                  hx_size size)
 {
-#if defined (HAVE_ARM) || defined (HAVE_ARM64) || defined (HAVE_MIPS)
+#if defined (HAVE_ARM) || defined (HAVE_ARM64)
   __builtin___clear_cache ((char *) address, (char *) address + size);
 #else
   (void) address;

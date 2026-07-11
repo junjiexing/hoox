@@ -73,7 +73,7 @@ common case. Define a macro only to opt out of a default:
 | `HOOX_SHARED` | Consume hoox as a Windows DLL — `HOOX_API` becomes `__declspec(dllimport)`. Default is static linkage (`HOOX_API` empty). |
 | `HOOX_EXPORTS` | Set **while building** a hoox DLL (with `HOOX_SHARED`) → `__declspec(dllexport)`. |
 | `HOOX_USE_DLMALLOC` | Use a bundled dlmalloc instead of the system allocator. You must supply `dlmalloc.c` on the include path. Default: system `malloc`. |
-| `HAVE_I386` / `HAVE_ARM` / `HAVE_ARM64` / `HAVE_MIPS`, `HAVE_WINDOWS` / `HAVE_LINUX` / `HAVE_DARWIN` | Force the target arch/OS. Normally auto-detected from compiler built-ins (`_M_X64`, `__aarch64__`, `_WIN32`, …); define only if detection cannot classify your target. |
+| `HAVE_I386` / `HAVE_ARM` / `HAVE_ARM64`, `HAVE_WINDOWS` / `HAVE_LINUX` / `HAVE_DARWIN` | Force the target arch/OS. Normally auto-detected from compiler built-ins (`_M_X64`, `__aarch64__`, `_WIN32`, …); define only if detection cannot classify your target. |
 
 On Windows, link `psapi`.
 
