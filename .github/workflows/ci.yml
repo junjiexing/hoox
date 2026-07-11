@@ -187,13 +187,20 @@ jobs:
         with:
           usesh: true
           prepare: |
-            pkg install -y cmake python3
+            pkg install -y cmake python3 gdb
           run: |
             set -e
             echo "::group::FreeBSD x86_64 (native)"
-            cmake -B build -DCMAKE_C_COMPILER=clang
+            cmake -B build -DCMAKE_C_COMPILER=clang -DCMAKE_BUILD_TYPE=Debug
             cmake --build build
-            ctest --test-dir build --output-on-failure
+            if ! ctest --test-dir build --output-on-failure; then
+              echo "=== ctest failed — capturing backtrace for test_amalgam ==="
+              t=$(find build -name test_amalgam -type f | head -1)
+              echo "binary: $t"; file "$t" || true
+              gdb -batch -ex 'run' -ex 'bt full' -ex 'info registers' -ex 'quit' \
+                "$t" 2>&1 | tail -100 || true
+              exit 1
+            fi
             echo "::endgroup::"
             echo "::group::FreeBSD x86 (32-bit, clang -m32 / freebsd32)"
             cmake -B build32 -DCMAKE_C_COMPILER=clang \
