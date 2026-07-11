@@ -36,28 +36,32 @@ JS 绑定等）。
 
 Windows 垂直切片已完成，并在 **x86 与 x64** 上、跨 **MSVC 19.x、clang、
 gcc (MinGW)** 全部通过：提取 → 构建 → hook 生效 → 完整测试套件 → 单文件合并 →
-example。**Linux x86 与 x86_64 亦已打通**（gcc，全测试套件 + amalgamation 全绿）。下一步向
+example。**Windows ARM64 亦已打通**（原生 `windows-11-arm` CI，MSVC，含 interceptor 行为
+测试全绿）。**Linux x86 与 x86_64 亦已打通**（gcc，全测试套件 + amalgamation 全绿）。下一步向
 其它平台/架构横向铺开。
 
 ## 平台支持
 
 图例：✅ 已支持（可构建并通过完整测试） · 🧩 源码已提取（在库中但尚未编译/验证） ·
-📋 规划中（尚未开始）
+📋 规划中（尚未开始） · ➖ 不适用（该平台无此架构）
 
 | OS ＼ 架构 | x86 | x86_64 | ARM | ARM64 | MIPS |
 |---|:-:|:-:|:-:|:-:|:-:|
-| **Windows** | ✅ | ✅ | 🧩 | 🧩 | 📋 |
+| **Windows** | ✅ | ✅ | ➖ | ✅ | 📋 |
 | **Linux** | ✅ | ✅ | 📋 | 📋 | 📋 |
 | **Android** | 📋 | 📋 | 📋 | 📋 | 📋 |
 | **macOS / iOS / tvOS** | 📋 | 📋 | 📋 | 📋 | 📋 |
 | **FreeBSD / QNX** | 📋 | 📋 | 📋 | 📋 | 📋 |
 
-可直接使用的组合是 **Windows × (x86 / x86_64)**（三套编译器全绿）与 **Linux × (x86 / x86_64)**
-（gcc 全绿）。Linux backend（`src/backend/posix` + `src/backend/linux`）走 RWX 路径，页保护/near
-分配基于 `/proc/self/maps`，TLS 用 pthread、线程枚举/挂起用 `/proc` + `tgkill`；同一份 backend
-覆盖 x86 与 x86_64（32 位构建加 `-DCMAKE_C_FLAGS="-m32"`，需 `gcc-multilib`）。ARM/ARM64 的架构与
-backend 源码已从 frida-gum 提取进仓库（🧩），但尚未接入构建；其它 OS 还需各自的 backend。MIPS 在
-frida 本身即为部分/实验性支持。
+可直接使用的组合是 **Windows × (x86 / x86_64 / ARM64)** 与 **Linux × (x86 / x86_64)**。
+Windows ARM64 在原生 `windows-11-arm` runner 上由 CI 构建并通过完整测试套件（含 interceptor
+行为测试）；它复用同一份 `src/backend/windows`（TLS 在非 x86 上回退到 `TlsGetValue`），并新增
+自研 AArch64 解码器 `src/disasm/hx_disasm_arm64.c` 驱动 `src/arch/arm64` 的 relocator/reader。
+Windows 走 ARM64 专属的 32 位 ARM 不适用（Windows on ARM 仅 ARM64）。Linux backend
+（`src/backend/posix` + `src/backend/linux`）走 RWX 路径，页保护/near 分配基于 `/proc/self/maps`，
+TLS 用 pthread、线程枚举/挂起用 `/proc` + `tgkill`；同一份 backend 覆盖 x86 与 x86_64（32 位构建加
+`-DCMAKE_C_FLAGS="-m32"`，需 `gcc-multilib`）。其它 OS 还需各自的 backend。MIPS 在 frida 本身
+即为部分/实验性支持。
 
 ## 文档
 

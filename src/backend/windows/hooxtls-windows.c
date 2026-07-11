@@ -265,14 +265,14 @@ hoox_tls_key_set_value (HooxTlsKey key,
 hx_pointer
 hoox_tls_key_get_value (HooxTlsKey key)
 {
-  return TlsGetValue (key);
+  return TlsGetValue ((DWORD) key);
 }
 
 void
 hoox_tls_key_set_value (HooxTlsKey key,
                        hx_pointer value)
 {
-  TlsSetValue (key, value);
+  TlsSetValue ((DWORD) key, value);
 }
 
 #endif

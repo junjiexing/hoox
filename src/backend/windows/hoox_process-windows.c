@@ -114,6 +114,12 @@ _hoox_process_enumerate_threads (HooxFoundThreadFunc func,
   (void) flags;
 }
 
+HooxOS
+hoox_process_get_native_os (void)
+{
+  return HOOX_OS_WINDOWS;
+}
+
 /* ---- code signing ------------------------------------------------------- */
 
 static HooxCodeSigningPolicy hoox_code_signing_policy = HOOX_CODE_SIGNING_OPTIONAL;

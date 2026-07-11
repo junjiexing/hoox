@@ -748,12 +748,12 @@ hoox_arm64_writer_put_cbx_op_reg_imm (HooxArm64Writer * self,
     imm19 = 0;
   }
 
-  hoox_arm64_writer_put_instruction (self,
+  hoox_arm64_writer_put_instruction (self, (hx_uint32) (
       ri.sf |
       0x34000000 |
       (hx_uint32) op << 24 |
       (imm19 & HOOX_INT19_MASK) << 5 |
-      ri.index);
+      ri.index));
 
   return TRUE;
 }
@@ -823,13 +823,13 @@ hoox_arm64_writer_put_tbx_op_reg_imm_imm (HooxArm64Writer * self,
     imm14 = 0;
   }
 
-  hoox_arm64_writer_put_instruction (self,
+  hoox_arm64_writer_put_instruction (self, (hx_uint32) (
       ((bit >> 5) << 31) |
       0x36000000 |
       (hx_uint32) op << 24 |
       ((bit & HOOX_INT5_MASK) << 19) |
       (imm14 & HOOX_INT14_MASK) << 5 |
-      ri.index);
+      ri.index));
 
   return TRUE;
 }
@@ -1096,11 +1096,11 @@ hoox_arm64_writer_put_ldr_reg_pcrel (HooxArm64Writer * self,
     imm19 = 0;
   }
 
-  hoox_arm64_writer_put_instruction (self,
+  hoox_arm64_writer_put_instruction (self, (hx_uint32) (
       (ri->width == 64 ? 0x50000000 : 0x10000000) |
       (ri->is_integer  ? 0x08000000 : 0x0c000000) |
       (imm19 & HOOX_INT19_MASK) << 5 |
-      ri->index);
+      ri->index));
 
   return TRUE;
 }
@@ -1228,8 +1228,8 @@ hoox_arm64_writer_put_ldrsw_reg_reg_offset (HooxArm64Writer * self,
   if (!immediate_fits_in_12_bits)
     return FALSE;
 
-  hoox_arm64_writer_put_instruction (self, 0xb9800000 | (immediate << 10) |
-      (rs.index << 5) | rd.index);
+  hoox_arm64_writer_put_instruction (self, (hx_uint32) (0xb9800000 |
+      (immediate << 10) | (rs.index << 5) | rd.index));
 
   return TRUE;
 }
@@ -1502,8 +1502,8 @@ hoox_arm64_writer_put_add_reg_reg_imm (HooxArm64Writer * self,
   if (rd.width != rl.width)
     return FALSE;
 
-  hoox_arm64_writer_put_instruction (self, rd.sf | 0x11000000 | rd.index |
-      (rl.index << 5) | (right_value << 10));
+  hoox_arm64_writer_put_instruction (self, (hx_uint32) (rd.sf | 0x11000000 |
+      rd.index | (rl.index << 5) | (right_value << 10)));
 
   return TRUE;
 }
@@ -1547,8 +1547,8 @@ hoox_arm64_writer_put_sub_reg_reg_imm (HooxArm64Writer * self,
   if (rd.width != rl.width)
     return FALSE;
 
-  hoox_arm64_writer_put_instruction (self, rd.sf | 0x51000000 | rd.index |
-      (rl.index << 5) | (right_value << 10));
+  hoox_arm64_writer_put_instruction (self, (hx_uint32) (rd.sf | 0x51000000 |
+      rd.index | (rl.index << 5) | (right_value << 10)));
 
   return TRUE;
 }
@@ -1826,10 +1826,10 @@ hoox_arm64_writer_put_load_store_pair (HooxArm64Writer * self,
       hx_assert_not_reached ();
   }
 
-  hoox_arm64_writer_put_instruction (self, (opc << 30) | (5 << 27) |
+  hoox_arm64_writer_put_instruction (self, (hx_uint32) ((opc << 30) | (5 << 27) |
       (is_vector << 26) | (mode << 23) | (operation_type << 22) |
       (((rn_offset >> shift) & 0x7f) << 15) |
-      (rt2 << 10) | (rn << 5) | rt);
+      (rt2 << 10) | (rn << 5) | rt));
 }
 
 void
@@ -2041,7 +2041,7 @@ hoox_arm64_writer_commit_literals (HooxArm64Writer * self)
     if (r->width != HOOX_LITERAL_32BIT)
       continue;
 
-    literal = r->val;
+    literal = (hx_int32) r->val;
 
     for (slot = first_slot; slot != last_slot; slot++)
     {

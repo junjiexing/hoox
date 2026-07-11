@@ -231,7 +231,7 @@ hoox_arm64_relocator_read_one (HooxArm64Relocator * self,
   self->input_cur = code;
   self->input_pc = address;
 
-  return self->input_cur - self->input_start;
+  return (hx_uint) (self->input_cur - self->input_start);
 }
 
 hx_insn *
@@ -509,7 +509,7 @@ hoox_arm64_relocator_can_relocate (hx_pointer address,
       hx_ssize offset = (hx_ssize) target - (hx_ssize) address;
       if (offset > 0 && offset < (hx_ssize) n)
       {
-        n = offset;
+        n = (hx_uint) offset;
         if (n == 4)
           break;
       }
@@ -777,13 +777,13 @@ hoox_arm64_relocator_rewrite_tbz (HooxArm64Relocator * self,
 
   if (ctx->insn->id == HX_ARM64_INS_TBZ)
   {
-    hoox_arm64_writer_put_tbz_reg_imm_label (ctx->output, source->reg, bit->imm,
-        is_true);
+    hoox_arm64_writer_put_tbz_reg_imm_label (ctx->output, source->reg,
+        (hx_uint) bit->imm, is_true);
   }
   else
   {
-    hoox_arm64_writer_put_tbnz_reg_imm_label (ctx->output, source->reg, bit->imm,
-        is_true);
+    hoox_arm64_writer_put_tbnz_reg_imm_label (ctx->output, source->reg,
+        (hx_uint) bit->imm, is_true);
   }
   hoox_arm64_writer_put_b_label (ctx->output, is_false);
 

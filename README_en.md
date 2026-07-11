@@ -37,32 +37,38 @@ utility layers (nano-glib, decoder) use `hx_`/`Hx`/`HX_`. No third-party prefix
 
 The Windows vertical slice is complete and green on **x86 and x64** across
 **MSVC 19.x, clang and gcc (MinGW)**: extraction → build → hooks firing → full
-test suite → single-file amalgamation → example. **Linux x86 and x86_64 now
-work too** (gcc; full test suite + amalgamation green). Horizontal roll-out to
-other platforms/architectures is next.
+test suite → single-file amalgamation → example. **Windows ARM64 works too**
+(native `windows-11-arm` CI, MSVC; the interceptor behaviour suite and all other
+tests pass). **Linux x86 and x86_64 now work too** (gcc; full test suite +
+amalgamation green). Horizontal roll-out to other platforms/architectures is
+next.
 
 ## Platform support
 
 Legend: ✅ supported (builds & passes the full test suite) · 🧩 extracted
-(sources are in-tree but not yet compiled/verified) · 📋 planned (not started)
+(sources are in-tree but not yet compiled/verified) · 📋 planned (not started) ·
+➖ N/A (no such architecture on this platform)
 
 | OS ＼ Arch | x86 | x86_64 | ARM | ARM64 | MIPS |
 |---|:-:|:-:|:-:|:-:|:-:|
-| **Windows** | ✅ | ✅ | 🧩 | 🧩 | 📋 |
+| **Windows** | ✅ | ✅ | ➖ | ✅ | 📋 |
 | **Linux** | ✅ | ✅ | 📋 | 📋 | 📋 |
 | **Android** | 📋 | 📋 | 📋 | 📋 | 📋 |
 | **macOS / iOS / tvOS** | 📋 | 📋 | 📋 | 📋 | 📋 |
 | **FreeBSD / QNX** | 📋 | 📋 | 📋 | 📋 | 📋 |
 
-Directly usable today: **Windows × (x86 / x86_64)** (green on all three
-compilers) and **Linux × (x86 / x86_64)** (green on gcc). The Linux backend
-(`src/backend/posix` + `src/backend/linux`) takes the RWX path, drives page
-protection / near-allocation off `/proc/self/maps`, uses pthread keys for TLS,
-and enumerates/suspends threads via `/proc` + `tgkill`; the one backend covers
-both x86 and x86_64 (add `-DCMAKE_C_FLAGS="-m32"` for the 32-bit build, which
-needs `gcc-multilib`). The ARM/ARM64 architecture and backend sources have been
-extracted from frida-gum into the tree (🧩) but are not yet wired into the
-build; other OSes still need their own backend. MIPS is partial/experimental in
+Directly usable today: **Windows × (x86 / x86_64 / ARM64)** and
+**Linux × (x86 / x86_64)**. Windows ARM64 is built and fully tested on the
+native `windows-11-arm` runner; it reuses the same `src/backend/windows` (TLS
+falls back to `TlsGetValue` off x86) and adds an in-tree AArch64 decoder
+(`src/disasm/hx_disasm_arm64.c`) that drives the `src/arch/arm64` relocator/
+reader. 32-bit ARM on Windows is N/A — Windows on ARM is ARM64-only. The Linux
+backend (`src/backend/posix` + `src/backend/linux`) takes the RWX path, drives
+page protection / near-allocation off `/proc/self/maps`, uses pthread keys for
+TLS, and enumerates/suspends threads via `/proc` + `tgkill`; the one backend
+covers both x86 and x86_64 (add `-DCMAKE_C_FLAGS="-m32"` for the 32-bit build,
+which needs `gcc-multilib`). Other OSes still need their own backend. MIPS is
+partial/experimental in
 frida itself.
 
 ## Documentation

@@ -22,7 +22,7 @@ list(APPEND HOOX_SOURCES
   "${CMAKE_CURRENT_SOURCE_DIR}/compat/hxstring.c"
   "${CMAKE_CURRENT_SOURCE_DIR}/compat/hxstrfuncs.c")
 
-# --- disasm (compact x86/x64 decoder; capstone shim) ------------------------
+# --- disasm (compact per-arch decoder; capstone shim) -----------------------
 if(HOOX_ARCH_FAMILY STREQUAL "x86")
   list(APPEND HOOX_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/disasm/hx_disasm_x86.c"
@@ -31,6 +31,14 @@ if(HOOX_ARCH_FAMILY STREQUAL "x86")
     "${CMAKE_CURRENT_SOURCE_DIR}/arch/x86/hooxx86relocator.c")
   set(HOOX_PRIVATE_INCLUDE_DIRS ${HOOX_PRIVATE_INCLUDE_DIRS}
     "${CMAKE_CURRENT_SOURCE_DIR}/arch/x86")
+elseif(HOOX_ARCH_FAMILY STREQUAL "arm64")
+  list(APPEND HOOX_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/disasm/hx_disasm_arm64.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/arch/arm64/hooxarm64writer.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/arch/arm64/hooxarm64reader.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/arch/arm64/hooxarm64relocator.c")
+  set(HOOX_PRIVATE_INCLUDE_DIRS ${HOOX_PRIVATE_INCLUDE_DIRS}
+    "${CMAKE_CURRENT_SOURCE_DIR}/arch/arm64")
 endif()
 
 # --- core (extracted hoox primitives) ----------------------------------------
@@ -75,6 +83,10 @@ if(HOOX_ARCH_FAMILY STREQUAL "x86")
     "${CMAKE_CURRENT_SOURCE_DIR}/backend/x86/hooxcpucontext-x86.c"
     "${CMAKE_CURRENT_SOURCE_DIR}/backend/x86/hooxcpu-x86.c"
     "${CMAKE_CURRENT_SOURCE_DIR}/backend/x86/hooxinterceptor-x86.c")
+elseif(HOOX_ARCH_FAMILY STREQUAL "arm64")
+  list(APPEND HOOX_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/backend/arm64/hooxcpucontext-arm64.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/backend/arm64/hooxinterceptor-arm64.c")
 endif()
 
 add_library(hoox STATIC ${HOOX_SOURCES})
@@ -96,6 +108,8 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 endif()
 if(HOOX_ARCH_FAMILY STREQUAL "x86")
   target_compile_definitions(hoox PRIVATE HAVE_I386)
+elseif(HOOX_ARCH_FAMILY STREQUAL "arm64")
+  target_compile_definitions(hoox PRIVATE HAVE_ARM64)
 endif()
 
 # Export the source list and private include dirs so the amalgamation test
