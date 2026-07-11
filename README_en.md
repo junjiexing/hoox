@@ -31,8 +31,9 @@ utility layers (nano-glib, decoder) use `hx_`/`Hx`/`HX_`. No third-party prefix
 
 The Windows vertical slice is complete and green on **x86 and x64** across
 **MSVC 19.x, clang and gcc (MinGW)**: extraction → build → hooks firing → full
-test suite → single-file amalgamation → example. Horizontal roll-out to other
-platforms/architectures is next.
+test suite → single-file amalgamation → example. **Linux x86 and x86_64 now
+work too** (gcc; full test suite + amalgamation green). Horizontal roll-out to
+other platforms/architectures is next.
 
 ## Platform support
 
@@ -42,15 +43,20 @@ Legend: ✅ supported (builds & passes the full test suite) · 🧩 extracted
 | OS ＼ Arch | x86 | x86_64 | ARM | ARM64 | MIPS |
 |---|:-:|:-:|:-:|:-:|:-:|
 | **Windows** | ✅ | ✅ | 🧩 | 🧩 | 📋 |
-| **Linux / Android** | 📋 | 📋 | 📋 | 📋 | 📋 |
+| **Linux** | ✅ | ✅ | 📋 | 📋 | 📋 |
+| **Android** | 📋 | 📋 | 📋 | 📋 | 📋 |
 | **macOS / iOS / tvOS** | 📋 | 📋 | 📋 | 📋 | 📋 |
 | **FreeBSD / QNX** | 📋 | 📋 | 📋 | 📋 | 📋 |
 
-The only directly usable combination today is **Windows × (x86 / x86_64)**,
-green on all three compilers. The ARM/ARM64 architecture and backend sources
-have been extracted from frida-gum into the tree (🧩) but are not yet wired into
-the build or verified; other OSes still need their own backend (memory / TLS /
-thread enumeration) before they can be enabled. MIPS is partial/experimental in
+Directly usable today: **Windows × (x86 / x86_64)** (green on all three
+compilers) and **Linux × (x86 / x86_64)** (green on gcc). The Linux backend
+(`src/backend/posix` + `src/backend/linux`) takes the RWX path, drives page
+protection / near-allocation off `/proc/self/maps`, uses pthread keys for TLS,
+and enumerates/suspends threads via `/proc` + `tgkill`; the one backend covers
+both x86 and x86_64 (add `-DCMAKE_C_FLAGS="-m32"` for the 32-bit build, which
+needs `gcc-multilib`). The ARM/ARM64 architecture and backend sources have been
+extracted from frida-gum into the tree (🧩) but are not yet wired into the
+build; other OSes still need their own backend. MIPS is partial/experimental in
 frida itself.
 
 ## Documentation

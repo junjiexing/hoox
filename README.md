@@ -31,7 +31,8 @@ JS 绑定等）。
 
 Windows 垂直切片已完成，并在 **x86 与 x64** 上、跨 **MSVC 19.x、clang、
 gcc (MinGW)** 全部通过：提取 → 构建 → hook 生效 → 完整测试套件 → 单文件合并 →
-example。下一步向其它平台/架构横向铺开。
+example。**Linux x86 与 x86_64 亦已打通**（gcc，全测试套件 + amalgamation 全绿）。下一步向
+其它平台/架构横向铺开。
 
 ## 平台支持
 
@@ -41,14 +42,17 @@ example。下一步向其它平台/架构横向铺开。
 | OS ＼ 架构 | x86 | x86_64 | ARM | ARM64 | MIPS |
 |---|:-:|:-:|:-:|:-:|:-:|
 | **Windows** | ✅ | ✅ | 🧩 | 🧩 | 📋 |
-| **Linux / Android** | 📋 | 📋 | 📋 | 📋 | 📋 |
+| **Linux** | ✅ | ✅ | 📋 | 📋 | 📋 |
+| **Android** | 📋 | 📋 | 📋 | 📋 | 📋 |
 | **macOS / iOS / tvOS** | 📋 | 📋 | 📋 | 📋 | 📋 |
 | **FreeBSD / QNX** | 📋 | 📋 | 📋 | 📋 | 📋 |
 
-当前唯一可直接使用的组合是 **Windows × (x86 / x86_64)**，三套编译器全绿。
-ARM/ARM64 的架构与 backend 源码已从 frida-gum 提取进仓库（🧩），但尚未接入构建或
-验证；其它 OS 还需各自的 backend（内存 / TLS / 线程枚举）才能启用。MIPS 在 frida
-本身即为部分/实验性支持。
+可直接使用的组合是 **Windows × (x86 / x86_64)**（三套编译器全绿）与 **Linux × (x86 / x86_64)**
+（gcc 全绿）。Linux backend（`src/backend/posix` + `src/backend/linux`）走 RWX 路径，页保护/near
+分配基于 `/proc/self/maps`，TLS 用 pthread、线程枚举/挂起用 `/proc` + `tgkill`；同一份 backend
+覆盖 x86 与 x86_64（32 位构建加 `-DCMAKE_C_FLAGS="-m32"`，需 `gcc-multilib`）。ARM/ARM64 的架构与
+backend 源码已从 frida-gum 提取进仓库（🧩），但尚未接入构建；其它 OS 还需各自的 backend。MIPS 在
+frida 本身即为部分/实验性支持。
 
 ## 文档
 

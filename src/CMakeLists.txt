@@ -59,6 +59,15 @@ if(WIN32)
     "${CMAKE_CURRENT_SOURCE_DIR}/backend/windows/hoox_msvc_intrinsics.c")
   set(HOOX_PRIVATE_INCLUDE_DIRS ${HOOX_PRIVATE_INCLUDE_DIRS}
     "${CMAKE_CURRENT_SOURCE_DIR}/backend/windows")
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  list(APPEND HOOX_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/backend/posix/hooxmemory-posix.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/backend/posix/hooxtls-posix.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/backend/linux/hooxmemory-linux.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/backend/linux/hoox_process-linux.c")
+  set(HOOX_PRIVATE_INCLUDE_DIRS ${HOOX_PRIVATE_INCLUDE_DIRS}
+    "${CMAKE_CURRENT_SOURCE_DIR}/backend/posix"
+    "${CMAKE_CURRENT_SOURCE_DIR}/backend/linux")
 endif()
 
 if(HOOX_ARCH_FAMILY STREQUAL "x86")
@@ -80,6 +89,10 @@ target_include_directories(hoox
 if(WIN32)
   target_link_libraries(hoox PRIVATE psapi)
   target_compile_definitions(hoox PRIVATE _CRT_SECURE_NO_WARNINGS HAVE_WINDOWS)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  find_package(Threads REQUIRED)
+  target_link_libraries(hoox PUBLIC Threads::Threads)
+  target_compile_definitions(hoox PRIVATE HAVE_LINUX)
 endif()
 if(HOOX_ARCH_FAMILY STREQUAL "x86")
   target_compile_definitions(hoox PRIVATE HAVE_I386)

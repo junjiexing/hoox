@@ -247,11 +247,21 @@
 
 ## M8 · 横向平台铺开（x86_64 起）
 
-- **T8.1** Linux x64：`gummemory-linux.c`/`gummemory-posix.c`、`gumtls-posix.c`、
-  `hoox_process-linux.c` shim（线程枚举/挂起用 `/proc` + `tgkill`/ptrace，模块范围用
-  `/proc/self/maps`）、`gumexceptor`→不需要；**POSIX fork 处理**（`gum_prepare_to_fork`/
-  `recover_*`：跨 fork 的锁/TLS 复位，Windows 首切片不需要、此处补上）；靶函数改 `dlopen`
-  （复用 frida `tests/data` 或本地重建）。验收：Linux x64 测试全绿 + CI。
+- **[x] T8.1** Linux x86 / x64（**完成，x86 与 x86_64 全测试全绿**）：新增
+  `src/backend/posix/hooxmemory-posix.c`（mmap 分配/near-alloc via free-range 枚举）、
+  `src/backend/posix/hooxtls-posix.c`（pthread key）、
+  `src/backend/linux/hooxmemory-linux.c`（`mprotect`/`clear_cache`/页保护查询，`/proc/self/maps`
+  解析 + `_hoox_memory_query_protections`）、`src/backend/linux/hoox_process-linux.c`
+  （`gettid`、`errno` 存取、`tgkill(SIGSTOP/SIGCONT)` 挂起/恢复、`/proc/self/task` 线程枚举、
+  `/proc/self/maps` range 枚举、code-signing=OPTIONAL、最小 `HooxModule`/range shim）、
+  共享的 `src/backend/linux/hooxlinux-priv.h`（增量式 `/proc/*/maps` 迭代器）。
+  说明：Linux 走 RWX 路径（`hoox_query_rwx_support()==HOOX_RWX_FULL`），故线程枚举/挂起为
+  **链接项**（运行时不触达）；靶函数直接编进测试二进制（无需 `dlopen`），故未引入 POSIX fork
+  处理。CMake：非 WIN32 且 `Linux` 时编译上述源、定义 `HAVE_LINUX`、链接 `Threads::Threads`。
+  8 个测试套件（compat/harness/memory/interceptor_smoke/interceptor(10)/disasm_diff/amalgam/
+  arch_x86）在 **x86_64 与 x86（32 位，`-DCMAKE_C_FLAGS="-m32"`，需 `gcc-multilib`）** 均全绿；
+  amalgamation 单文件产物亦全绿。同一份 backend 覆盖两种位宽，x86 无需改动代码。CI 待接入。
+  macOS/darwin backend 见 T8.2。
 - **T8.2** macOS x64/arm64：`gummemory-darwin.c`、`gumtls-darwin.c`、
   **真实** `gumcodesegment-darwin.c`、`hoox_process-darwin.c` shim；
   ptrauth 相关（arm64e）按需。验收：macOS 测试全绿 + CI。

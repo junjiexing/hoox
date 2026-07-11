@@ -16,7 +16,15 @@
 
 **Windows 垂直切片已打通（x86 与 x64，实测全绿）：** 提取 → 编译 → hook 生效 →
 测试全绿 → 单文件合并 (`hoox.c`/`hoox.h`) → example 闭环。
-构建在 **MSVC / clang / gcc** 三套工具链下全部通过。下一步向其它平台/架构横向铺开。
+构建在 **MSVC / clang / gcc** 三套工具链下全部通过。
+
+**Linux x86 与 x86_64 已打通（gcc，实测全绿）：** backend 位于 `src/backend/posix/`
+（`hooxmemory-posix.c`/`hooxtls-posix.c`）与 `src/backend/linux/`
+（`hooxmemory-linux.c`/`hoox_process-linux.c`/`hooxlinux-priv.h`）。Linux 走 RWX 路径，
+线程挂起/枚举为链接项（`tgkill`/`/proc/self/task`），页保护查询与 near-alloc 走 `/proc/self/maps`，
+TLS 用 pthread key。同一份 arch-agnostic backend 覆盖两种位宽：x86_64 直接构建；x86（32 位）加
+`-DCMAKE_C_FLAGS="-m32"`（需 `gcc-multilib`），代码零改动。8 个测试套件 + amalgamation 在两种
+位宽均全绿。下一步：macOS/其它平台与架构横向铺开。
 
 > 命名已完成一次性重构：**所有 `gum`/`cs`/glib 前缀均已清除**（见 D2）。仓库不再以
 > 与上游 diff 对拍为目标——以行为一致 + 测试通过为准。
