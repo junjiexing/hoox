@@ -42,9 +42,9 @@ test suite → single-file amalgamation → example. **Windows ARM64 works too**
 tests pass). **Linux now covers x86 / x86_64 / ARM / ARM64**: x86 and x86_64 on
 gcc/clang; ARM64 built and fully tested on the native `ubuntu-24.04-arm` CI; ARM
 (32-bit, A32 + Thumb) cross-compiled (`gcc-arm-linux-gnueabihf`) and run through
-the full ctest suite under `qemu-arm`. **macOS x86_64 works too** (native
-`macos-15-intel` CI, AppleClang; interceptor behaviour suite green). Horizontal
-roll-out to other platforms is next.
+the full ctest suite under `qemu-arm`. **macOS now covers x86_64 and ARM64**
+(native `macos-15-intel` and Apple Silicon `macos-15` CI, AppleClang; interceptor
+behaviour suite green on both). Horizontal roll-out to other platforms is next.
 
 ## Platform support
 
@@ -57,12 +57,12 @@ Legend: ✅ supported (builds & passes the full test suite) · 🧩 extracted
 | **Windows** | ✅ | ✅ | ➖ | ✅ | 📋 |
 | **Linux** | ✅ | ✅ | ✅ | ✅ | 📋 |
 | **Android** | 📋 | 📋 | 📋 | 📋 | 📋 |
-| **macOS** | ➖ | ✅ | ➖ | 📋 | ➖ |
+| **macOS** | ➖ | ✅ | ➖ | ✅ | ➖ |
 | **iOS / tvOS** | ➖ | ➖ | ➖ | 📋 | ➖ |
 | **FreeBSD / QNX** | 📋 | 📋 | 📋 | 📋 | 📋 |
 
 Directly usable today: **Windows × (x86 / x86_64 / ARM64)**,
-**Linux × (x86 / x86_64 / ARM / ARM64)** and **macOS × x86_64**. Windows ARM64 is built and fully
+**Linux × (x86 / x86_64 / ARM / ARM64)** and **macOS × (x86_64 / ARM64)**. Windows ARM64 is built and fully
 tested on the native `windows-11-arm` runner; it reuses the same
 `src/backend/windows` (TLS falls back to `TlsGetValue` off x86) and adds an
 in-tree AArch64 decoder (`src/disasm/hx_disasm_arm64.c`) that drives the
@@ -75,12 +75,16 @@ architectures. x86_64 builds directly; x86 adds `-DCMAKE_C_FLAGS="-m32"` (needs
 `gcc-multilib`); ARM64 uses the native `ubuntu-24.04-arm` runner; ARM (32-bit)
 cross-compiles with `gcc-arm-linux-gnueabihf` and runs its tests under
 `qemu-arm`. 32-bit ARM uses an in-tree A32+Thumb decoder
-(`src/disasm/hx_disasm_arm.c`) driving `src/arch/arm`. **macOS x86_64** reuses
-the x86 decoder/arch and the POSIX allocator + pthread TLS, adding
-`src/backend/darwin` (mach VM query/enumerate, dyld module enumeration); the key
+(`src/disasm/hx_disasm_arm.c`) driving `src/arch/arm`. **macOS** reuses the
+x86/arm64 decoders and arch, the POSIX allocator + pthread TLS, and adds
+`src/backend/darwin` (mach VM query/enumerate, dyld module enumeration). The key
 detail is that patching code-signed `__TEXT` pages requires `mach_vm_protect`
-with `VM_PROT_COPY` (verified on the native `macos-15-intel` runner). Other OSes
-still need their own backend. MIPS is partial/experimental in frida itself.
+with `VM_PROT_COPY` (a private, writable-then-executable copy — sidestepping
+W^X). x86_64 is verified on `macos-15-intel` and ARM64 on the Apple Silicon
+`macos-15` runner; the interceptor behaviour suite is green on both. (An in-tree
+Darwin code segment, `hooxcodesegment-darwin.c`, is also provided for older
+kernels.) Other OSes still need their own backend. MIPS is partial/experimental
+in frida itself.
 
 ## Documentation
 
