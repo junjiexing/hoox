@@ -34,6 +34,25 @@ The Windows vertical slice is complete and green on **x86 and x64** across
 test suite → single-file amalgamation → example. Horizontal roll-out to other
 platforms/architectures is next.
 
+## Platform support
+
+Legend: ✅ supported (builds & passes the full test suite) · 🧩 extracted
+(sources are in-tree but not yet compiled/verified) · 📋 planned (not started)
+
+| OS ＼ Arch | x86 | x86_64 | ARM | ARM64 | MIPS |
+|---|:-:|:-:|:-:|:-:|:-:|
+| **Windows** | ✅ | ✅ | 🧩 | 🧩 | 📋 |
+| **Linux / Android** | 📋 | 📋 | 📋 | 📋 | 📋 |
+| **macOS / iOS / tvOS** | 📋 | 📋 | 📋 | 📋 | 📋 |
+| **FreeBSD / QNX** | 📋 | 📋 | 📋 | 📋 | 📋 |
+
+The only directly usable combination today is **Windows × (x86 / x86_64)**,
+green on all three compilers. The ARM/ARM64 architecture and backend sources
+have been extracted from frida-gum into the tree (🧩) but are not yet wired into
+the build or verified; other OSes still need their own backend (memory / TLS /
+thread enumeration) before they can be enabled. MIPS is partial/experimental in
+frida itself.
+
 ## Documentation
 
 - **[API reference (English)](docs/API_en.md)** — every public function, type
