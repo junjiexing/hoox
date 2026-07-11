@@ -65,22 +65,6 @@ hx_realloc (hx_pointer mem,
   return result;
 }
 
-hx_pointer
-hx_try_malloc (hx_size n_bytes)
-{
-  if (n_bytes == 0)
-    return NULL;
-  return malloc (n_bytes);
-}
-
-hx_pointer
-hx_try_malloc0 (hx_size n_bytes)
-{
-  if (n_bytes == 0)
-    return NULL;
-  return calloc (1, n_bytes);
-}
-
 void
 hx_free (hx_pointer mem)
 {

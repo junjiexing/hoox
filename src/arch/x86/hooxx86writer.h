@@ -104,7 +104,6 @@ enum _HooxX86PtrTarget
   HOOX_HX_PTR_QWORD
 };
 
-HOOX_API HooxX86Writer * hoox_x86_writer_new (hx_pointer code_address);
 HOOX_API HooxX86Writer * hoox_x86_writer_ref (HooxX86Writer * writer);
 HOOX_API void hoox_x86_writer_unref (HooxX86Writer * writer);
 
@@ -119,56 +118,26 @@ HOOX_API void hoox_x86_writer_set_target_cpu (HooxX86Writer * self,
 HOOX_API void hoox_x86_writer_set_target_abi (HooxX86Writer * self,
     HooxAbiType abi_type);
 
-HOOX_API hx_pointer hoox_x86_writer_cur (HooxX86Writer * self);
 HOOX_API hx_uint hoox_x86_writer_offset (HooxX86Writer * self);
 
 HOOX_API hx_boolean hoox_x86_writer_flush (HooxX86Writer * self);
 
-HOOX_API HooxX86Reg hoox_x86_writer_get_cpu_register_for_nth_argument (
-    HooxX86Writer * self, hx_uint n);
 
 HOOX_API hx_boolean hoox_x86_writer_put_label (HooxX86Writer * self,
     hx_constpointer id);
 
-HOOX_API hx_boolean hoox_x86_writer_can_branch_directly_between (HooxAddress from,
-    HooxAddress to);
 HOOX_API hx_boolean hoox_x86_writer_put_call_address_with_arguments (
     HooxX86Writer * self, HooxCallingConvention conv, HooxAddress func,
     hx_uint n_args, ...);
-HOOX_API hx_boolean hoox_x86_writer_put_call_address_with_arguments_array (
-    HooxX86Writer * self, HooxCallingConvention conv, HooxAddress func,
-    hx_uint n_args, const HooxArgument * args);
 HOOX_API hx_boolean hoox_x86_writer_put_call_address_with_aligned_arguments (
     HooxX86Writer * self, HooxCallingConvention conv, HooxAddress func,
     hx_uint n_args, ...);
-HOOX_API hx_boolean hoox_x86_writer_put_call_address_with_aligned_arguments_array (
-    HooxX86Writer * self, HooxCallingConvention conv, HooxAddress func,
-    hx_uint n_args, const HooxArgument * args);
 HOOX_API hx_boolean hoox_x86_writer_put_call_reg_with_arguments (
     HooxX86Writer * self, HooxCallingConvention conv, HooxX86Reg reg,
     hx_uint n_args, ...);
-HOOX_API hx_boolean hoox_x86_writer_put_call_reg_with_arguments_array (
-    HooxX86Writer * self, HooxCallingConvention conv, HooxX86Reg reg,
-    hx_uint n_args, const HooxArgument * args);
-HOOX_API hx_boolean hoox_x86_writer_put_call_reg_with_aligned_arguments (
-    HooxX86Writer * self, HooxCallingConvention conv, HooxX86Reg reg,
-    hx_uint n_args, ...);
-HOOX_API hx_boolean hoox_x86_writer_put_call_reg_with_aligned_arguments_array (
-    HooxX86Writer * self, HooxCallingConvention conv, HooxX86Reg reg,
-    hx_uint n_args, const HooxArgument * args);
 HOOX_API hx_boolean hoox_x86_writer_put_call_reg_offset_ptr_with_arguments (
     HooxX86Writer * self, HooxCallingConvention conv, HooxX86Reg reg,
     hx_ssize offset, hx_uint n_args, ...);
-HOOX_API hx_boolean hoox_x86_writer_put_call_reg_offset_ptr_with_arguments_array (
-    HooxX86Writer * self, HooxCallingConvention conv, HooxX86Reg reg,
-    hx_ssize offset, hx_uint n_args, const HooxArgument * args);
-HOOX_API hx_boolean hoox_x86_writer_put_call_reg_offset_ptr_with_aligned_arguments (
-    HooxX86Writer * self, HooxCallingConvention conv, HooxX86Reg reg,
-    hx_ssize offset, hx_uint n_args, ...);
-HOOX_API hx_boolean
-    hoox_x86_writer_put_call_reg_offset_ptr_with_aligned_arguments_array (
-    HooxX86Writer * self, HooxCallingConvention conv, HooxX86Reg reg,
-    hx_ssize offset, hx_uint n_args, const HooxArgument * args);
 HOOX_API hx_boolean hoox_x86_writer_put_call_address (HooxX86Writer * self,
     HooxAddress address);
 HOOX_API hx_boolean hoox_x86_writer_put_call_reg (HooxX86Writer * self,
@@ -181,15 +150,10 @@ HOOX_API hx_boolean hoox_x86_writer_put_call_indirect_label (HooxX86Writer * sel
     hx_constpointer label_id);
 HOOX_API void hoox_x86_writer_put_call_near_label (HooxX86Writer * self,
     hx_constpointer label_id);
-HOOX_API void hoox_x86_writer_put_leave (HooxX86Writer * self);
 HOOX_API void hoox_x86_writer_put_ret (HooxX86Writer * self);
-HOOX_API void hoox_x86_writer_put_ret_imm (HooxX86Writer * self,
-    hx_uint16 imm_value);
 HOOX_API hx_boolean hoox_x86_writer_put_jmp_address (HooxX86Writer * self,
     HooxAddress address);
 HOOX_API void hoox_x86_writer_put_jmp_short_label (HooxX86Writer * self,
-    hx_constpointer label_id);
-HOOX_API void hoox_x86_writer_put_jmp_near_label (HooxX86Writer * self,
     hx_constpointer label_id);
 HOOX_API hx_boolean hoox_x86_writer_put_jmp_reg (HooxX86Writer * self,
     HooxX86Reg reg);
@@ -212,26 +176,14 @@ HOOX_API hx_boolean hoox_x86_writer_put_add_reg_imm (HooxX86Writer * self,
     HooxX86Reg reg, hx_ssize imm_value);
 HOOX_API hx_boolean hoox_x86_writer_put_add_reg_reg (HooxX86Writer * self,
     HooxX86Reg dst_reg, HooxX86Reg src_reg);
-HOOX_API hx_boolean hoox_x86_writer_put_add_reg_near_ptr (HooxX86Writer * self,
-    HooxX86Reg dst_reg, HooxAddress src_address);
 HOOX_API hx_boolean hoox_x86_writer_put_sub_reg_imm (HooxX86Writer * self,
     HooxX86Reg reg, hx_ssize imm_value);
-HOOX_API hx_boolean hoox_x86_writer_put_sub_reg_reg (HooxX86Writer * self,
-    HooxX86Reg dst_reg, HooxX86Reg src_reg);
-HOOX_API hx_boolean hoox_x86_writer_put_sub_reg_near_ptr (HooxX86Writer * self,
-    HooxX86Reg dst_reg, HooxAddress src_address);
 HOOX_API hx_boolean hoox_x86_writer_put_inc_reg (HooxX86Writer * self,
     HooxX86Reg reg);
 HOOX_API hx_boolean hoox_x86_writer_put_dec_reg (HooxX86Writer * self,
     HooxX86Reg reg);
-HOOX_API hx_boolean hoox_x86_writer_put_inc_reg_ptr (HooxX86Writer * self,
-    HooxX86PtrTarget target, HooxX86Reg reg);
-HOOX_API hx_boolean hoox_x86_writer_put_dec_reg_ptr (HooxX86Writer * self,
-    HooxX86PtrTarget target, HooxX86Reg reg);
 HOOX_API hx_boolean hoox_x86_writer_put_lock_xadd_reg_ptr_reg (HooxX86Writer * self,
     HooxX86Reg dst_reg, HooxX86Reg src_reg);
-HOOX_API hx_boolean hoox_x86_writer_put_lock_cmpxchg_reg_ptr_reg (
-    HooxX86Writer * self, HooxX86Reg dst_reg, HooxX86Reg src_reg);
 HOOX_API hx_boolean hoox_x86_writer_put_lock_inc_imm32_ptr (HooxX86Writer * self,
     hx_pointer target);
 HOOX_API hx_boolean hoox_x86_writer_put_lock_dec_imm32_ptr (HooxX86Writer * self,
@@ -243,10 +195,6 @@ HOOX_API hx_boolean hoox_x86_writer_put_and_reg_u32 (HooxX86Writer * self,
     HooxX86Reg reg, hx_uint32 imm_value);
 HOOX_API hx_boolean hoox_x86_writer_put_shl_reg_u8 (HooxX86Writer * self,
     HooxX86Reg reg, hx_uint8 imm_value);
-HOOX_API hx_boolean hoox_x86_writer_put_shr_reg_u8 (HooxX86Writer * self,
-    HooxX86Reg reg, hx_uint8 imm_value);
-HOOX_API hx_boolean hoox_x86_writer_put_xor_reg_reg (HooxX86Writer * self,
-    HooxX86Reg dst_reg, HooxX86Reg src_reg);
 
 HOOX_API hx_boolean hoox_x86_writer_put_mov_reg_reg (HooxX86Writer * self,
     HooxX86Reg dst_reg, HooxX86Reg src_reg);
@@ -256,8 +204,6 @@ HOOX_API hx_boolean hoox_x86_writer_put_mov_reg_u64 (HooxX86Writer * self,
     HooxX86Reg dst_reg, hx_uint64 imm_value);
 HOOX_API void hoox_x86_writer_put_mov_reg_address (HooxX86Writer * self,
     HooxX86Reg dst_reg, HooxAddress address);
-HOOX_API void hoox_x86_writer_put_mov_reg_ptr_u32 (HooxX86Writer * self,
-    HooxX86Reg dst_reg, hx_uint32 imm_value);
 HOOX_API hx_boolean hoox_x86_writer_put_mov_reg_offset_ptr_u32 (HooxX86Writer * self,
     HooxX86Reg dst_reg, hx_ssize dst_offset, hx_uint32 imm_value);
 HOOX_API void hoox_x86_writer_put_mov_reg_ptr_reg (HooxX86Writer * self,
@@ -268,40 +214,13 @@ HOOX_API void hoox_x86_writer_put_mov_reg_reg_ptr (HooxX86Writer * self,
     HooxX86Reg dst_reg, HooxX86Reg src_reg);
 HOOX_API hx_boolean hoox_x86_writer_put_mov_reg_reg_offset_ptr (HooxX86Writer * self,
     HooxX86Reg dst_reg, HooxX86Reg src_reg, hx_ssize src_offset);
-HOOX_API hx_boolean hoox_x86_writer_put_mov_reg_base_index_scale_offset_ptr (
-    HooxX86Writer * self, HooxX86Reg dst_reg, HooxX86Reg base_reg,
-    HooxX86Reg index_reg, hx_uint8 scale, hx_ssize offset);
 
 HOOX_API hx_boolean hoox_x86_writer_put_mov_reg_near_ptr (HooxX86Writer * self,
     HooxX86Reg dst_reg, HooxAddress src_address);
 HOOX_API hx_boolean hoox_x86_writer_put_mov_near_ptr_reg (HooxX86Writer * self,
     HooxAddress dst_address, HooxX86Reg src_reg);
 
-HOOX_API hx_boolean hoox_x86_writer_put_mov_fs_u32_ptr_reg (HooxX86Writer * self,
-    hx_uint32 fs_offset, HooxX86Reg src_reg);
-HOOX_API hx_boolean hoox_x86_writer_put_mov_reg_fs_u32_ptr (HooxX86Writer * self,
-    HooxX86Reg dst_reg, hx_uint32 fs_offset);
-HOOX_API void hoox_x86_writer_put_mov_fs_reg_ptr_reg (HooxX86Writer * self,
-    HooxX86Reg fs_offset, HooxX86Reg src_reg);
-HOOX_API void hoox_x86_writer_put_mov_reg_fs_reg_ptr (HooxX86Writer * self,
-    HooxX86Reg dst_reg, HooxX86Reg fs_offset);
-HOOX_API hx_boolean hoox_x86_writer_put_mov_gs_u32_ptr_reg (HooxX86Writer * self,
-    hx_uint32 fs_offset, HooxX86Reg src_reg);
-HOOX_API hx_boolean hoox_x86_writer_put_mov_reg_gs_u32_ptr (HooxX86Writer * self,
-    HooxX86Reg dst_reg, hx_uint32 fs_offset);
-HOOX_API void hoox_x86_writer_put_mov_gs_reg_ptr_reg (HooxX86Writer * self,
-    HooxX86Reg gs_offset, HooxX86Reg src_reg);
-HOOX_API void hoox_x86_writer_put_mov_reg_gs_reg_ptr (HooxX86Writer * self,
-    HooxX86Reg dst_reg, HooxX86Reg gs_offset);
 
-HOOX_API void hoox_x86_writer_put_movq_xmm0_esp_offset_ptr (HooxX86Writer * self,
-    hx_int8 offset);
-HOOX_API void hoox_x86_writer_put_movq_eax_offset_ptr_xmm0 (HooxX86Writer * self,
-    hx_int8 offset);
-HOOX_API void hoox_x86_writer_put_movdqu_xmm0_esp_offset_ptr (HooxX86Writer * self,
-    hx_int8 offset);
-HOOX_API void hoox_x86_writer_put_movdqu_eax_offset_ptr_xmm0 (HooxX86Writer * self,
-    hx_int8 offset);
 
 HOOX_API hx_boolean hoox_x86_writer_put_lea_reg_reg_offset (HooxX86Writer * self,
     HooxX86Reg dst_reg, HooxX86Reg src_reg, hx_ssize src_offset);
@@ -317,39 +236,21 @@ HOOX_API hx_boolean hoox_x86_writer_put_push_reg (HooxX86Writer * self,
     HooxX86Reg reg);
 HOOX_API hx_boolean hoox_x86_writer_put_pop_reg (HooxX86Writer * self,
     HooxX86Reg reg);
-HOOX_API void hoox_x86_writer_put_push_imm_ptr (HooxX86Writer * self,
-    hx_constpointer imm_ptr);
 HOOX_API void hoox_x86_writer_put_pushax (HooxX86Writer * self);
 HOOX_API void hoox_x86_writer_put_popax (HooxX86Writer * self);
 HOOX_API void hoox_x86_writer_put_pushfx (HooxX86Writer * self);
 HOOX_API void hoox_x86_writer_put_popfx (HooxX86Writer * self);
-HOOX_API void hoox_x86_writer_put_sahf (HooxX86Writer * self);
-HOOX_API void hoox_x86_writer_put_lahf (HooxX86Writer * self);
 
 HOOX_API hx_boolean hoox_x86_writer_put_test_reg_reg (HooxX86Writer * self,
     HooxX86Reg reg_a, HooxX86Reg reg_b);
-HOOX_API hx_boolean hoox_x86_writer_put_test_reg_u32 (HooxX86Writer * self,
-    HooxX86Reg reg, hx_uint32 imm_value);
 HOOX_API hx_boolean hoox_x86_writer_put_cmp_reg_i32 (HooxX86Writer * self,
     HooxX86Reg reg, hx_int32 imm_value);
 HOOX_API hx_boolean hoox_x86_writer_put_cmp_reg_offset_ptr_reg (HooxX86Writer * self,
     HooxX86Reg reg_a, hx_ssize offset, HooxX86Reg reg_b);
-HOOX_API void hoox_x86_writer_put_cmp_imm_ptr_imm_u32 (HooxX86Writer * self,
-    hx_constpointer imm_ptr, hx_uint32 imm_value);
-HOOX_API hx_boolean hoox_x86_writer_put_cmp_reg_reg (HooxX86Writer * self,
-    HooxX86Reg reg_a, HooxX86Reg reg_b);
-HOOX_API void hoox_x86_writer_put_clc (HooxX86Writer * self);
-HOOX_API void hoox_x86_writer_put_stc (HooxX86Writer * self);
 HOOX_API void hoox_x86_writer_put_cld (HooxX86Writer * self);
-HOOX_API void hoox_x86_writer_put_std (HooxX86Writer * self);
 
-HOOX_API void hoox_x86_writer_put_cpuid (HooxX86Writer * self);
-HOOX_API void hoox_x86_writer_put_lfence (HooxX86Writer * self);
-HOOX_API void hoox_x86_writer_put_rdtsc (HooxX86Writer * self);
-HOOX_API void hoox_x86_writer_put_pause (HooxX86Writer * self);
 HOOX_API void hoox_x86_writer_put_nop (HooxX86Writer * self);
 HOOX_API void hoox_x86_writer_put_breakpoint (HooxX86Writer * self);
-HOOX_API void hoox_x86_writer_put_padding (HooxX86Writer * self, hx_uint n);
 HOOX_API void hoox_x86_writer_put_nop_padding (HooxX86Writer * self, hx_uint n);
 
 HOOX_API hx_boolean hoox_x86_writer_put_fxsave_reg_ptr (HooxX86Writer * self,

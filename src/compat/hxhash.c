@@ -192,14 +192,6 @@ hx_hash_table_insert (HxHashTable * hash_table,
 }
 
 hx_boolean
-hx_hash_table_replace (HxHashTable * hash_table,
-                      hx_pointer key,
-                      hx_pointer value)
-{
-  return hx_hash_insert (hash_table, key, value, TRUE);
-}
-
-hx_boolean
 hx_hash_table_add (HxHashTable * hash_table,
                   hx_pointer key)
 {
@@ -213,26 +205,6 @@ hx_hash_table_lookup (HxHashTable * hash_table,
   hx_uint hash = hx_hash_key (hash_table, key);
   HxNode * node = hx_hash_find (hash_table, key, hash, NULL, NULL);
   return (node != NULL) ? node->value : NULL;
-}
-
-hx_boolean
-hx_hash_table_lookup_extended (HxHashTable * hash_table,
-                              hx_constpointer lookup_key,
-                              hx_pointer * orig_key,
-                              hx_pointer * value)
-{
-  hx_uint hash = hx_hash_key (hash_table, lookup_key);
-  HxNode * node = hx_hash_find (hash_table, lookup_key, hash, NULL, NULL);
-
-  if (node == NULL)
-    return FALSE;
-
-  if (orig_key != NULL)
-    *orig_key = node->key;
-  if (value != NULL)
-    *value = node->value;
-
-  return TRUE;
 }
 
 hx_boolean
@@ -283,13 +255,6 @@ hx_hash_table_remove (HxHashTable * hash_table,
   return hx_hash_remove_internal (hash_table, key, TRUE);
 }
 
-hx_boolean
-hx_hash_table_steal (HxHashTable * hash_table,
-                    hx_constpointer key)
-{
-  return hx_hash_remove_internal (hash_table, key, FALSE);
-}
-
 void
 hx_hash_table_remove_all (HxHashTable * hash_table)
 {
@@ -315,13 +280,6 @@ hx_hash_table_remove_all (HxHashTable * hash_table)
   hash_table->version++;
 }
 
-HxHashTable *
-hx_hash_table_ref (HxHashTable * hash_table)
-{
-  hash_table->ref_count++;
-  return hash_table;
-}
-
 void
 hx_hash_table_unref (HxHashTable * hash_table)
 {
@@ -338,93 +296,6 @@ hx_hash_table_destroy (HxHashTable * hash_table)
 {
   hx_hash_table_remove_all (hash_table);
   hx_hash_table_unref (hash_table);
-}
-
-void
-hx_hash_table_foreach (HxHashTable * hash_table,
-                      HxHFunc func,
-                      hx_pointer user_data)
-{
-  hx_uint i;
-
-  for (i = 0; i != hash_table->n_buckets; i++)
-  {
-    HxNode * node = hash_table->buckets[i];
-    while (node != NULL)
-    {
-      HxNode * next = node->next;
-      func (node->key, node->value, user_data);
-      node = next;
-    }
-  }
-}
-
-hx_uint
-hx_hash_table_foreach_remove (HxHashTable * hash_table,
-                             HxHRFunc func,
-                             hx_pointer user_data)
-{
-  hx_uint i;
-  hx_uint removed = 0;
-
-  for (i = 0; i != hash_table->n_buckets; i++)
-  {
-    HxNode * prev = NULL;
-    HxNode * node = hash_table->buckets[i];
-
-    while (node != NULL)
-    {
-      HxNode * next = node->next;
-
-      if (func (node->key, node->value, user_data))
-      {
-        if (prev != NULL)
-          prev->next = next;
-        else
-          hash_table->buckets[i] = next;
-
-        if (hash_table->key_destroy_func != NULL)
-          hash_table->key_destroy_func (node->key);
-        if (hash_table->value_destroy_func != NULL)
-          hash_table->value_destroy_func (node->value);
-        hx_free (node);
-        hash_table->n_items--;
-        removed++;
-      }
-      else
-      {
-        prev = node;
-      }
-
-      node = next;
-    }
-  }
-
-  if (removed != 0)
-    hash_table->version++;
-
-  return removed;
-}
-
-hx_pointer
-hx_hash_table_find (HxHashTable * hash_table,
-                   HxHRFunc predicate,
-                   hx_pointer user_data)
-{
-  hx_uint i;
-
-  for (i = 0; i != hash_table->n_buckets; i++)
-  {
-    HxNode * node = hash_table->buckets[i];
-    while (node != NULL)
-    {
-      if (predicate (node->key, node->value, user_data))
-        return node->value;
-      node = node->next;
-    }
-  }
-
-  return NULL;
 }
 
 hx_uint
@@ -523,50 +394,4 @@ hx_direct_equal (hx_constpointer a,
                 hx_constpointer b)
 {
   return a == b;
-}
-
-hx_uint
-hx_int_hash (hx_constpointer v)
-{
-  return (hx_uint) *(const hx_int *) v;
-}
-
-hx_boolean
-hx_int_equal (hx_constpointer a,
-             hx_constpointer b)
-{
-  return *(const hx_int *) a == *(const hx_int *) b;
-}
-
-hx_uint
-hx_int64_hash (hx_constpointer v)
-{
-  hx_uint64 k = *(const hx_uint64 *) v;
-  return (hx_uint) (k ^ (k >> 32));
-}
-
-hx_boolean
-hx_int64_equal (hx_constpointer a,
-               hx_constpointer b)
-{
-  return *(const hx_uint64 *) a == *(const hx_uint64 *) b;
-}
-
-hx_uint
-hx_str_hash (hx_constpointer v)
-{
-  const signed char * p;
-  hx_uint32 h = 5381;
-
-  for (p = v; *p != '\0'; p++)
-    h = (h << 5) + h + (hx_uint32) *p;
-
-  return h;
-}
-
-hx_boolean
-hx_str_equal (hx_constpointer a,
-             hx_constpointer b)
-{
-  return strcmp (a, b) == 0;
 }

@@ -62,15 +62,12 @@ HOOX_API HooxCodeSlice * hoox_code_allocator_try_alloc_slice_near (
     HooxCodeAllocator * self, const HooxAddressSpec * spec, hx_size alignment);
 HOOX_API void hoox_code_allocator_commit (HooxCodeAllocator * self);
 HOOX_API HxType hoox_code_slice_get_type (void) HX_GNUC_CONST;
-HOOX_API HooxCodeSlice * hoox_code_slice_ref (HooxCodeSlice * slice);
 HOOX_API void hoox_code_slice_unref (HooxCodeSlice * slice);
 
 HOOX_API HooxCodeDeflector * hoox_code_allocator_alloc_deflector (
     HooxCodeAllocator * self, const HooxAddressSpec * caller,
     hx_pointer return_address, hx_pointer target, hx_boolean dedicated);
 HOOX_API HxType hoox_code_deflector_get_type (void) HX_GNUC_CONST;
-HOOX_API HooxCodeDeflector * hoox_code_deflector_ref (
-    HooxCodeDeflector * deflector);
 HOOX_API void hoox_code_deflector_unref (HooxCodeDeflector * deflector);
 
 HX_END_DECLS

@@ -36,31 +36,6 @@ hx_slist_prepend (HxSList * list,
 }
 
 HxSList *
-hx_slist_insert (HxSList * list,
-                hx_pointer data,
-                hx_int position)
-{
-  HxSList * prev;
-  HxSList * node;
-
-  if (position < 0 || list == NULL)
-    return hx_slist_append (list, data);
-  if (position == 0)
-    return hx_slist_prepend (list, data);
-
-  prev = list;
-  while (--position > 0 && prev->next != NULL)
-    prev = prev->next;
-
-  node = hx_slice_new (HxSList);
-  node->data = data;
-  node->next = prev->next;
-  prev->next = node;
-
-  return list;
-}
-
-HxSList *
 hx_slist_remove (HxSList * list,
                 hx_constpointer data)
 {
@@ -171,22 +146,6 @@ hx_slist_length (HxSList * list)
   return n;
 }
 
-HxSList *
-hx_slist_reverse (HxSList * list)
-{
-  HxSList * prev = NULL;
-
-  while (list != NULL)
-  {
-    HxSList * next = list->next;
-    list->next = prev;
-    prev = list;
-    list = next;
-  }
-
-  return prev;
-}
-
 void
 hx_slist_foreach (HxSList * list,
                  HxFunc func,
@@ -201,31 +160,11 @@ hx_slist_foreach (HxSList * list,
 }
 
 void
-hx_slist_free_1 (HxSList * list)
-{
-  hx_slice_free (HxSList, list);
-}
-
-void
 hx_slist_free (HxSList * list)
 {
   while (list != NULL)
   {
     HxSList * next = list->next;
-    hx_slice_free (HxSList, list);
-    list = next;
-  }
-}
-
-void
-hx_slist_free_full (HxSList * list,
-                   HxDestroyNotify free_func)
-{
-  while (list != NULL)
-  {
-    HxSList * next = list->next;
-    if (free_func != NULL)
-      free_func (list->data);
     hx_slice_free (HxSList, list);
     list = next;
   }
@@ -240,16 +179,6 @@ hx_list_last (HxList * list)
     return NULL;
   while (list->next != NULL)
     list = list->next;
-  return list;
-}
-
-HxList *
-hx_list_first (HxList * list)
-{
-  if (list == NULL)
-    return NULL;
-  while (list->prev != NULL)
-    list = list->prev;
   return list;
 }
 
@@ -293,34 +222,6 @@ hx_list_prepend (HxList * list,
 }
 
 HxList *
-hx_list_insert (HxList * list,
-               hx_pointer data,
-               hx_int position)
-{
-  HxList * tmp;
-  HxList * node;
-
-  if (position < 0 || list == NULL)
-    return hx_list_append (list, data);
-  if (position == 0)
-    return hx_list_prepend (list, data);
-
-  tmp = hx_list_nth (list, (hx_uint) position);
-  if (tmp == NULL)
-    return hx_list_append (list, data);
-
-  node = hx_slice_new (HxList);
-  node->data = data;
-  node->prev = tmp->prev;
-  node->next = tmp;
-  if (tmp->prev != NULL)
-    tmp->prev->next = node;
-  tmp->prev = node;
-
-  return (node->prev == NULL) ? node : list;
-}
-
-HxList *
 hx_list_remove_link (HxList * list,
                     HxList * llink)
 {
@@ -351,25 +252,6 @@ hx_list_delete_link (HxList * list,
 }
 
 HxList *
-hx_list_remove (HxList * list,
-               hx_constpointer data)
-{
-  HxList * cur = list;
-
-  while (cur != NULL)
-  {
-    if (cur->data == data)
-    {
-      list = hx_list_delete_link (list, cur);
-      break;
-    }
-    cur = cur->next;
-  }
-
-  return list;
-}
-
-HxList *
 hx_list_find (HxList * list,
              hx_constpointer data)
 {
@@ -391,42 +273,6 @@ hx_list_nth (HxList * list,
   return list;
 }
 
-hx_pointer
-hx_list_nth_data (HxList * list,
-                 hx_uint n)
-{
-  HxList * node = hx_list_nth (list, n);
-  return (node != NULL) ? node->data : NULL;
-}
-
-hx_uint
-hx_list_length (HxList * list)
-{
-  hx_uint n = 0;
-  while (list != NULL)
-  {
-    n++;
-    list = list->next;
-  }
-  return n;
-}
-
-HxList *
-hx_list_reverse (HxList * list)
-{
-  HxList * last = NULL;
-
-  while (list != NULL)
-  {
-    last = list;
-    list = last->next;
-    last->next = last->prev;
-    last->prev = list;
-  }
-
-  return last;
-}
-
 void
 hx_list_foreach (HxList * list,
                 HxFunc func,
@@ -446,20 +292,6 @@ hx_list_free (HxList * list)
   while (list != NULL)
   {
     HxList * next = list->next;
-    hx_slice_free (HxList, list);
-    list = next;
-  }
-}
-
-void
-hx_list_free_full (HxList * list,
-                  HxDestroyNotify free_func)
-{
-  while (list != NULL)
-  {
-    HxList * next = list->next;
-    if (free_func != NULL)
-      free_func (list->data);
     hx_slice_free (HxList, list);
     list = next;
   }
@@ -501,12 +333,6 @@ hx_boolean
 hx_queue_is_empty (HxQueue * queue)
 {
   return queue->head == NULL;
-}
-
-hx_uint
-hx_queue_get_length (HxQueue * queue)
-{
-  return queue->length;
 }
 
 void
@@ -584,47 +410,4 @@ hx_queue_pop_tail (HxQueue * queue)
   queue->length--;
 
   return data;
-}
-
-hx_pointer
-hx_queue_peek_head (HxQueue * queue)
-{
-  return (queue->head != NULL) ? queue->head->data : NULL;
-}
-
-hx_pointer
-hx_queue_peek_tail (HxQueue * queue)
-{
-  return (queue->tail != NULL) ? queue->tail->data : NULL;
-}
-
-void
-hx_queue_foreach (HxQueue * queue,
-                 HxFunc func,
-                 hx_pointer user_data)
-{
-  HxList * node = queue->head;
-  while (node != NULL)
-  {
-    HxList * next = node->next;
-    func (node->data, user_data);
-    node = next;
-  }
-}
-
-hx_boolean
-hx_queue_remove (HxQueue * queue,
-                hx_constpointer data)
-{
-  HxList * node = hx_list_find (queue->head, data);
-
-  if (node == NULL)
-    return FALSE;
-
-  if (node == queue->tail)
-    queue->tail = node->prev;
-  queue->head = hx_list_delete_link (queue->head, node);
-  queue->length--;
-
-  return TRUE;
 }

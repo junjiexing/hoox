@@ -18,8 +18,6 @@ HX_BEGIN_DECLS
 hx_pointer hx_malloc (hx_size n_bytes);
 hx_pointer hx_malloc0 (hx_size n_bytes);
 hx_pointer hx_realloc (hx_pointer mem, hx_size n_bytes);
-hx_pointer hx_try_malloc (hx_size n_bytes);
-hx_pointer hx_try_malloc0 (hx_size n_bytes);
 void hx_free (hx_pointer mem);
 
 hx_pointer hx_memdup (hx_constpointer mem, hx_uint byte_size);

@@ -224,17 +224,6 @@ hoox_sign_code_address (HooxAddress value)
 #endif
 }
 
-HooxAddress
-hoox_strip_code_address (HooxAddress value)
-{
-#ifdef HAVE_PTRAUTH
-  return HX_POINTER_TO_SIZE (ptrauth_strip (
-      HX_SIZE_TO_POINTER (value), ptrauth_key_asia));
-#else
-  return value;
-#endif
-}
-
 HooxPtrauthSupport
 hoox_query_ptrauth_support (void)
 {
@@ -1076,16 +1065,4 @@ hoox_address_spec_is_satisfied_by (const HooxAddressSpec * spec,
       ABS ((const hx_uint8 *) spec->near_address - (const hx_uint8 *) address);
 
   return distance <= spec->max_distance;
-}
-
-HooxMemoryRange *
-hoox_memory_range_copy (const HooxMemoryRange * range)
-{
-  return hx_slice_dup (HooxMemoryRange, range);
-}
-
-void
-hoox_memory_range_free (HooxMemoryRange * range)
-{
-  hx_slice_free (HooxMemoryRange, range);
 }

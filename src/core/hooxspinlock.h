@@ -21,10 +21,8 @@ struct _HooxSpinlock
   hx_pointer data;
 };
 
-HOOX_API void hoox_spinlock_init (HooxSpinlock * spinlock);
 
 HOOX_API void hoox_spinlock_acquire (HooxSpinlock * spinlock);
-HOOX_API hx_boolean hoox_spinlock_try_acquire (HooxSpinlock * spinlock);
 HOOX_API void hoox_spinlock_release (HooxSpinlock * spinlock);
 
 HX_END_DECLS

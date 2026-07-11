@@ -90,14 +90,6 @@ hx_string_truncate (HxString * string,
 }
 
 HxString *
-hx_string_assign (HxString * string,
-                 const hx_char * rval)
-{
-  hx_string_truncate (string, 0);
-  return hx_string_append (string, rval);
-}
-
-HxString *
 hx_string_append_len (HxString * string,
                      const hx_char * val,
                      hx_ssize len)

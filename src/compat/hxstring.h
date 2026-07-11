@@ -28,7 +28,6 @@ HxString * hx_string_new (const hx_char * init);
 HxString * hx_string_sized_new (hx_size dfl_size);
 hx_char * hx_string_free (HxString * string, hx_boolean free_segment);
 
-HxString * hx_string_assign (HxString * string, const hx_char * rval);
 HxString * hx_string_truncate (HxString * string, hx_size len);
 HxString * hx_string_append (HxString * string, const hx_char * val);
 HxString * hx_string_append_c (HxString * string, hx_char c);

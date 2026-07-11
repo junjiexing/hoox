@@ -19,11 +19,7 @@ HX_BEGIN_DECLS
 
 typedef struct _HooxModule HooxModule;
 
-HOOX_API const hx_char * hoox_module_get_name (HooxModule * self);
-HOOX_API const hx_char * hoox_module_get_path (HooxModule * self);
 HOOX_API const HooxMemoryRange * hoox_module_get_range (HooxModule * self);
-HOOX_API HooxAddress hoox_module_find_export_by_name (HooxModule * self,
-    const hx_char * symbol_name);
 
 HX_END_DECLS
 

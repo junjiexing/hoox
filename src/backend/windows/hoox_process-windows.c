@@ -124,12 +124,6 @@ hoox_process_get_code_signing_policy (void)
   return hoox_code_signing_policy;
 }
 
-void
-hoox_process_set_code_signing_policy (HooxCodeSigningPolicy policy)
-{
-  hoox_code_signing_policy = policy;
-}
-
 /* ---- module (main-module range for tests) ------------------------------- */
 
 struct _HooxModule
@@ -179,34 +173,8 @@ hoox_main_module_get (void)
   return m;
 }
 
-HooxModule *
-hoox_process_get_main_module (void)
-{
-  return hoox_main_module_get ();
-}
-
-const hx_char *
-hoox_module_get_name (HooxModule * self)
-{
-  return self->name;
-}
-
-const hx_char *
-hoox_module_get_path (HooxModule * self)
-{
-  return self->path;
-}
-
 const HooxMemoryRange *
 hoox_module_get_range (HooxModule * self)
 {
   return &self->range;
-}
-
-HooxAddress
-hoox_module_find_export_by_name (HooxModule * self,
-                                const hx_char * symbol_name)
-{
-  (void) self;
-  return HOOX_ADDRESS (GetProcAddress (GetModuleHandleW (NULL), symbol_name));
 }

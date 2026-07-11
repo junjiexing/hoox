@@ -90,19 +90,6 @@ hx_array_new (hx_boolean zero_terminated,
   return hx_array_sized_new (zero_terminated, clear, element_size, 0);
 }
 
-void
-hx_array_set_clear_func (HxArray * array,
-                        HxDestroyNotify clear_func)
-{
-  ((HxRealArray *) array)->clear_func = clear_func;
-}
-
-hx_uint
-hx_array_get_element_size (HxArray * array)
-{
-  return ((HxRealArray *) array)->elt_size;
-}
-
 static void
 hx_array_call_clear (HxRealArray * a,
                      hx_uint index_,
@@ -142,13 +129,6 @@ hx_array_free (HxArray * array,
   hx_free (a);
 
   return segment;
-}
-
-HxArray *
-hx_array_ref (HxArray * array)
-{
-  ((HxRealArray *) array)->ref_count++;
-  return array;
 }
 
 void
@@ -289,48 +269,6 @@ hx_array_remove_index_fast (HxArray * array,
   return array;
 }
 
-HxArray *
-hx_array_remove_range (HxArray * array,
-                      hx_uint index_,
-                      hx_uint length)
-{
-  HxRealArray * a = (HxRealArray *) array;
-
-  hx_return_val_if_fail (index_ + length <= a->len, array);
-
-  if (a->clear_func != NULL)
-    hx_array_call_clear (a, index_, length);
-
-  if (index_ + length != a->len)
-  {
-    memmove (a->data + (hx_size) index_ * a->elt_size,
-        a->data + (hx_size) (index_ + length) * a->elt_size,
-        (hx_size) (a->len - (index_ + length)) * a->elt_size);
-  }
-
-  a->len -= length;
-  hx_array_zero_terminate (a);
-
-  return array;
-}
-
-hx_pointer
-hx_array_steal (HxArray * array,
-               hx_size * len)
-{
-  HxRealArray * a = (HxRealArray *) array;
-  hx_pointer segment = a->data;
-
-  if (len != NULL)
-    *len = a->len;
-
-  a->data = NULL;
-  a->len = 0;
-  a->alloc = 0;
-
-  return segment;
-}
-
 /* ---- HxPtrArray ---------------------------------------------------------- */
 
 typedef struct _HxRealPtrArray HxRealPtrArray;
@@ -398,13 +336,6 @@ hx_ptr_array_new_full (hx_uint reserved_size,
   return array;
 }
 
-void
-hx_ptr_array_set_free_func (HxPtrArray * array,
-                           HxDestroyNotify element_free_func)
-{
-  ((HxRealPtrArray *) array)->element_free_func = element_free_func;
-}
-
 hx_pointer *
 hx_ptr_array_free (HxPtrArray * array,
                   hx_boolean free_segment)
@@ -439,13 +370,6 @@ hx_ptr_array_free (HxPtrArray * array,
   return segment;
 }
 
-HxPtrArray *
-hx_ptr_array_ref (HxPtrArray * array)
-{
-  ((HxRealPtrArray *) array)->ref_count++;
-  return array;
-}
-
 void
 hx_ptr_array_unref (HxPtrArray * array)
 {
@@ -463,35 +387,6 @@ hx_ptr_array_add (HxPtrArray * array,
 
   hx_ptr_array_maybe_expand (a, 1);
   a->pdata[a->len++] = data;
-}
-
-void
-hx_ptr_array_set_size (HxPtrArray * array,
-                      hx_int length)
-{
-  HxRealPtrArray * a = (HxRealPtrArray *) array;
-  hx_uint new_len = (hx_uint) length;
-
-  if (new_len > a->len)
-  {
-    hx_ptr_array_maybe_expand (a, new_len - a->len);
-    memset (a->pdata + a->len, 0,
-        (hx_size) (new_len - a->len) * sizeof (hx_pointer));
-  }
-  else if (new_len < a->len)
-  {
-    if (a->element_free_func != NULL)
-    {
-      hx_uint i;
-      for (i = new_len; i != a->len; i++)
-      {
-        if (a->pdata[i] != NULL)
-          a->element_free_func (a->pdata[i]);
-      }
-    }
-  }
-
-  a->len = new_len;
 }
 
 hx_pointer
@@ -531,53 +426,6 @@ hx_ptr_array_remove_index_fast (HxPtrArray * array,
   return result;
 }
 
-hx_boolean
-hx_ptr_array_remove (HxPtrArray * array,
-                    hx_pointer data)
-{
-  hx_uint i;
-
-  for (i = 0; i != array->len; i++)
-  {
-    if (array->pdata[i] == data)
-    {
-      hx_ptr_array_remove_index (array, i);
-      return TRUE;
-    }
-  }
-
-  return FALSE;
-}
-
-hx_boolean
-hx_ptr_array_remove_fast (HxPtrArray * array,
-                         hx_pointer data)
-{
-  hx_uint i;
-
-  for (i = 0; i != array->len; i++)
-  {
-    if (array->pdata[i] == data)
-    {
-      hx_ptr_array_remove_index_fast (array, i);
-      return TRUE;
-    }
-  }
-
-  return FALSE;
-}
-
-void
-hx_ptr_array_foreach (HxPtrArray * array,
-                     HxFunc func,
-                     hx_pointer user_data)
-{
-  hx_uint i;
-
-  for (i = 0; i != array->len; i++)
-    func (array->pdata[i], user_data);
-}
-
 /* GLib's hx_ptr_array_sort passes pointers-to-elements to the comparator. */
 static HxCompareFunc hx_ptr_sort_cmp;
 
@@ -594,41 +442,4 @@ hx_ptr_array_sort (HxPtrArray * array,
 {
   hx_ptr_sort_cmp = compare_func;
   qsort (array->pdata, array->len, sizeof (hx_pointer), hx_ptr_sort_thunk);
-}
-
-hx_boolean
-hx_ptr_array_find (HxPtrArray * array,
-                  hx_constpointer needle,
-                  hx_uint * index_)
-{
-  hx_uint i;
-
-  for (i = 0; i != array->len; i++)
-  {
-    if (array->pdata[i] == needle)
-    {
-      if (index_ != NULL)
-        *index_ = i;
-      return TRUE;
-    }
-  }
-
-  return FALSE;
-}
-
-hx_pointer *
-hx_ptr_array_steal (HxPtrArray * array,
-                   hx_size * len)
-{
-  HxRealPtrArray * a = (HxRealPtrArray *) array;
-  hx_pointer * segment = a->pdata;
-
-  if (len != NULL)
-    *len = a->len;
-
-  a->pdata = NULL;
-  a->len = 0;
-  a->alloc = 0;
-
-  return segment;
 }

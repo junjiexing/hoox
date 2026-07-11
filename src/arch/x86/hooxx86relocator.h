@@ -34,10 +34,6 @@ struct _HooxX86Relocator
   hx_boolean eoi;
 };
 
-HOOX_API HooxX86Relocator * hoox_x86_relocator_new (hx_constpointer input_code,
-    HooxX86Writer * output);
-HOOX_API HooxX86Relocator * hoox_x86_relocator_ref (HooxX86Relocator * relocator);
-HOOX_API void hoox_x86_relocator_unref (HooxX86Relocator * relocator);
 
 HOOX_API void hoox_x86_relocator_init (HooxX86Relocator * relocator,
     hx_constpointer input_code, HooxX86Writer * output);
@@ -54,9 +50,7 @@ HOOX_API hx_insn * hoox_x86_relocator_peek_next_write_insn (
 HOOX_API hx_pointer hoox_x86_relocator_peek_next_write_source (
     HooxX86Relocator * self);
 HOOX_API void hoox_x86_relocator_skip_one (HooxX86Relocator * self);
-HOOX_API void hoox_x86_relocator_skip_one_no_label (HooxX86Relocator * self);
 HOOX_API hx_boolean hoox_x86_relocator_write_one (HooxX86Relocator * self);
-HOOX_API hx_boolean hoox_x86_relocator_write_one_no_label (HooxX86Relocator * self);
 HOOX_API void hoox_x86_relocator_write_all (HooxX86Relocator * self);
 
 HOOX_API hx_boolean hoox_x86_relocator_eob (HooxX86Relocator * self);
@@ -64,8 +58,6 @@ HOOX_API hx_boolean hoox_x86_relocator_eoi (HooxX86Relocator * self);
 
 HOOX_API hx_boolean hoox_x86_relocator_can_relocate (hx_pointer address,
     hx_uint min_bytes, HooxRelocationScenario scenario, hx_uint * maximum);
-HOOX_API hx_uint hoox_x86_relocator_relocate (hx_pointer from, hx_uint min_bytes,
-    hx_pointer to);
 
 HX_END_DECLS
 

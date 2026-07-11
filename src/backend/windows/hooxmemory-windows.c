@@ -39,78 +39,10 @@ _hoox_memory_backend_query_page_size (void)
 }
 
 hx_boolean
-hoox_memory_is_readable (hx_constpointer address,
-                        hx_size len)
-{
-  HooxPageProtection prot;
-
-  if (!hoox_memory_get_protection (address, len, &prot))
-    return FALSE;
-
-  return (prot & HOOX_PAGE_READ) != 0;
-}
-
-hx_boolean
 hoox_memory_query_protection (hx_constpointer address,
                              HooxPageProtection * prot)
 {
   return hoox_memory_get_protection (address, 1, prot);
-}
-
-hx_uint8 *
-hoox_memory_read (hx_constpointer address,
-                 hx_size len,
-                 hx_size * n_bytes_read)
-{
-  hx_uint8 * result;
-  hx_size offset;
-  HANDLE self;
-  hx_size page_size;
-
-  result = hx_malloc (len);
-  offset = 0;
-
-  self = GetCurrentProcess ();
-  page_size = hoox_query_page_size ();
-
-  while (offset != len)
-  {
-    const hx_uint8 * chunk_address, * page_address;
-    hx_size page_offset, chunk_size;
-    SIZE_T n;
-    BOOL success;
-
-    chunk_address = (const hx_uint8 *) address + offset;
-    page_address = HX_SIZE_TO_POINTER (
-        HX_POINTER_TO_SIZE (chunk_address) & ~(page_size - 1));
-    page_offset = chunk_address - page_address;
-    chunk_size = MIN (len - offset, page_size - page_offset);
-
-    success = ReadProcessMemory (self, chunk_address, result + offset,
-        chunk_size, &n);
-    if (!success)
-      break;
-    offset += n;
-  }
-
-  if (offset == 0)
-  {
-    hx_free (result);
-    result = NULL;
-  }
-
-  if (n_bytes_read != NULL)
-    *n_bytes_read = offset;
-
-  return result;
-}
-
-hx_boolean
-hoox_memory_write (hx_pointer address,
-                  const hx_uint8 * bytes,
-                  hx_size len)
-{
-  return WriteProcessMemory (GetCurrentProcess (), address, bytes, len, NULL);
 }
 
 hx_boolean
@@ -335,37 +267,6 @@ hoox_memory_recommit (hx_pointer address,
 {
   return VirtualAlloc (address, size, MEM_COMMIT,
       hoox_page_protection_to_windows (prot)) != NULL;
-}
-
-hx_boolean
-hoox_memory_discard (hx_pointer address,
-                    hx_size size)
-{
-  static hx_boolean initialized = FALSE;
-  static DWORD (WINAPI * discard_impl) (PVOID address, SIZE_T size);
-
-  if (!initialized)
-  {
-    discard_impl = HOOX_POINTER_TO_FUNCPTR (DWORD (WINAPI *) (PVOID, SIZE_T),
-        GetProcAddress (GetModuleHandleW (L"kernel32.dll"),
-          "DiscardVirtualMemory"));
-    initialized = TRUE;
-  }
-
-  if (discard_impl != NULL)
-  {
-    if (discard_impl (address, size) == ERROR_SUCCESS)
-      return TRUE;
-  }
-
-  return VirtualAlloc (address, size, MEM_RESET, PAGE_READWRITE) != NULL;
-}
-
-hx_boolean
-hoox_memory_decommit (hx_pointer address,
-                     hx_size size)
-{
-  return VirtualFree (address, size, MEM_DECOMMIT);
 }
 
 static hx_boolean

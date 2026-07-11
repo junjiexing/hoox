@@ -112,18 +112,12 @@ HOOX_API void hoox_internal_heap_unref (void);
 HOOX_API hx_pointer hoox_sign_code_pointer (hx_pointer value);
 HOOX_API hx_pointer hoox_strip_code_pointer (hx_pointer value);
 HOOX_API HooxAddress hoox_sign_code_address (HooxAddress value);
-HOOX_API HooxAddress hoox_strip_code_address (HooxAddress value);
 HOOX_API HooxPtrauthSupport hoox_query_ptrauth_support (void);
 HOOX_API hx_uint hoox_query_page_size (void);
 HOOX_API hx_boolean hoox_query_is_rwx_supported (void);
 HOOX_API HooxRwxSupport hoox_query_rwx_support (void);
-HOOX_API hx_boolean hoox_memory_is_readable (hx_constpointer address, hx_size len);
 HOOX_API hx_boolean hoox_memory_query_protection (hx_constpointer address,
     HooxPageProtection * prot);
-HOOX_API hx_uint8 * hoox_memory_read (hx_constpointer address, hx_size len,
-    hx_size * n_bytes_read);
-HOOX_API hx_boolean hoox_memory_write (hx_pointer address, const hx_uint8 * bytes,
-    hx_size len);
 HOOX_API hx_boolean hoox_memory_patch_code (hx_pointer address, hx_size size,
     HooxMemoryPatchApplyFunc apply, hx_pointer apply_data);
 HOOX_API hx_boolean hoox_memory_patch_code_pages (HxPtrArray * sorted_addresses,
@@ -194,15 +188,11 @@ HOOX_API hx_boolean hoox_memory_free (hx_pointer address, hx_size size);
 HOOX_API hx_boolean hoox_memory_release (hx_pointer address, hx_size size);
 HOOX_API hx_boolean hoox_memory_recommit (hx_pointer address, hx_size size,
     HooxPageProtection prot);
-HOOX_API hx_boolean hoox_memory_discard (hx_pointer address, hx_size size);
-HOOX_API hx_boolean hoox_memory_decommit (hx_pointer address, hx_size size);
 
 HOOX_API hx_boolean hoox_address_spec_is_satisfied_by (const HooxAddressSpec * spec,
     hx_constpointer address);
 
 HOOX_API HxType hoox_memory_range_get_type (void) HX_GNUC_CONST;
-HOOX_API HooxMemoryRange * hoox_memory_range_copy (const HooxMemoryRange * range);
-HOOX_API void hoox_memory_range_free (HooxMemoryRange * range);
 
 HX_END_DECLS
 

@@ -92,18 +92,6 @@ static hx_boolean hoox_x86_writer_put_prefix_for_registers (HooxX86Writer * self
 static hx_uint8 hoox_get_jcc_opcode (hx_x86_insn instruction_id);
 
 HooxX86Writer *
-hoox_x86_writer_new (hx_pointer code_address)
-{
-  HooxX86Writer * writer;
-
-  writer = hx_slice_new (HooxX86Writer);
-
-  hoox_x86_writer_init (writer, code_address);
-
-  return writer;
-}
-
-HooxX86Writer *
 hoox_x86_writer_ref (HooxX86Writer * writer)
 {
   hx_atomic_int_inc (&writer->ref_count);
@@ -197,12 +185,6 @@ hoox_x86_writer_set_target_abi (HooxX86Writer * self,
   self->target_abi = abi_type;
 }
 
-hx_pointer
-hoox_x86_writer_cur (HooxX86Writer * self)
-{
-  return self->code;
-}
-
 hx_uint
 hoox_x86_writer_offset (HooxX86Writer * self)
 {
@@ -288,53 +270,6 @@ error:
   }
 }
 
-HooxX86Reg
-hoox_x86_writer_get_cpu_register_for_nth_argument (HooxX86Writer * self,
-                                                  hx_uint n)
-{
-  if (self->target_cpu == HOOX_CPU_AMD64)
-  {
-    if (self->target_abi == HOOX_ABI_UNIX)
-    {
-      static const HooxX86Reg amd64_unix_reg_by_index[] = {
-        HOOX_HX_RDI,
-        HOOX_HX_RSI,
-        HOOX_HX_RDX,
-        HOOX_HX_RCX,
-        HOOX_HX_R8,
-        HOOX_HX_R9
-      };
-
-      if (n < HX_N_ELEMENTS (amd64_unix_reg_by_index))
-        return amd64_unix_reg_by_index[n];
-    }
-    else if (self->target_abi == HOOX_ABI_WINDOWS)
-    {
-      static const HooxX86Reg amd64_windows_reg_by_index[] = {
-        HOOX_HX_RCX,
-        HOOX_HX_RDX,
-        HOOX_HX_R8,
-        HOOX_HX_R9
-      };
-
-      if (n < HX_N_ELEMENTS (amd64_windows_reg_by_index))
-        return amd64_windows_reg_by_index[n];
-    }
-  }
-  else if (self->target_cpu == HOOX_CPU_IA32)
-  {
-    static const HooxX86Reg fastcall_reg_by_index[] = {
-      HOOX_HX_ECX,
-      HOOX_HX_EDX,
-    };
-
-    if (n < HX_N_ELEMENTS (fastcall_reg_by_index))
-      return fastcall_reg_by_index[n];
-  }
-
-  return HOOX_HX_NONE;
-}
-
 hx_boolean
 hoox_x86_writer_put_label (HooxX86Writer * self,
                           hx_constpointer id)
@@ -367,20 +302,6 @@ hoox_x86_writer_add_label_reference_here (HooxX86Writer * self,
 }
 
 hx_boolean
-hoox_x86_writer_can_branch_directly_between (HooxAddress from,
-                                            HooxAddress to)
-{
-  hx_int64 distance;
-  hx_boolean distance_fits_in_i32;
-
-  distance = (hx_ssize) to - (hx_ssize) (from + 5);
-
-  distance_fits_in_i32 = (distance >= HX_MININT32 && distance <= HX_MAXINT32);
-
-  return distance_fits_in_i32;
-}
-
-hx_boolean
 hoox_x86_writer_put_call_address_with_arguments (HooxX86Writer * self,
                                                 HooxCallingConvention conv,
                                                 HooxAddress func,
@@ -392,23 +313,6 @@ hoox_x86_writer_put_call_address_with_arguments (HooxX86Writer * self,
   va_start (args, n_args);
   hoox_x86_writer_put_argument_list_setup_va (self, conv, n_args, args);
   va_end (args);
-
-  if (!hoox_x86_writer_put_call_address (self, func))
-    return FALSE;
-
-  hoox_x86_writer_put_argument_list_teardown (self, conv, n_args);
-
-  return TRUE;
-}
-
-hx_boolean
-hoox_x86_writer_put_call_address_with_arguments_array (HooxX86Writer * self,
-                                                      HooxCallingConvention conv,
-                                                      HooxAddress func,
-                                                      hx_uint n_args,
-                                                      const HooxArgument * args)
-{
-  hoox_x86_writer_put_argument_list_setup (self, conv, n_args, args);
 
   if (!hoox_x86_writer_put_call_address (self, func))
     return FALSE;
@@ -441,24 +345,6 @@ hoox_x86_writer_put_call_address_with_aligned_arguments (
 }
 
 hx_boolean
-hoox_x86_writer_put_call_address_with_aligned_arguments_array (
-    HooxX86Writer * self,
-    HooxCallingConvention conv,
-    HooxAddress func,
-    hx_uint n_args,
-    const HooxArgument * args)
-{
-  hoox_x86_writer_put_aligned_argument_list_setup (self, conv, n_args, args);
-
-  if (!hoox_x86_writer_put_call_address (self, func))
-    return FALSE;
-
-  hoox_x86_writer_put_aligned_argument_list_teardown (self, conv, n_args);
-
-  return TRUE;
-}
-
-hx_boolean
 hoox_x86_writer_put_call_reg_with_arguments (HooxX86Writer * self,
                                             HooxCallingConvention conv,
                                             HooxX86Reg reg,
@@ -475,62 +361,6 @@ hoox_x86_writer_put_call_reg_with_arguments (HooxX86Writer * self,
     return FALSE;
 
   hoox_x86_writer_put_argument_list_teardown (self, conv, n_args);
-
-  return TRUE;
-}
-
-hx_boolean
-hoox_x86_writer_put_call_reg_with_arguments_array (HooxX86Writer * self,
-                                                  HooxCallingConvention conv,
-                                                  HooxX86Reg reg,
-                                                  hx_uint n_args,
-                                                  const HooxArgument * args)
-{
-  hoox_x86_writer_put_argument_list_setup (self, conv, n_args, args);
-
-  if (!hoox_x86_writer_put_call_reg (self, reg))
-    return FALSE;
-
-  hoox_x86_writer_put_argument_list_teardown (self, conv, n_args);
-
-  return TRUE;
-}
-
-hx_boolean
-hoox_x86_writer_put_call_reg_with_aligned_arguments (HooxX86Writer * self,
-                                                    HooxCallingConvention conv,
-                                                    HooxX86Reg reg,
-                                                    hx_uint n_args,
-                                                    ...)
-{
-  va_list args;
-
-  va_start (args, n_args);
-  hoox_x86_writer_put_aligned_argument_list_setup_va (self, conv, n_args, args);
-  va_end (args);
-
-  if (!hoox_x86_writer_put_call_reg (self, reg))
-    return FALSE;
-
-  hoox_x86_writer_put_aligned_argument_list_teardown (self, conv, n_args);
-
-  return TRUE;
-}
-
-hx_boolean
-hoox_x86_writer_put_call_reg_with_aligned_arguments_array (
-    HooxX86Writer * self,
-    HooxCallingConvention conv,
-    HooxX86Reg reg,
-    hx_uint n_args,
-    const HooxArgument * args)
-{
-  hoox_x86_writer_put_aligned_argument_list_setup (self, conv, n_args, args);
-
-  if (!hoox_x86_writer_put_call_reg (self, reg))
-    return FALSE;
-
-  hoox_x86_writer_put_aligned_argument_list_teardown (self, conv, n_args);
 
   return TRUE;
 }
@@ -807,67 +637,6 @@ hoox_x86_writer_put_call_reg_offset_ptr_with_arguments (
 }
 
 hx_boolean
-hoox_x86_writer_put_call_reg_offset_ptr_with_arguments_array (
-    HooxX86Writer * self,
-    HooxCallingConvention conv,
-    HooxX86Reg reg,
-    hx_ssize offset,
-    hx_uint n_args,
-    const HooxArgument * args)
-{
-  hoox_x86_writer_put_argument_list_setup (self, conv, n_args, args);
-
-  if (!hoox_x86_writer_put_call_reg_offset_ptr (self, reg, offset))
-    return FALSE;
-
-  hoox_x86_writer_put_argument_list_teardown (self, conv, n_args);
-
-  return TRUE;
-}
-
-hx_boolean
-hoox_x86_writer_put_call_reg_offset_ptr_with_aligned_arguments (
-    HooxX86Writer * self,
-    HooxCallingConvention conv,
-    HooxX86Reg reg,
-    hx_ssize offset,
-    hx_uint n_args,
-    ...)
-{
-  va_list args;
-
-  va_start (args, n_args);
-  hoox_x86_writer_put_aligned_argument_list_setup_va (self, conv, n_args, args);
-  va_end (args);
-
-  if (!hoox_x86_writer_put_call_reg_offset_ptr (self, reg, offset))
-    return FALSE;
-
-  hoox_x86_writer_put_aligned_argument_list_teardown (self, conv, n_args);
-
-  return TRUE;
-}
-
-hx_boolean
-hoox_x86_writer_put_call_reg_offset_ptr_with_aligned_arguments_array (
-    HooxX86Writer * self,
-    HooxCallingConvention conv,
-    HooxX86Reg reg,
-    hx_ssize offset,
-    hx_uint n_args,
-    const HooxArgument * args)
-{
-  hoox_x86_writer_put_aligned_argument_list_setup (self, conv, n_args, args);
-
-  if (!hoox_x86_writer_put_call_reg_offset_ptr (self, reg, offset))
-    return FALSE;
-
-  hoox_x86_writer_put_aligned_argument_list_teardown (self, conv, n_args);
-
-  return TRUE;
-}
-
-hx_boolean
 hoox_x86_writer_put_call_address (HooxX86Writer * self,
                                  HooxAddress address)
 {
@@ -1028,24 +797,9 @@ hoox_x86_writer_put_call_near_label (HooxX86Writer * self,
 }
 
 void
-hoox_x86_writer_put_leave (HooxX86Writer * self)
-{
-  hoox_x86_writer_put_u8 (self, 0xc9);
-}
-
-void
 hoox_x86_writer_put_ret (HooxX86Writer * self)
 {
   hoox_x86_writer_put_u8 (self, 0xc3);
-}
-
-void
-hoox_x86_writer_put_ret_imm (HooxX86Writer * self,
-                            hx_uint16 imm_value)
-{
-  self->code[0] = 0xc2;
-  *((hx_uint16 *) (self->code + 1)) = HX_UINT16_TO_LE (imm_value);
-  hoox_x86_writer_commit (self, 3);
 }
 
 hx_boolean
@@ -1146,14 +900,6 @@ hoox_x86_writer_put_jmp_short_label (HooxX86Writer * self,
 {
   hoox_x86_writer_put_short_jmp (self, HX_SIZE_TO_POINTER (self->pc));
   hoox_x86_writer_add_label_reference_here (self, label_id, HOOX_LREF_SHORT);
-}
-
-void
-hoox_x86_writer_put_jmp_near_label (HooxX86Writer * self,
-                                   hx_constpointer label_id)
-{
-  hoox_x86_writer_put_near_jmp (self, HX_SIZE_TO_POINTER (self->pc));
-  hoox_x86_writer_add_label_reference_here (self, label_id, HOOX_LREF_NEAR);
 }
 
 hx_boolean
@@ -1453,103 +1199,11 @@ hoox_x86_writer_put_add_reg_reg (HooxX86Writer * self,
 }
 
 hx_boolean
-hoox_x86_writer_put_add_reg_near_ptr (HooxX86Writer * self,
-                                     HooxX86Reg dst_reg,
-                                     HooxAddress src_address)
-{
-  HooxX86RegInfo dst;
-
-  hoox_x86_writer_describe_cpu_reg (self, dst_reg, &dst);
-
-  if (!hoox_x86_writer_put_prefix_for_registers (self, &dst, 32, &dst, NULL))
-    return FALSE;
-
-  self->code[0] = 0x03;
-  self->code[1] = 0x05 | (dst.index << 3);
-  hoox_x86_writer_commit (self, 2);
-
-  if (self->target_cpu == HOOX_CPU_IA32)
-  {
-    if (src_address > HX_MAXUINT32)
-      return FALSE;
-    *((hx_uint32 *) self->code) = HX_UINT32_TO_LE ((hx_uint32) src_address);
-  }
-  else
-  {
-    hx_int64 distance = (hx_int64) src_address - (hx_int64) (self->pc + 4);
-    if (distance < HX_MININT32 || distance > HX_MAXINT32)
-      return FALSE;
-    *((hx_int32 *) self->code) = HX_INT32_TO_LE ((hx_int32) distance);
-  }
-  hoox_x86_writer_commit (self, 4);
-
-  return TRUE;
-}
-
-hx_boolean
 hoox_x86_writer_put_sub_reg_imm (HooxX86Writer * self,
                                 HooxX86Reg reg,
                                 hx_ssize imm_value)
 {
   return hoox_x86_writer_put_add_or_sub_reg_imm (self, reg, imm_value, FALSE);
-}
-
-hx_boolean
-hoox_x86_writer_put_sub_reg_reg (HooxX86Writer * self,
-                                HooxX86Reg dst_reg,
-                                HooxX86Reg src_reg)
-{
-  HooxX86RegInfo dst, src;
-
-  hoox_x86_writer_describe_cpu_reg (self, dst_reg, &dst);
-  hoox_x86_writer_describe_cpu_reg (self, src_reg, &src);
-
-  if (src.width != dst.width)
-    return FALSE;
-
-  if (!hoox_x86_writer_put_prefix_for_registers (self, &dst, 32, &dst, &src,
-      NULL))
-    return FALSE;
-
-  self->code[0] = 0x29;
-  self->code[1] = 0xc0 | (src.index << 3) | dst.index;
-  hoox_x86_writer_commit (self, 2);
-
-  return TRUE;
-}
-
-hx_boolean
-hoox_x86_writer_put_sub_reg_near_ptr (HooxX86Writer * self,
-                                     HooxX86Reg dst_reg,
-                                     HooxAddress src_address)
-{
-  HooxX86RegInfo dst;
-
-  hoox_x86_writer_describe_cpu_reg (self, dst_reg, &dst);
-
-  if (!hoox_x86_writer_put_prefix_for_registers (self, &dst, 32, &dst, NULL))
-    return FALSE;
-
-  self->code[0] = 0x2b;
-  self->code[1] = 0x05 | (dst.index << 3);
-  hoox_x86_writer_commit (self, 2);
-
-  if (self->target_cpu == HOOX_CPU_IA32)
-  {
-    if (src_address > HX_MAXUINT32)
-      return FALSE;
-    *((hx_uint32 *) self->code) = HX_UINT32_TO_LE ((hx_uint32) src_address);
-  }
-  else
-  {
-    hx_int64 distance = (hx_int64) src_address - (hx_int64) (self->pc + 4);
-    if (distance < HX_MININT32 || distance > HX_MAXINT32)
-      return FALSE;
-    *((hx_int32 *) self->code) = HX_INT32_TO_LE ((hx_int32) distance);
-  }
-  hoox_x86_writer_commit (self, 4);
-
-  return TRUE;
 }
 
 hx_boolean
@@ -1637,22 +1291,6 @@ hoox_x86_writer_put_inc_or_dec_reg_ptr (HooxX86Writer * self,
 }
 
 hx_boolean
-hoox_x86_writer_put_inc_reg_ptr (HooxX86Writer * self,
-                                HooxX86PtrTarget target,
-                                HooxX86Reg reg)
-{
-  return hoox_x86_writer_put_inc_or_dec_reg_ptr (self, target, reg, TRUE);
-}
-
-hx_boolean
-hoox_x86_writer_put_dec_reg_ptr (HooxX86Writer * self,
-                                HooxX86PtrTarget target,
-                                HooxX86Reg reg)
-{
-  return hoox_x86_writer_put_inc_or_dec_reg_ptr (self, target, reg, FALSE);
-}
-
-hx_boolean
 hoox_x86_writer_put_lock_xadd_reg_ptr_reg (HooxX86Writer * self,
                                           HooxX86Reg dst_reg,
                                           HooxX86Reg src_reg)
@@ -1672,50 +1310,6 @@ hoox_x86_writer_put_lock_xadd_reg_ptr_reg (HooxX86Writer * self,
   self->code[1] = 0xc1;
   self->code[2] = 0x00 | (src.index << 3) | dst.index;
   hoox_x86_writer_commit (self, 3);
-
-  if (dst.meta == HOOX_HX_META_XSP)
-  {
-    hoox_x86_writer_put_u8 (self, 0x24);
-  }
-  else if (dst.meta == HOOX_HX_META_XBP)
-  {
-    self->code[-1] |= 0x40;
-    hoox_x86_writer_put_u8 (self, 0x00);
-  }
-
-  return TRUE;
-}
-
-hx_boolean
-hoox_x86_writer_put_lock_cmpxchg_reg_ptr_reg (HooxX86Writer * self,
-                                             HooxX86Reg dst_reg,
-                                             HooxX86Reg src_reg)
-{
-  HooxX86RegInfo dst, src;
-
-  hoox_x86_writer_describe_cpu_reg (self, dst_reg, &dst);
-  hoox_x86_writer_describe_cpu_reg (self, src_reg, &src);
-
-  if (self->target_cpu == HOOX_CPU_IA32)
-  {
-    if (dst.width != 32)
-      return FALSE;
-  }
-  else
-  {
-    if (dst.width != 64)
-      return FALSE;
-  }
-  if (dst.index_is_extended)
-    return FALSE;
-  if (src.width != 32 || src.index_is_extended)
-    return FALSE;
-
-  self->code[0] = 0xf0; /* lock prefix */
-  self->code[1] = 0x0f;
-  self->code[2] = 0xb1;
-  self->code[3] = 0x00 | (src.index << 3) | dst.index;
-  hoox_x86_writer_commit (self, 4);
 
   if (dst.meta == HOOX_HX_META_XSP)
   {
@@ -1845,51 +1439,6 @@ hoox_x86_writer_put_shl_reg_u8 (HooxX86Writer * self,
 }
 
 hx_boolean
-hoox_x86_writer_put_shr_reg_u8 (HooxX86Writer * self,
-                               HooxX86Reg reg,
-                               hx_uint8 imm_value)
-{
-  HooxX86RegInfo ri;
-
-  hoox_x86_writer_describe_cpu_reg (self, reg, &ri);
-
-  if (!hoox_x86_writer_put_prefix_for_registers (self, &ri, 32, &ri, NULL))
-    return FALSE;
-
-  self->code[0] = 0xc1;
-  self->code[1] = 0xe8 | ri.index;
-  self->code[2] = imm_value;
-  hoox_x86_writer_commit (self, 3);
-
-  return TRUE;
-}
-
-hx_boolean
-hoox_x86_writer_put_xor_reg_reg (HooxX86Writer * self,
-                                HooxX86Reg dst_reg,
-                                HooxX86Reg src_reg)
-{
-  HooxX86RegInfo dst, src;
-
-  hoox_x86_writer_describe_cpu_reg (self, dst_reg, &dst);
-  hoox_x86_writer_describe_cpu_reg (self, src_reg, &src);
-
-  if (dst.width != src.width)
-    return FALSE;
-  if (dst.index_is_extended || src.index_is_extended)
-    return FALSE;
-
-  if (!hoox_x86_writer_put_prefix_for_reg_info (self, &dst, 0))
-    return FALSE;
-
-  self->code[0] = 0x31;
-  self->code[1] = 0xc0 | (src.index << 3) | dst.index;
-  hoox_x86_writer_commit (self, 2);
-
-  return TRUE;
-}
-
-hx_boolean
 hoox_x86_writer_put_mov_reg_reg (HooxX86Writer * self,
                                 HooxX86Reg dst_reg,
                                 HooxX86Reg src_reg)
@@ -1973,14 +1522,6 @@ hoox_x86_writer_put_mov_reg_address (HooxX86Writer * self,
     hoox_x86_writer_put_mov_reg_u32 (self, dst_reg, (hx_uint32) address);
   else
     hoox_x86_writer_put_mov_reg_u64 (self, dst_reg, (hx_uint64) address);
-}
-
-void
-hoox_x86_writer_put_mov_reg_ptr_u32 (HooxX86Writer * self,
-                                    HooxX86Reg dst_reg,
-                                    hx_uint32 imm_value)
-{
-  hoox_x86_writer_put_mov_reg_offset_ptr_u32 (self, dst_reg, 0, imm_value);
 }
 
 hx_boolean
@@ -2166,71 +1707,6 @@ hoox_x86_writer_put_mov_reg_reg_offset_ptr (HooxX86Writer * self,
 }
 
 hx_boolean
-hoox_x86_writer_put_mov_reg_base_index_scale_offset_ptr (HooxX86Writer * self,
-                                                        HooxX86Reg dst_reg,
-                                                        HooxX86Reg base_reg,
-                                                        HooxX86Reg index_reg,
-                                                        hx_uint8 scale,
-                                                        hx_ssize offset)
-{
-  HooxX86RegInfo dst, base, index;
-  hx_boolean offset_fits_in_i8;
-  const hx_uint8 scale_lookup[] = {
-      /* 0: */ 0xff,
-      /* 1: */    0,
-      /* 2: */    1,
-      /* 3: */ 0xff,
-      /* 4: */    2,
-      /* 5: */ 0xff,
-      /* 6: */ 0xff,
-      /* 7: */ 0xff,
-      /* 8: */    3
-  };
-
-  hoox_x86_writer_describe_cpu_reg (self, dst_reg, &dst);
-  hoox_x86_writer_describe_cpu_reg (self, base_reg, &base);
-  hoox_x86_writer_describe_cpu_reg (self, index_reg, &index);
-
-  if (dst.index_is_extended)
-    return FALSE;
-  if (base.width != index.width)
-    return FALSE;
-  if (base.index_is_extended || index.index_is_extended)
-    return FALSE;
-  if (index.meta == HOOX_HX_META_XSP)
-    return FALSE;
-  if (scale != 1 && scale != 2 && scale != 4 && scale != 8)
-    return FALSE;
-
-  offset_fits_in_i8 = HOOX_IS_WITHIN_INT8_RANGE (offset);
-
-  if (self->target_cpu == HOOX_CPU_AMD64)
-  {
-    if (dst.width != 64 || base.width != 64 || index.width != 64)
-      return FALSE;
-
-    hoox_x86_writer_put_u8 (self, 0x48);
-  }
-
-  self->code[0] = 0x8b;
-  self->code[1] = (offset_fits_in_i8 ? 0x40 : 0x80) | (dst.index << 3) | 0x04;
-  self->code[2] = (scale_lookup[scale] << 6) | (index.index << 3) | base.index;
-  hoox_x86_writer_commit (self, 3);
-
-  if (offset_fits_in_i8)
-  {
-    hoox_x86_writer_put_s8 (self, (hx_int8) offset);
-  }
-  else
-  {
-    *((hx_int32 *) self->code) = HX_INT32_TO_LE (offset);
-    hoox_x86_writer_commit (self, 4);
-  }
-
-  return TRUE;
-}
-
-hx_boolean
 hoox_x86_writer_put_mov_reg_near_ptr (HooxX86Writer * self,
                                      HooxX86Reg dst_reg,
                                      HooxAddress src_address)
@@ -2352,128 +1828,6 @@ hoox_x86_writer_put_mov_imm_ptr_reg (HooxX86Writer * self,
   hoox_x86_writer_commit (self, 7);
 
   return TRUE;
-}
-
-hx_boolean
-hoox_x86_writer_put_mov_fs_u32_ptr_reg (HooxX86Writer * self,
-                                       hx_uint32 fs_offset,
-                                       HooxX86Reg src_reg)
-{
-  hoox_x86_writer_put_u8 (self, 0x64);
-  return hoox_x86_writer_put_mov_imm_ptr_reg (self, fs_offset, src_reg);
-}
-
-hx_boolean
-hoox_x86_writer_put_mov_reg_fs_u32_ptr (HooxX86Writer * self,
-                                       HooxX86Reg dst_reg,
-                                       hx_uint32 fs_offset)
-{
-  hoox_x86_writer_put_u8 (self, 0x64);
-  return hoox_x86_writer_put_mov_reg_imm_ptr (self, dst_reg, fs_offset);
-}
-
-void
-hoox_x86_writer_put_mov_fs_reg_ptr_reg (HooxX86Writer * self,
-                                       HooxX86Reg fs_offset,
-                                       HooxX86Reg src_reg)
-{
-  hoox_x86_writer_put_u8 (self, 0x65);
-  hoox_x86_writer_put_mov_reg_ptr_reg (self, fs_offset, src_reg);
-}
-
-void
-hoox_x86_writer_put_mov_reg_fs_reg_ptr (HooxX86Writer * self,
-                                       HooxX86Reg dst_reg,
-                                       HooxX86Reg fs_offset)
-{
-  hoox_x86_writer_put_u8 (self, 0x65);
-  hoox_x86_writer_put_mov_reg_reg_ptr (self, dst_reg, fs_offset);
-}
-
-hx_boolean
-hoox_x86_writer_put_mov_gs_u32_ptr_reg (HooxX86Writer * self,
-                                       hx_uint32 fs_offset,
-                                       HooxX86Reg src_reg)
-{
-  hoox_x86_writer_put_u8 (self, 0x65);
-  return hoox_x86_writer_put_mov_imm_ptr_reg (self, fs_offset, src_reg);
-}
-
-hx_boolean
-hoox_x86_writer_put_mov_reg_gs_u32_ptr (HooxX86Writer * self,
-                                       HooxX86Reg dst_reg,
-                                       hx_uint32 fs_offset)
-{
-  hoox_x86_writer_put_u8 (self, 0x65);
-  return hoox_x86_writer_put_mov_reg_imm_ptr (self, dst_reg, fs_offset);
-}
-
-void
-hoox_x86_writer_put_mov_gs_reg_ptr_reg (HooxX86Writer * self,
-                                       HooxX86Reg gs_offset,
-                                       HooxX86Reg src_reg)
-{
-  hoox_x86_writer_put_u8 (self, 0x65);
-  hoox_x86_writer_put_mov_reg_ptr_reg (self, gs_offset, src_reg);
-}
-
-void
-hoox_x86_writer_put_mov_reg_gs_reg_ptr (HooxX86Writer * self,
-                                       HooxX86Reg dst_reg,
-                                       HooxX86Reg gs_offset)
-{
-  hoox_x86_writer_put_u8 (self, 0x65);
-  hoox_x86_writer_put_mov_reg_reg_ptr (self, dst_reg, gs_offset);
-}
-
-void
-hoox_x86_writer_put_movq_xmm0_esp_offset_ptr (HooxX86Writer * self,
-                                             hx_int8 offset)
-{
-  self->code[0] = 0xf3;
-  self->code[1] = 0x0f;
-  self->code[2] = 0x7e;
-  self->code[3] = 0x44;
-  self->code[4] = 0x24;
-  self->code[5] = offset;
-  hoox_x86_writer_commit (self, 6);
-}
-
-void
-hoox_x86_writer_put_movq_eax_offset_ptr_xmm0 (HooxX86Writer * self,
-                                             hx_int8 offset)
-{
-  self->code[0] = 0x66;
-  self->code[1] = 0x0f;
-  self->code[2] = 0xd6;
-  self->code[3] = 0x40;
-  self->code[4] = offset;
-  hoox_x86_writer_commit (self, 5);
-}
-
-void
-hoox_x86_writer_put_movdqu_xmm0_esp_offset_ptr (HooxX86Writer * self,
-                                               hx_int8 offset)
-{
-  self->code[0] = 0xf3;
-  self->code[1] = 0x0f;
-  self->code[2] = 0x6f;
-  self->code[3] = 0x44;
-  self->code[4] = 0x24;
-  self->code[5] = offset;
-  hoox_x86_writer_commit (self, 6);
-}
-
-void
-hoox_x86_writer_put_movdqu_eax_offset_ptr_xmm0 (HooxX86Writer * self,
-                                               hx_int8 offset)
-{
-  self->code[0] = 0xf3;
-  self->code[1] = 0x0f;
-  self->code[2] = 0x7f;
-  self->code[3] = 0x40;
-  self->code[4] = offset;
-  hoox_x86_writer_commit (self, 5);
 }
 
 hx_boolean
@@ -2642,16 +1996,6 @@ hoox_x86_writer_put_pop_reg (HooxX86Writer * self,
 }
 
 void
-hoox_x86_writer_put_push_imm_ptr (HooxX86Writer * self,
-                                 hx_constpointer imm_ptr)
-{
-  self->code[0] = 0xff;
-  self->code[1] = 0x35;
-  *((hx_uint32 *) (self->code + 2)) = HX_UINT32_TO_LE (HOOX_ADDRESS (imm_ptr));
-  hoox_x86_writer_commit (self, 6);
-}
-
-void
 hoox_x86_writer_put_pushax (HooxX86Writer * self)
 {
   if (self->target_cpu == HOOX_CPU_IA32)
@@ -2727,18 +2071,6 @@ hoox_x86_writer_put_popfx (HooxX86Writer * self)
   hoox_x86_writer_put_u8 (self, 0x9d);
 }
 
-void
-hoox_x86_writer_put_sahf (HooxX86Writer * self)
-{
-  hoox_x86_writer_put_u8 (self, 0x9e);
-}
-
-void
-hoox_x86_writer_put_lahf (HooxX86Writer * self)
-{
-  hoox_x86_writer_put_u8 (self, 0x9f);
-}
-
 hx_boolean
 hoox_x86_writer_put_test_reg_reg (HooxX86Writer * self,
                                  HooxX86Reg reg_a,
@@ -2758,35 +2090,6 @@ hoox_x86_writer_put_test_reg_reg (HooxX86Writer * self,
   self->code[0] = 0x85;
   self->code[1] = 0xc0 | (b.index << 3) | a.index;
   hoox_x86_writer_commit (self, 2);
-
-  return TRUE;
-}
-
-hx_boolean
-hoox_x86_writer_put_test_reg_u32 (HooxX86Writer * self,
-                                 HooxX86Reg reg,
-                                 hx_uint32 imm_value)
-{
-  HooxX86RegInfo ri;
-
-  hoox_x86_writer_describe_cpu_reg (self, reg, &ri);
-
-  if (!hoox_x86_writer_put_prefix_for_registers (self, &ri, 32, &ri, NULL))
-    return FALSE;
-
-  if (ri.meta == HOOX_HX_META_XAX)
-  {
-    self->code[0] = 0xa9;
-    *((hx_uint32 *) (self->code + 1)) = HX_UINT32_TO_LE (imm_value);
-    hoox_x86_writer_commit (self, 5);
-  }
-  else
-  {
-    self->code[0] = 0xf7;
-    self->code[1] = 0xc0 | ri.index;
-    *((hx_uint32 *) (self->code + 2)) = HX_UINT32_TO_LE (imm_value);
-    hoox_x86_writer_commit (self, 6);
-  }
 
   return TRUE;
 }
@@ -2858,95 +2161,9 @@ hoox_x86_writer_put_cmp_reg_offset_ptr_reg (HooxX86Writer * self,
 }
 
 void
-hoox_x86_writer_put_cmp_imm_ptr_imm_u32 (HooxX86Writer * self,
-                                        hx_constpointer imm_ptr,
-                                        hx_uint32 imm_value)
-{
-  self->code[0] = 0x81;
-  self->code[1] = 0x3d;
-  *((hx_uint32 *) (self->code + 2)) = HX_UINT32_TO_LE (HOOX_ADDRESS (imm_ptr));
-  *((hx_uint32 *) (self->code + 6)) = HX_UINT32_TO_LE (imm_value);
-  hoox_x86_writer_commit (self, 10);
-}
-
-hx_boolean
-hoox_x86_writer_put_cmp_reg_reg (HooxX86Writer * self,
-                                HooxX86Reg reg_a,
-                                HooxX86Reg reg_b)
-{
-  HooxX86RegInfo a, b;
-
-  hoox_x86_writer_describe_cpu_reg (self, reg_a, &a);
-  hoox_x86_writer_describe_cpu_reg (self, reg_b, &b);
-
-  if (a.width != b.width)
-    return FALSE;
-
-  if (!hoox_x86_writer_put_prefix_for_registers (self, &a, 32, &a, &b, NULL))
-    return FALSE;
-
-  self->code[0] = 0x39;
-  self->code[1] = 0xc0 | (b.index << 3) | a.index;
-  hoox_x86_writer_commit (self, 2);
-
-  return TRUE;
-}
-
-void
-hoox_x86_writer_put_clc (HooxX86Writer * self)
-{
-  hoox_x86_writer_put_u8 (self, 0xf8);
-}
-
-void
-hoox_x86_writer_put_stc (HooxX86Writer * self)
-{
-  hoox_x86_writer_put_u8 (self, 0xf9);
-}
-
-void
 hoox_x86_writer_put_cld (HooxX86Writer * self)
 {
   hoox_x86_writer_put_u8 (self, 0xfc);
-}
-
-void
-hoox_x86_writer_put_std (HooxX86Writer * self)
-{
-  hoox_x86_writer_put_u8 (self, 0xfd);
-}
-
-void
-hoox_x86_writer_put_cpuid (HooxX86Writer * self)
-{
-  self->code[0] = 0x0f;
-  self->code[1] = 0xa2;
-  hoox_x86_writer_commit (self, 2);
-}
-
-void
-hoox_x86_writer_put_lfence (HooxX86Writer * self)
-{
-  self->code[0] = 0x0f;
-  self->code[1] = 0xae;
-  self->code[2] = 0xe8;
-  hoox_x86_writer_commit (self, 3);
-}
-
-void
-hoox_x86_writer_put_rdtsc (HooxX86Writer * self)
-{
-  self->code[0] = 0x0f;
-  self->code[1] = 0x31;
-  hoox_x86_writer_commit (self, 2);
-}
-
-void
-hoox_x86_writer_put_pause (HooxX86Writer * self)
-{
-  self->code[0] = 0xf3;
-  self->code[1] = 0x90;
-  hoox_x86_writer_commit (self, 2);
 }
 
 void
@@ -2959,14 +2176,6 @@ void
 hoox_x86_writer_put_breakpoint (HooxX86Writer * self)
 {
   hoox_x86_writer_put_u8 (self, 0xcc);
-}
-
-void
-hoox_x86_writer_put_padding (HooxX86Writer * self,
-                            hx_uint n)
-{
-  memset (self->code, 0xcc, n);
-  hoox_x86_writer_commit (self, n);
 }
 
 /*

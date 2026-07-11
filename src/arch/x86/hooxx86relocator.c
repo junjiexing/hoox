@@ -39,38 +39,6 @@ static hx_boolean hoox_x86_call_is_to_next_instruction (hx_insn * insn);
 static hx_boolean hoox_x86_call_try_parse_get_pc_thunk (hx_insn * insn,
     HooxCpuType cpu_type, HooxX86Reg * pc_reg);
 
-HooxX86Relocator *
-hoox_x86_relocator_new (hx_constpointer input_code,
-                       HooxX86Writer * output)
-{
-  HooxX86Relocator * relocator;
-
-  relocator = hx_slice_new (HooxX86Relocator);
-
-  hoox_x86_relocator_init (relocator, input_code, output);
-
-  return relocator;
-}
-
-HooxX86Relocator *
-hoox_x86_relocator_ref (HooxX86Relocator * relocator)
-{
-  hx_atomic_int_inc (&relocator->ref_count);
-
-  return relocator;
-}
-
-void
-hoox_x86_relocator_unref (HooxX86Relocator * relocator)
-{
-  if (hx_atomic_int_dec_and_test (&relocator->ref_count))
-  {
-    hoox_x86_relocator_clear (relocator);
-
-    hx_slice_free (HooxX86Relocator, relocator);
-  }
-}
-
 void
 hoox_x86_relocator_init (HooxX86Relocator * relocator,
                         hx_constpointer input_code,
@@ -257,13 +225,6 @@ hoox_x86_relocator_skip_one (HooxX86Relocator * self)
   hoox_x86_relocator_put_label_for (self, next);
 }
 
-void
-hoox_x86_relocator_skip_one_no_label (HooxX86Relocator * self)
-{
-  hoox_x86_relocator_peek_next_write_insn (self);
-  hoox_x86_relocator_increment_outpos (self);
-}
-
 hx_boolean
 hoox_x86_relocator_write_one (HooxX86Relocator * self)
 {
@@ -274,12 +235,6 @@ hoox_x86_relocator_write_one (HooxX86Relocator * self)
 
   hoox_x86_relocator_put_label_for (self, cur);
 
-  return hoox_x86_relocator_write_one_instruction (self);
-}
-
-hx_boolean
-hoox_x86_relocator_write_one_no_label (HooxX86Relocator * self)
-{
   return hoox_x86_relocator_write_one_instruction (self);
 }
 
@@ -457,34 +412,6 @@ hoox_x86_relocator_can_relocate (hx_pointer address,
     *maximum = n;
 
   return n >= min_bytes;
-}
-
-hx_uint
-hoox_x86_relocator_relocate (hx_pointer from,
-                            hx_uint min_bytes,
-                            hx_pointer to)
-{
-  HooxX86Writer cw;
-  HooxX86Relocator rl;
-  hx_uint reloc_bytes;
-
-  hoox_x86_writer_init (&cw, to);
-
-  hoox_x86_relocator_init (&rl, from, &cw);
-
-  do
-  {
-    reloc_bytes = hoox_x86_relocator_read_one (&rl, NULL);
-    hx_assert (reloc_bytes != 0);
-  }
-  while (reloc_bytes < min_bytes);
-
-  hoox_x86_relocator_write_all (&rl);
-
-  hoox_x86_relocator_clear (&rl);
-  hoox_x86_writer_clear (&cw);
-
-  return reloc_bytes;
 }
 
 static hx_boolean

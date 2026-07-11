@@ -20,7 +20,6 @@ HOOX_API HooxCodeSegment * hoox_code_segment_new (hx_size size,
 HOOX_API void hoox_code_segment_free (HooxCodeSegment * segment);
 
 HOOX_API hx_pointer hoox_code_segment_get_address (HooxCodeSegment * self);
-HOOX_API hx_size hoox_code_segment_get_size (HooxCodeSegment * self);
 HOOX_API hx_size hoox_code_segment_get_virtual_size (HooxCodeSegment * self);
 
 HOOX_API void hoox_code_segment_realize (HooxCodeSegment * self);

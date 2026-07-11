@@ -102,7 +102,6 @@ HOOX_API HooxTeardownRequirement hoox_process_get_teardown_requirement (void);
 HOOX_API void hoox_process_set_teardown_requirement (
     HooxTeardownRequirement requirement);
 HOOX_API HooxCodeSigningPolicy hoox_process_get_code_signing_policy (void);
-HOOX_API void hoox_process_set_code_signing_policy (HooxCodeSigningPolicy policy);
 HOOX_API hx_boolean hoox_process_is_debugger_attached (void);
 HOOX_API HooxProcessId hoox_process_get_id (void);
 HOOX_API HooxThreadId hoox_process_get_current_thread_id (void);
@@ -113,7 +112,6 @@ HOOX_API hx_boolean hoox_process_modify_thread (HooxThreadId thread_id,
     HooxModifyThreadFunc func, hx_pointer user_data, HooxModifyThreadFlags flags);
 HOOX_API void hoox_process_enumerate_threads (HooxFoundThreadFunc func,
     hx_pointer user_data, HooxThreadFlags flags);
-HOOX_API HooxModule * hoox_process_get_main_module (void);
 HOOX_API HooxModule * hoox_process_get_libc_module (void);
 HOOX_API HooxModule * hoox_process_find_module_by_name (const hx_char * name);
 HOOX_API HooxModule * hoox_process_find_module_by_address (HooxAddress address);

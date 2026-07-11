@@ -27,13 +27,10 @@ HOOX_API void hoox_metal_array_free (HooxMetalArray * array);
 
 HOOX_API hx_pointer hoox_metal_array_element_at (HooxMetalArray * self,
     hx_uint index_);
-HOOX_API hx_pointer hoox_metal_array_insert_at (HooxMetalArray * self, hx_uint index_);
 HOOX_API void hoox_metal_array_remove_at (HooxMetalArray * self, hx_uint index_);
 HOOX_API void hoox_metal_array_remove_all (HooxMetalArray * self);
 HOOX_API hx_pointer hoox_metal_array_append (HooxMetalArray * self);
 
-HOOX_API void hoox_metal_array_get_extents (HooxMetalArray * self,
-    hx_pointer * start, hx_pointer * end);
 HOOX_API void hoox_metal_array_ensure_capacity (HooxMetalArray * self,
     hx_uint capacity);
 

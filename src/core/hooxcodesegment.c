@@ -37,12 +37,6 @@ hoox_code_segment_get_address (HooxCodeSegment * self)
 }
 
 hx_size
-hoox_code_segment_get_size (HooxCodeSegment * self)
-{
-  return 0;
-}
-
-hx_size
 hoox_code_segment_get_virtual_size (HooxCodeSegment * self)
 {
   return 0;

@@ -41,24 +41,6 @@ hoox_metal_array_element_at (HooxMetalArray * self,
   return ((hx_uint8 *) self->data) + (index_ * self->element_size);
 }
 
-hx_pointer
-hoox_metal_array_insert_at (HooxMetalArray * self,
-                           hx_uint index_)
-{
-  hx_pointer element;
-
-  hoox_metal_array_ensure_capacity (self, self->length + 1);
-
-  element = hoox_metal_array_element_at (self, index_);
-
-  memmove (hoox_metal_array_element_at (self, index_ + 1), element,
-      (self->length - index_) * self->element_size);
-
-  self->length++;
-
-  return element;
-}
-
 void
 hoox_metal_array_remove_at (HooxMetalArray * self,
                            hx_uint index_)
@@ -84,23 +66,6 @@ hoox_metal_array_append (HooxMetalArray * self)
   hoox_metal_array_ensure_capacity (self, self->length + 1);
 
   return hoox_metal_array_element_at (self, self->length++);
-}
-
-void
-hoox_metal_array_get_extents (HooxMetalArray * self,
-                             hx_pointer * start,
-                             hx_pointer * end)
-{
-  HooxMemoryRange range;
-  hx_uint size;
-
-  size = (hx_uint) ((hx_uint8 *) hoox_metal_array_element_at (self, self->capacity) -
-      (hx_uint8 *) self->data);
-  hoox_query_page_allocation_range (self->data, hoox_round_up_to_page_size (size),
-      &range);
-
-  *start = HX_SIZE_TO_POINTER (range.base_address);
-  *end = HX_SIZE_TO_POINTER (range.base_address + range.size);
 }
 
 void

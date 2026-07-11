@@ -375,60 +375,6 @@ hoox_metal_hash_table_new_full (HxHashFunc      hash_func,
   return hash_table;
 }
 
-void
-hoox_metal_hash_table_iter_init (HooxMetalHashTableIter *iter,
-                        HooxMetalHashTable     *hash_table)
-{
-  RealIter *ri = (RealIter *) iter;
-
-  hx_return_if_fail (iter != NULL);
-  hx_return_if_fail (hash_table != NULL);
-
-  ri->hash_table = hash_table;
-  ri->position = -1;
-}
-
-hx_boolean
-hoox_metal_hash_table_iter_next (HooxMetalHashTableIter *iter,
-                        hx_pointer       *key,
-                        hx_pointer       *value)
-{
-  RealIter *ri = (RealIter *) iter;
-  hx_int position;
-
-  hx_return_val_if_fail (iter != NULL, FALSE);
-  hx_return_val_if_fail (ri->position < ri->hash_table->size, FALSE);
-
-  position = ri->position;
-
-  do
-    {
-      position++;
-      if (position >= ri->hash_table->size)
-        {
-          ri->position = position;
-          return FALSE;
-        }
-    }
-  while (!HASH_IS_REAL (ri->hash_table->hashes[position]));
-
-  if (key != NULL)
-    *key = ri->hash_table->keys[position];
-  if (value != NULL)
-    *value = ri->hash_table->values[position];
-
-  ri->position = position;
-  return TRUE;
-}
-
-HooxMetalHashTable *
-hoox_metal_hash_table_iter_get_hash_table (HooxMetalHashTableIter *iter)
-{
-  hx_return_val_if_fail (iter != NULL, NULL);
-
-  return ((RealIter *) iter)->hash_table;
-}
-
 static void
 iter_remove_or_steal (RealIter *ri, hx_boolean notify)
 {
@@ -437,12 +383,6 @@ iter_remove_or_steal (RealIter *ri, hx_boolean notify)
   hx_return_if_fail (ri->position < ri->hash_table->size);
 
   hoox_metal_hash_table_remove_node (ri->hash_table, ri->position, notify);
-}
-
-void
-hoox_metal_hash_table_iter_remove (HooxMetalHashTableIter *iter)
-{
-  iter_remove_or_steal ((RealIter *) iter, TRUE);
 }
 
 static hx_boolean
@@ -510,42 +450,6 @@ hoox_metal_hash_table_insert_node (HooxMetalHashTable *hash_table,
   return !already_exists;
 }
 
-void
-hoox_metal_hash_table_iter_replace (HooxMetalHashTableIter *iter,
-                           hx_pointer        value)
-{
-  RealIter *ri;
-  hx_uint node_hash;
-  hx_pointer key;
-
-  ri = (RealIter *) iter;
-
-  hx_return_if_fail (ri != NULL);
-  hx_return_if_fail (ri->position >= 0);
-  hx_return_if_fail (ri->position < ri->hash_table->size);
-
-  node_hash = ri->hash_table->hashes[ri->position];
-  key = ri->hash_table->keys[ri->position];
-
-  hoox_metal_hash_table_insert_node (ri->hash_table, ri->position, node_hash, key, value, TRUE, TRUE);
-}
-
-void
-hoox_metal_hash_table_iter_steal (HooxMetalHashTableIter *iter)
-{
-  iter_remove_or_steal ((RealIter *) iter, FALSE);
-}
-
-
-HooxMetalHashTable *
-hoox_metal_hash_table_ref (HooxMetalHashTable *hash_table)
-{
-  hx_return_val_if_fail (hash_table != NULL, NULL);
-
-  hx_atomic_int_inc (&hash_table->ref_count);
-
-  return hash_table;
-}
 
 void
 hoox_metal_hash_table_unref (HooxMetalHashTable *hash_table)
@@ -563,15 +467,6 @@ hoox_metal_hash_table_unref (HooxMetalHashTable *hash_table)
     }
 }
 
-void
-hoox_metal_hash_table_destroy (HooxMetalHashTable *hash_table)
-{
-  hx_return_if_fail (hash_table != NULL);
-
-  hoox_metal_hash_table_remove_all (hash_table);
-  hoox_metal_hash_table_unref (hash_table);
-}
-
 hx_pointer
 hoox_metal_hash_table_lookup (HooxMetalHashTable    *hash_table,
                      hx_constpointer  key)
@@ -586,31 +481,6 @@ hoox_metal_hash_table_lookup (HooxMetalHashTable    *hash_table,
   return HASH_IS_REAL (hash_table->hashes[node_index])
     ? hash_table->values[node_index]
     : NULL;
-}
-
-hx_boolean
-hoox_metal_hash_table_lookup_extended (HooxMetalHashTable    *hash_table,
-                              hx_constpointer  lookup_key,
-                              hx_pointer      *orig_key,
-                              hx_pointer      *value)
-{
-  hx_uint node_index;
-  hx_uint node_hash;
-
-  hx_return_val_if_fail (hash_table != NULL, FALSE);
-
-  node_index = hoox_metal_hash_table_lookup_node (hash_table, lookup_key, &node_hash);
-
-  if (!HASH_IS_REAL (hash_table->hashes[node_index]))
-    return FALSE;
-
-  if (orig_key)
-    *orig_key = hash_table->keys[node_index];
-
-  if (value)
-    *value = hash_table->values[node_index];
-
-  return TRUE;
 }
 
 static hx_boolean
@@ -637,35 +507,6 @@ hoox_metal_hash_table_insert (HooxMetalHashTable *hash_table,
   return hoox_metal_hash_table_insert_internal (hash_table, key, value, FALSE);
 }
 
-hx_boolean
-hoox_metal_hash_table_replace (HooxMetalHashTable *hash_table,
-                      hx_pointer    key,
-                      hx_pointer    value)
-{
-  return hoox_metal_hash_table_insert_internal (hash_table, key, value, TRUE);
-}
-
-hx_boolean
-hoox_metal_hash_table_add (HooxMetalHashTable *hash_table,
-                  hx_pointer    key)
-{
-  return hoox_metal_hash_table_insert_internal (hash_table, key, key, TRUE);
-}
-
-hx_boolean
-hoox_metal_hash_table_contains (HooxMetalHashTable    *hash_table,
-                       hx_constpointer  key)
-{
-  hx_uint node_index;
-  hx_uint node_hash;
-
-  hx_return_val_if_fail (hash_table != NULL, FALSE);
-
-  node_index = hoox_metal_hash_table_lookup_node (hash_table, key, &node_hash);
-
-  return HASH_IS_REAL (hash_table->hashes[node_index]);
-}
-
 static hx_boolean
 hoox_metal_hash_table_remove_internal (HooxMetalHashTable    *hash_table,
                               hx_constpointer  key,
@@ -687,35 +528,12 @@ hoox_metal_hash_table_remove_internal (HooxMetalHashTable    *hash_table,
   return TRUE;
 }
 
-hx_boolean
-hoox_metal_hash_table_remove (HooxMetalHashTable    *hash_table,
-                     hx_constpointer  key)
-{
-  return hoox_metal_hash_table_remove_internal (hash_table, key, TRUE);
-}
-
-hx_boolean
-hoox_metal_hash_table_steal (HooxMetalHashTable    *hash_table,
-                    hx_constpointer  key)
-{
-  return hoox_metal_hash_table_remove_internal (hash_table, key, FALSE);
-}
-
 void
 hoox_metal_hash_table_remove_all (HooxMetalHashTable *hash_table)
 {
   hx_return_if_fail (hash_table != NULL);
 
   hoox_metal_hash_table_remove_all_nodes (hash_table, TRUE);
-  hoox_metal_hash_table_maybe_resize (hash_table);
-}
-
-void
-hoox_metal_hash_table_steal_all (HooxMetalHashTable *hash_table)
-{
-  hx_return_if_fail (hash_table != NULL);
-
-  hoox_metal_hash_table_remove_all_nodes (hash_table, FALSE);
   hoox_metal_hash_table_maybe_resize (hash_table);
 }
 
@@ -745,85 +563,5 @@ hoox_metal_hash_table_foreach_remove_or_steal (HooxMetalHashTable *hash_table,
   hoox_metal_hash_table_maybe_resize (hash_table);
 
   return deleted;
-}
-
-hx_uint
-hoox_metal_hash_table_foreach_remove (HooxMetalHashTable *hash_table,
-                             HxHRFunc     func,
-                             hx_pointer    user_data)
-{
-  hx_return_val_if_fail (hash_table != NULL, 0);
-  hx_return_val_if_fail (func != NULL, 0);
-
-  return hoox_metal_hash_table_foreach_remove_or_steal (hash_table, func, user_data, TRUE);
-}
-
-hx_uint
-hoox_metal_hash_table_foreach_steal (HooxMetalHashTable *hash_table,
-                            HxHRFunc     func,
-                            hx_pointer    user_data)
-{
-  hx_return_val_if_fail (hash_table != NULL, 0);
-  hx_return_val_if_fail (func != NULL, 0);
-
-  return hoox_metal_hash_table_foreach_remove_or_steal (hash_table, func, user_data, FALSE);
-}
-
-void
-hoox_metal_hash_table_foreach (HooxMetalHashTable *hash_table,
-                      HxHFunc      func,
-                      hx_pointer    user_data)
-{
-  hx_int i;
-
-  hx_return_if_fail (hash_table != NULL);
-  hx_return_if_fail (func != NULL);
-
-  for (i = 0; i < hash_table->size; i++)
-    {
-      hx_uint node_hash = hash_table->hashes[i];
-      hx_pointer node_key = hash_table->keys[i];
-      hx_pointer node_value = hash_table->values[i];
-
-      if (HASH_IS_REAL (node_hash))
-        (* func) (node_key, node_value, user_data);
-    }
-}
-
-hx_pointer
-hoox_metal_hash_table_find (HooxMetalHashTable *hash_table,
-                   HxHRFunc     predicate,
-                   hx_pointer    user_data)
-{
-  hx_int i;
-  hx_boolean match;
-
-  hx_return_val_if_fail (hash_table != NULL, NULL);
-  hx_return_val_if_fail (predicate != NULL, NULL);
-
-  match = FALSE;
-
-  for (i = 0; i < hash_table->size; i++)
-    {
-      hx_uint node_hash = hash_table->hashes[i];
-      hx_pointer node_key = hash_table->keys[i];
-      hx_pointer node_value = hash_table->values[i];
-
-      if (HASH_IS_REAL (node_hash))
-        match = predicate (node_key, node_value, user_data);
-
-      if (match)
-        return node_value;
-    }
-
-  return NULL;
-}
-
-hx_uint
-hoox_metal_hash_table_size (HooxMetalHashTable *hash_table)
-{
-  hx_return_val_if_fail (hash_table != NULL, 0);
-
-  return hash_table->nnodes;
 }
 

@@ -387,14 +387,6 @@ hoox_code_pages_unref (HooxCodePages * self)
   }
 }
 
-HooxCodeSlice *
-hoox_code_slice_ref (HooxCodeSlice * slice)
-{
-  hx_atomic_int_inc (&slice->ref_count);
-
-  return slice;
-}
-
 void
 hoox_code_slice_unref (HooxCodeSlice * slice)
 {
@@ -508,14 +500,6 @@ hoox_code_allocator_alloc_deflector (HooxCodeAllocator * self,
   impl->allocator = self;
 
   dispatcher->callers = hx_slist_prepend (dispatcher->callers, deflector);
-
-  return deflector;
-}
-
-HooxCodeDeflector *
-hoox_code_deflector_ref (HooxCodeDeflector * deflector)
-{
-  hx_atomic_int_inc (&deflector->ref_count);
 
   return deflector;
 }
