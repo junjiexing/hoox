@@ -18,9 +18,6 @@
 #ifdef HAVE_ARM64
 # include "hooxarm64writer.h"
 #endif
-#ifdef HAVE_DARWIN
-# include "backend-darwin/hooxdarwin-priv.h"
-#endif
 
 #include <string.h>
 

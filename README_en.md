@@ -42,8 +42,9 @@ test suite → single-file amalgamation → example. **Windows ARM64 works too**
 tests pass). **Linux now covers x86 / x86_64 / ARM / ARM64**: x86 and x86_64 on
 gcc/clang; ARM64 built and fully tested on the native `ubuntu-24.04-arm` CI; ARM
 (32-bit, A32 + Thumb) cross-compiled (`gcc-arm-linux-gnueabihf`) and run through
-the full ctest suite under `qemu-arm`. Horizontal roll-out to other platforms is
-next.
+the full ctest suite under `qemu-arm`. **macOS x86_64 works too** (native
+`macos-15-intel` CI, AppleClang; interceptor behaviour suite green). Horizontal
+roll-out to other platforms is next.
 
 ## Platform support
 
@@ -56,11 +57,12 @@ Legend: ✅ supported (builds & passes the full test suite) · 🧩 extracted
 | **Windows** | ✅ | ✅ | ➖ | ✅ | 📋 |
 | **Linux** | ✅ | ✅ | ✅ | ✅ | 📋 |
 | **Android** | 📋 | 📋 | 📋 | 📋 | 📋 |
-| **macOS / iOS / tvOS** | 📋 | 📋 | 📋 | 📋 | 📋 |
+| **macOS** | ➖ | ✅ | ➖ | 📋 | ➖ |
+| **iOS / tvOS** | ➖ | ➖ | ➖ | 📋 | ➖ |
 | **FreeBSD / QNX** | 📋 | 📋 | 📋 | 📋 | 📋 |
 
-Directly usable today: **Windows × (x86 / x86_64 / ARM64)** and
-**Linux × (x86 / x86_64 / ARM / ARM64)**. Windows ARM64 is built and fully
+Directly usable today: **Windows × (x86 / x86_64 / ARM64)**,
+**Linux × (x86 / x86_64 / ARM / ARM64)** and **macOS × x86_64**. Windows ARM64 is built and fully
 tested on the native `windows-11-arm` runner; it reuses the same
 `src/backend/windows` (TLS falls back to `TlsGetValue` off x86) and adds an
 in-tree AArch64 decoder (`src/disasm/hx_disasm_arm64.c`) that drives the
@@ -73,8 +75,12 @@ architectures. x86_64 builds directly; x86 adds `-DCMAKE_C_FLAGS="-m32"` (needs
 `gcc-multilib`); ARM64 uses the native `ubuntu-24.04-arm` runner; ARM (32-bit)
 cross-compiles with `gcc-arm-linux-gnueabihf` and runs its tests under
 `qemu-arm`. 32-bit ARM uses an in-tree A32+Thumb decoder
-(`src/disasm/hx_disasm_arm.c`) driving `src/arch/arm`. Other OSes still need
-their own backend. MIPS is partial/experimental in frida itself.
+(`src/disasm/hx_disasm_arm.c`) driving `src/arch/arm`. **macOS x86_64** reuses
+the x86 decoder/arch and the POSIX allocator + pthread TLS, adding
+`src/backend/darwin` (mach VM query/enumerate, dyld module enumeration); the key
+detail is that patching code-signed `__TEXT` pages requires `mach_vm_protect`
+with `VM_PROT_COPY` (verified on the native `macos-15-intel` runner). Other OSes
+still need their own backend. MIPS is partial/experimental in frida itself.
 
 ## Documentation
 
