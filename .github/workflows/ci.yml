@@ -36,9 +36,10 @@ jobs:
           - { name: 'Linux · x86_64 · GCC',           runner: ubuntu-latest,  supported: true, toolchain: linux-gcc   }
           - { name: 'Linux · x86_64 · Clang',         runner: ubuntu-latest,  supported: true, toolchain: linux-clang }
           - { name: 'Linux · x86 (32-bit) · GCC',     runner: ubuntu-latest,  supported: true, toolchain: linux-gcc32 }
+          - { name: 'Linux · ARM64 · GCC',            runner: ubuntu-24.04-arm, supported: true, toolchain: linux-gcc   }
+          - { name: 'Linux · ARM64 · Clang',          runner: ubuntu-24.04-arm, supported: true, toolchain: linux-clang }
 
           # ---- planned: not implemented yet, skipped -----------------------
-          - { name: 'Linux · ARM64 · (planned)',      runner: ubuntu-latest, supported: false }
           - { name: 'Linux · ARM · (planned)',        runner: ubuntu-latest, supported: false }
           - { name: 'Linux · MIPS · (planned)',       runner: ubuntu-latest, supported: false }
           - { name: 'Android · ARM64 · (planned)',    runner: ubuntu-latest, supported: false }
