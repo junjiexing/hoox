@@ -40,6 +40,7 @@ jobs:
           - { name: 'Linux · ARM64 · Clang',          runner: ubuntu-24.04-arm, supported: true, toolchain: linux-clang }
 
           - { name: 'Linux · ARM (32-bit) · GCC',     runner: ubuntu-latest, supported: true, toolchain: linux-arm32 }
+          - { name: 'macOS · x86_64 · Clang',         runner: macos-13, supported: true, toolchain: macos-clang }
 
           # ---- planned: not implemented yet, skipped -----------------------
           - { name: 'Linux · MIPS · (planned)',       runner: ubuntu-latest, supported: false }
@@ -47,7 +48,6 @@ jobs:
           - { name: 'Android · ARM · (planned)',      runner: ubuntu-latest, supported: false }
           - { name: 'Android · x86_64 · (planned)',   runner: ubuntu-latest, supported: false }
           - { name: 'macOS · ARM64 · (planned)',      runner: ubuntu-latest, supported: false }
-          - { name: 'macOS · x86_64 · (planned)',     runner: ubuntu-latest, supported: false }
           - { name: 'iOS · ARM64 · (planned)',        runner: ubuntu-latest, supported: false }
           - { name: 'tvOS · ARM64 · (planned)',       runner: ubuntu-latest, supported: false }
           - { name: 'FreeBSD · x86_64 · (planned)',   runner: ubuntu-latest, supported: false }
@@ -148,6 +148,14 @@ jobs:
         run: |
           cmake -B build -DCMAKE_C_COMPILER=gcc \
             -DCMAKE_C_FLAGS=-m32 -DCMAKE_EXE_LINKER_FLAGS=-m32
+          cmake --build build
+          ctest --test-dir build --output-on-failure
+
+      # ---- macOS x86_64 (native Intel runner, Apple clang) --------------
+      - name: Build & test (macOS clang)
+        if: ${{ matrix.supported && matrix.toolchain == 'macos-clang' }}
+        run: |
+          cmake -B build -DCMAKE_C_COMPILER=clang
           cmake --build build
           ctest --test-dir build --output-on-failure
 
