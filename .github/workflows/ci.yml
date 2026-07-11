@@ -158,9 +158,6 @@ jobs:
           cmake -B build -DCMAKE_C_COMPILER=clang
           cmake --build build
           if ! ctest --test-dir build --output-on-failure; then
-            echo "::group::direct run"
-            ./build/tests/test_interceptor_smoke; echo "exit=$?"
-            echo "::endgroup::"
             echo "::group::lldb backtrace"
             lldb --batch -o run -o "thread backtrace all" -o quit \
               ./build/tests/test_interceptor_smoke 2>&1 | tail -80 || true
