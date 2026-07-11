@@ -25,6 +25,10 @@ JS 绑定等）。
 - **零配置即可使用** —— 静态链接、系统分配器、目标架构/OS 均为默认值；直接把
   `hoox.c`/`hoox.h` 放进项目编译即可，无需任何 `-D`。需要动态库时定义
   `HOOX_SHARED`，需要 dlmalloc 时定义 `HOOX_USE_DLMALLOC`。
+  在 POSIX 上需链接平台线程库（`-pthread`）——hoox 的 TLS 用 pthread key；
+  这在 **FreeBSD** 上是必需的（pthread 位于 `libthr`，不链接则符号会解析到 libc 的
+  空存根，`pthread_setspecific/getspecific` 静默失效）。glibc 已把 pthread 并入 libc，
+  Linux 上通常无需显式链接。
 - **纯 C99**，用 **CMake** 构建，支持 **MSVC / clang / gcc**（MSVC 在
   `/W3 /sdl /WX` 下零告警）。
 

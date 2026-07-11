@@ -26,6 +26,11 @@ resolution, JS bindings, …).
 - **Zero-config to consume** — static linkage, the system allocator, and the
   target arch/OS are all defaults; drop `hoox.c`/`hoox.h` in and compile, no `-D`
   flags. Opt into a DLL with `HOOX_SHARED`, or dlmalloc with `HOOX_USE_DLMALLOC`.
+  On POSIX, link the platform threads library (`-pthread`) — hoox uses pthread
+  keys for TLS. This is required on **FreeBSD** (pthread lives in `libthr`; unlinked,
+  the symbols resolve to libc's no-op weak stubs and `pthread_setspecific/getspecific`
+  silently do nothing). glibc folds pthread into libc, so Linux usually needs no
+  explicit link.
 - **Pure C99**, built with **CMake**, on **MSVC / clang / gcc** (the MSVC build
   is warning-clean under `/W3 /sdl /WX`).
 

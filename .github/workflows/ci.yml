@@ -187,51 +187,13 @@ jobs:
         with:
           usesh: true
           prepare: |
-            pkg install -y cmake python3 gdb
+            pkg install -y cmake python3
           run: |
             set -e
             echo "::group::FreeBSD x86_64 (native)"
-            cmake -B build -DCMAKE_C_COMPILER=clang -DCMAKE_BUILD_TYPE=Debug
+            cmake -B build -DCMAKE_C_COMPILER=clang
             cmake --build build
-            if ! ctest --test-dir build --output-on-failure; then
-              echo "=== ctest failed — tracing begin/push/end for test_amalgam ==="
-              t=$(find build -name test_amalgam -type f | head -1)
-              echo "binary: $t"; file "$t" || true
-              cat > /tmp/cmds.gdb <<'GDB'
-            set pagination off
-            break interceptor_thread_context_new
-            commands
-            silent
-            printf "NEWCTX\n"
-            cont
-            end
-            break hx_private_set
-            commands
-            silent
-            printf "SET  priv=%p impl=%p val=%p\n", (void *)key, key->impl, value
-            cont
-            end
-            break hx_private_get
-            commands
-            silent
-            printf "GET  priv=%p impl=%p\n", (void *)key, key->impl
-            cont
-            end
-            run
-            printf "\n=== CRASH STATE ===\n"
-            bt
-            print &hoox_interceptor_context_private
-            print hoox_interceptor_context_private.impl
-            print hoox_interceptor_guard_key
-            print interceptor_ctx
-            print interceptor_ctx->stack
-            print pthread_getspecific(((struct _HxPrivateKey *)hoox_interceptor_context_private.impl)->key)
-            print pthread_getspecific((pthread_key_t)hoox_interceptor_guard_key)
-            quit
-            GDB
-              gdb -batch -x /tmp/cmds.gdb "$t" 2>&1 | tail -80 || true
-              exit 1
-            fi
+            ctest --test-dir build --output-on-failure
             echo "::endgroup::"
             echo "::group::FreeBSD x86 (32-bit, clang -m32 / freebsd32)"
             cmake -B build32 -DCMAKE_C_COMPILER=clang \

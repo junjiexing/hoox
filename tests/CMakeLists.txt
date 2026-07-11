@@ -139,6 +139,14 @@ if(HOOX_ARCH_FAMILY STREQUAL "x86")
     if(WIN32)
       target_link_libraries(test_amalgam PRIVATE psapi)
       target_compile_definitions(test_amalgam PRIVATE _CRT_SECURE_NO_WARNINGS)
+    else()
+      # A real amalgam consumer on POSIX must link the threads library, exactly
+      # as it would link the platform's pthread: hoox uses pthread keys for TLS.
+      # This is mandatory on FreeBSD, where pthread lives in libthr and the
+      # unlinked symbols would otherwise resolve to libc's no-op weak stubs
+      # (setspecific/getspecific silently do nothing -> per-call thread context).
+      find_package(Threads REQUIRED)
+      target_link_libraries(test_amalgam PRIVATE Threads::Threads)
     endif()
     add_test(NAME amalgam COMMAND test_amalgam)
   endif()

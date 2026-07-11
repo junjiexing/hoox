@@ -63,6 +63,11 @@ page-plan-builder/调试器映射）。因此 `test_memory`（裸 RWX）与 `int
 CI 无托管 FreeBSD runner，故用 `vmactions/freebsd-vm` 在 ubuntu 宿主上启动 amd64 FreeBSD VM：x86_64 原生
 跑完整套件，x86（32 位）用 `clang -m32`（freebsd32/lib32）同样跑完整套件；ARM/ARM64 FreeBSD 共用同一
 arch-agnostic backend + 在 Linux/macOS ARM 验证过的 arch 层（VM 无 sysroot 交叉运行，CI 未执行）。
+**关键坑（FreeBSD 必链 libthr）：** hoox 的 TLS 用 pthread key；FreeBSD 的 pthread 在 `libthr`，
+消费方（含 amalgam）**必须链接 `-pthread`**，否则 `pthread_*` 会解析到 libc 的**空存根**（静默无操作）——
+`pthread_getspecific` 恒返回 NULL，导致 interceptor 线程上下文每次调用都新建，enter/leave 拿到不同调用栈
+→ on-leave 空栈崩溃。glibc 已把 pthread 并入 libc，Linux 无此问题；`test_amalgam`（直接编译 `hoox.c`、
+不链接 `hoox` 目标）因此在 `tests/CMakeLists.txt` 显式链接 `Threads::Threads`。
 
 下一步：iOS/Android/其它平台。
 
