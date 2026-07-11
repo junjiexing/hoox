@@ -72,6 +72,19 @@ main (void)
 
   hoox_internal_heap_ref ();
 
+  /*
+   * This smoke test allocates a single RWX page and executes code from it.
+   * Platforms that enforce W^X (e.g. Apple Silicon) do not offer RWX at all —
+   * there the hook engine uses the code-segment / writable-remap path instead,
+   * which the interceptor suite exercises. Skip here when RWX is unavailable.
+   */
+  if (hoox_query_rwx_support () != HOOX_RWX_FULL)
+  {
+    printf ("memory: skipped (RWX unavailable on this platform)\n");
+    hoox_internal_heap_unref ();
+    return 0;
+  }
+
   page_size = hoox_query_page_size ();
   CHECK (page_size >= 4096);
 

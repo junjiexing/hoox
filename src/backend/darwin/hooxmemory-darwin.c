@@ -85,27 +85,53 @@ _hoox_memory_query_protections (HxPtrArray * sorted_pages,
   }
 }
 
+HX_GNUC_INTERNAL hx_boolean hoox_darwin_is_debugger_mapping_enforced (void);
+
 hx_boolean
 hoox_memory_can_remap_writable (void)
 {
-  return FALSE;
+  return hoox_darwin_is_debugger_mapping_enforced ();
 }
 
+/*
+ * Create a writable alias of the executable target pages (sharing the same
+ * physical pages, copy == FALSE), so patches land in the code without ever
+ * dropping execute permission on the running page — essential on Apple Silicon,
+ * where the mprotect-to-writable path would fault any co-resident code.
+ */
 hx_pointer
 hoox_memory_try_remap_writable_pages (hx_pointer first_page,
                                      hx_uint n_pages)
 {
-  (void) first_page;
-  (void) n_pages;
-  return NULL;
+  mach_port_t task = mach_task_self ();
+  mach_vm_size_t size = (mach_vm_size_t) n_pages * hoox_query_page_size ();
+  mach_vm_address_t writable = 0;
+  vm_prot_t cur_prot = VM_PROT_NONE, max_prot = VM_PROT_NONE;
+
+  if (mach_vm_remap (task, &writable, size, 0, VM_FLAGS_ANYWHERE, task,
+      (mach_vm_address_t) (hx_uintptr) first_page, FALSE, &cur_prot, &max_prot,
+      VM_INHERIT_NONE) != KERN_SUCCESS)
+  {
+    return NULL;
+  }
+
+  if (mach_vm_protect (task, writable, size, FALSE,
+      VM_PROT_READ | VM_PROT_WRITE) != KERN_SUCCESS)
+  {
+    mach_vm_deallocate (task, writable, size);
+    return NULL;
+  }
+
+  return (hx_pointer) (hx_uintptr) writable;
 }
 
 void
 hoox_memory_dispose_writable_pages (hx_pointer first_page,
                                    hx_uint n_pages)
 {
-  (void) first_page;
-  (void) n_pages;
+  mach_vm_deallocate (mach_task_self (),
+      (mach_vm_address_t) (hx_uintptr) first_page,
+      (mach_vm_size_t) n_pages * hoox_query_page_size ());
 }
 
 static vm_prot_t

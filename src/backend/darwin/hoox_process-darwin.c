@@ -257,6 +257,49 @@ hoox_process_get_native_os (void)
   return HOOX_OS_MACOS;
 }
 
+/* ---- writable-remap enforcement probe ----------------------------------- *
+ * Determines whether the kernel enforces W^X on this process (true on Apple
+ * Silicon, false where plain RWX/mprotect works, e.g. Intel). When enforced,
+ * hoox patches code through a separate writable vm_remap alias rather than
+ * mprotecting the executable page (which would drop X during the write). */
+hx_boolean
+hoox_darwin_is_debugger_mapping_enforced (void)
+{
+  static hx_boolean initialized = FALSE;
+  static hx_boolean enforced = FALSE;
+
+  if (!initialized)
+  {
+    mach_port_t task = mach_task_self ();
+    hx_size page_size = hoox_query_page_size ();
+    mach_vm_address_t start = 0;
+    vm_address_t addr = 0;
+    vm_prot_t cur_prot = VM_PROT_NONE, max_prot = VM_PROT_NONE;
+
+    if (mach_vm_allocate (task, &start, page_size, VM_FLAGS_ANYWHERE) ==
+        KERN_SUCCESS)
+    {
+      *(hx_uint32 *) (hx_uintptr) start = 1337;
+      mach_vm_protect (task, start, page_size, FALSE,
+          VM_PROT_READ | VM_PROT_EXECUTE);
+
+      if (vm_remap (task, &addr, page_size, 0, VM_FLAGS_ANYWHERE, task,
+          start, FALSE, &cur_prot, &max_prot, VM_INHERIT_NONE) == KERN_SUCCESS)
+      {
+        enforced = (cur_prot & (VM_PROT_READ | VM_PROT_EXECUTE)) !=
+            (VM_PROT_READ | VM_PROT_EXECUTE);
+        mach_vm_deallocate (task, addr, page_size);
+      }
+
+      mach_vm_deallocate (task, start, page_size);
+    }
+
+    initialized = TRUE;
+  }
+
+  return enforced;
+}
+
 /* ---- module enumeration (via dyld) --------------------------------------
  * Backs hoox_probe_module_for_code_cave (hooxcodeallocator.c), which is
  * compiled on Darwin and reads only the module's __TEXT range. */
