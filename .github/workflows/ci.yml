@@ -199,31 +199,34 @@ jobs:
               echo "binary: $t"; file "$t" || true
               cat > /tmp/cmds.gdb <<'GDB'
             set pagination off
-            break _hoox_function_context_begin_invocation
+            break interceptor_thread_context_new
             commands
             silent
-            printf "BEGIN fctx=%p\n", function_ctx
+            printf "NEWCTX\n"
             cont
             end
-            break hoox_invocation_stack_push
+            break hx_private_set
             commands
             silent
-            printf "PUSH  fctx=%p stack=%p oldlen=%d\n", function_ctx, stack, stack->len
+            printf "SET  priv=%p impl=%p val=%p\n", (void *)key, key->impl, value
             cont
             end
-            break _hoox_function_context_end_invocation
+            break hx_private_get
             commands
             silent
-            printf "END   fctx=%p\n", function_ctx
+            printf "GET  priv=%p impl=%p\n", (void *)key, key->impl
             cont
             end
             run
-            printf "\n=== CRASH BACKTRACE ===\n"
-            bt full
-            printf "\n=== leave-side context ===\n"
+            printf "\n=== CRASH STATE ===\n"
+            bt
+            print &hoox_interceptor_context_private
+            print hoox_interceptor_context_private.impl
+            print hoox_interceptor_guard_key
             print interceptor_ctx
             print interceptor_ctx->stack
-            print interceptor_ctx->stack->len
+            print pthread_getspecific(((struct _HxPrivateKey *)hoox_interceptor_context_private.impl)->key)
+            print pthread_getspecific((pthread_key_t)hoox_interceptor_guard_key)
             quit
             GDB
               gdb -batch -x /tmp/cmds.gdb "$t" 2>&1 | tail -80 || true
