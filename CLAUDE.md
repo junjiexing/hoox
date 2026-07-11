@@ -31,9 +31,12 @@ relocator/reader/writer 与 `src/backend/arm64` 的 interceptor/cpucontext（fri
 （`hooxmemory-posix.c`/`hooxtls-posix.c`）与 `src/backend/linux/`
 （`hooxmemory-linux.c`/`hoox_process-linux.c`/`hooxlinux-priv.h`）。Linux 走 RWX 路径，
 线程挂起/枚举为链接项（`tgkill`/`/proc/self/task`），页保护查询与 near-alloc 走 `/proc/self/maps`，
-TLS 用 pthread key。同一份 arch-agnostic backend 覆盖两种位宽：x86_64 直接构建；x86（32 位）加
-`-DCMAKE_C_FLAGS="-m32"`（需 `gcc-multilib`），代码零改动。8 个测试套件 + amalgamation 在两种
-位宽均全绿。下一步：macOS/其它平台与架构横向铺开。
+TLS 用 pthread key。同一份 arch-agnostic backend 覆盖全部四种架构：x86_64 直接构建；x86（32 位）加
+`-DCMAKE_C_FLAGS="-m32"`（需 `gcc-multilib`）；**ARM64** 用原生 `ubuntu-24.04-arm` CI；**ARM（32 位，
+A32 + Thumb）** 交叉编译 `gcc-arm-linux-gnueabihf` 后在 `qemu-arm` 下跑完整测试套件。ARM 新增自研
+A32+Thumb 解码器 `src/disasm/hx_disasm_arm.c`（配 `backend/arm/hooxcpu-arm.c` 用 `getauxval` 查 VFP/
+interwork 特性）驱动 `src/arch/arm`。测试套件 + amalgamation 在所有已支持组合均全绿。下一步：
+macOS/Android/其它平台横向铺开。
 
 > 命名已完成一次性重构：**所有 `gum`/`cs`/glib 前缀均已清除**（见 D2）。仓库不再以
 > 与上游 diff 对拍为目标——以行为一致 + 测试通过为准。
