@@ -51,8 +51,8 @@
 # endif
 #endif
 #ifdef HAVE_DARWIN
-# include "backend-darwin/hooxdarwin-priv.h"
-# include "hoox/hooxdarwin.h"
+# include <mach/mach.h>
+HX_GNUC_INTERNAL hx_boolean hoox_darwin_is_debugger_mapping_enforced (void);
 #endif
 
 typedef struct _HooxPatchCodeContext HooxPatchCodeContext;

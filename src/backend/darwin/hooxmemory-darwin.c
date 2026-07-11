@@ -91,6 +91,16 @@ hoox_memory_can_remap_writable (void)
   return FALSE;
 }
 
+/*
+ * Only consulted on the remap-writable path (never taken on x86_64, where
+ * hoox_memory_can_remap_writable() is FALSE); provided so hooxmemory.c links.
+ */
+hx_boolean
+hoox_darwin_is_debugger_mapping_enforced (void)
+{
+  return FALSE;
+}
+
 hx_pointer
 hoox_memory_try_remap_writable_pages (hx_pointer first_page,
                                      hx_uint n_pages)
