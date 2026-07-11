@@ -5,28 +5,28 @@
  * Licence: wxWindows Library Licence, Version 3.1
  */
 
-#include "gum.h"
+#include "hoox.h"
 
 #include <stdio.h>
 
-static int g_failures = 0;
+static int hx_failures = 0;
 
 #define CHECK(expr) \
-    G_STMT_START { \
+    HX_STMT_START { \
       if (!(expr)) { \
         fprintf (stderr, "FAIL %s:%d: %s\n", __FILE__, __LINE__, #expr); \
-        g_failures++; \
+        hx_failures++; \
       } \
-    } G_STMT_END
+    } HX_STMT_END
 
 /* Target function — kept out-of-line so it has a real prologue to hook. */
 #ifdef _MSC_VER
-# define GUM_NOINLINE __declspec (noinline)
+# define HOOX_NOINLINE __declspec (noinline)
 #else
-# define GUM_NOINLINE __attribute__ ((noinline))
+# define HOOX_NOINLINE __attribute__ ((noinline))
 #endif
 
-GUM_NOINLINE
+HOOX_NOINLINE
 static int
 target_add (int a, int b)
 {
@@ -41,7 +41,7 @@ typedef struct
 } Probe;
 
 static void
-on_enter (GumInvocationContext * ic, gpointer user_data)
+on_enter (HooxInvocationContext * ic, hx_pointer user_data)
 {
   Probe * p = user_data;
   (void) ic;
@@ -49,7 +49,7 @@ on_enter (GumInvocationContext * ic, gpointer user_data)
 }
 
 static void
-on_leave (GumInvocationContext * ic, gpointer user_data)
+on_leave (HooxInvocationContext * ic, hx_pointer user_data)
 {
   Probe * p = user_data;
   (void) ic;
@@ -69,23 +69,23 @@ replacement_add (int a, int b)
 int
 main (void)
 {
-  GumInterceptor * interceptor;
-  GumInvocationListener * listener;
+  HooxInterceptor * interceptor;
+  HooxInvocationListener * listener;
   Probe probe = { 0, 0 };
-  GumAttachReturn ar;
-  GumReplaceReturn rr;
+  HooxAttachReturn ar;
+  HooxReplaceReturn rr;
   int r;
 
-  gum_init ();
+  hoox_init ();
 
-  interceptor = gum_interceptor_obtain ();
+  interceptor = hoox_interceptor_obtain ();
   CHECK (interceptor != NULL);
 
   /* ---- attach a listener ---- */
-  listener = gum_make_call_listener (on_enter, on_leave, &probe, NULL);
-  ar = gum_interceptor_attach (interceptor, (gpointer) target_add, listener,
+  listener = hoox_make_call_listener (on_enter, on_leave, &probe, NULL);
+  ar = hoox_interceptor_attach (interceptor, (hx_pointer) target_add, listener,
       NULL);
-  CHECK (ar == GUM_ATTACH_OK);
+  CHECK (ar == HOOX_ATTACH_OK);
 
   r = target_add (3, 4);
   CHECK (r == 7);
@@ -97,36 +97,36 @@ main (void)
   CHECK (probe.enter_count == 2);
   CHECK (probe.leave_count == 2);
 
-  gum_interceptor_detach (interceptor, listener);
+  hoox_interceptor_detach (interceptor, listener);
 
   r = target_add (1, 1);
   CHECK (r == 2);
   CHECK (probe.enter_count == 2);   /* no longer firing */
 
-  gum_invocation_listener_unref (listener);
+  hoox_invocation_listener_unref (listener);
 
   /* ---- replace a function ---- */
-  rr = gum_interceptor_replace (interceptor, (gpointer) target_add,
-      (gpointer) replacement_add, (gpointer *) &original_add, NULL);
-  CHECK (rr == GUM_REPLACE_OK);
+  rr = hoox_interceptor_replace (interceptor, (hx_pointer) target_add,
+      (hx_pointer) replacement_add, (hx_pointer *) &original_add, NULL);
+  CHECK (rr == HOOX_REPLACE_OK);
 
   r = target_add (5, 6);
   CHECK (r == 111);   /* 5 + 6 + 100 */
 
-  gum_interceptor_revert (interceptor, (gpointer) target_add);
+  hoox_interceptor_revert (interceptor, (hx_pointer) target_add);
 
   r = target_add (5, 6);
   CHECK (r == 11);    /* back to normal */
 
-  gum_interceptor_unref (interceptor);
+  hoox_interceptor_unref (interceptor);
 
-  gum_deinit ();
+  hoox_deinit ();
 
-  if (g_failures == 0)
+  if (hx_failures == 0)
   {
     printf ("interceptor smoke: all tests passed\n");
     return 0;
   }
-  printf ("interceptor smoke: %d failure(s)\n", g_failures);
+  printf ("interceptor smoke: %d failure(s)\n", hx_failures);
   return 1;
 }

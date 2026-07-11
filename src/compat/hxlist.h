@@ -1,7 +1,7 @@
 /*
- * hoox nano-glib: GSList, GList, GQueue.
+ * hoox nano-glib: HxSList, HxList, HxQueue.
  *
- * Public node layout matches GLib so intrusive traversal in extracted gum
+ * Public node layout matches GLib so intrusive traversal in extracted hoox
  * code (node->data / node->next / node->prev) keeps working.
  *
  * Licence: wxWindows Library Licence, Version 3.1
@@ -12,93 +12,93 @@
 
 #include "hxdefs.h"
 
-G_BEGIN_DECLS
+HX_BEGIN_DECLS
 
-typedef struct _GSList GSList;
-typedef struct _GList GList;
-typedef struct _GQueue GQueue;
+typedef struct _HxSList HxSList;
+typedef struct _HxList HxList;
+typedef struct _HxQueue HxQueue;
 
-struct _GSList
+struct _HxSList
 {
-  gpointer data;
-  GSList * next;
+  hx_pointer data;
+  HxSList * next;
 };
 
-struct _GList
+struct _HxList
 {
-  gpointer data;
-  GList * next;
-  GList * prev;
+  hx_pointer data;
+  HxList * next;
+  HxList * prev;
 };
 
-struct _GQueue
+struct _HxQueue
 {
-  GList * head;
-  GList * tail;
-  guint length;
+  HxList * head;
+  HxList * tail;
+  hx_uint length;
 };
 
-#define G_QUEUE_INIT { NULL, NULL, 0 }
+#define HX_QUEUE_INIT { NULL, NULL, 0 }
 
-#define g_slist_next(slist) ((slist) ? (slist)->next : NULL)
-#define g_list_next(list) ((list) ? (list)->next : NULL)
-#define g_list_previous(list) ((list) ? (list)->prev : NULL)
+#define hx_slist_next(slist) ((slist) ? (slist)->next : NULL)
+#define hx_list_next(list) ((list) ? (list)->next : NULL)
+#define hx_list_previous(list) ((list) ? (list)->prev : NULL)
 
-/* ---- GSList ------------------------------------------------------------- */
+/* ---- HxSList ------------------------------------------------------------- */
 
-GSList * g_slist_append (GSList * list, gpointer data);
-GSList * g_slist_prepend (GSList * list, gpointer data);
-GSList * g_slist_insert (GSList * list, gpointer data, gint position);
-GSList * g_slist_remove (GSList * list, gconstpointer data);
-GSList * g_slist_remove_link (GSList * list, GSList * link_);
-GSList * g_slist_delete_link (GSList * list, GSList * link_);
-GSList * g_slist_find (GSList * list, gconstpointer data);
-GSList * g_slist_last (GSList * list);
-GSList * g_slist_nth (GSList * list, guint n);
-gpointer g_slist_nth_data (GSList * list, guint n);
-guint g_slist_length (GSList * list);
-GSList * g_slist_reverse (GSList * list);
-void g_slist_foreach (GSList * list, GFunc func, gpointer user_data);
-void g_slist_free (GSList * list);
-void g_slist_free_1 (GSList * list);
-void g_slist_free_full (GSList * list, GDestroyNotify free_func);
+HxSList * hx_slist_append (HxSList * list, hx_pointer data);
+HxSList * hx_slist_prepend (HxSList * list, hx_pointer data);
+HxSList * hx_slist_insert (HxSList * list, hx_pointer data, hx_int position);
+HxSList * hx_slist_remove (HxSList * list, hx_constpointer data);
+HxSList * hx_slist_remove_link (HxSList * list, HxSList * link_);
+HxSList * hx_slist_delete_link (HxSList * list, HxSList * link_);
+HxSList * hx_slist_find (HxSList * list, hx_constpointer data);
+HxSList * hx_slist_last (HxSList * list);
+HxSList * hx_slist_nth (HxSList * list, hx_uint n);
+hx_pointer hx_slist_nth_data (HxSList * list, hx_uint n);
+hx_uint hx_slist_length (HxSList * list);
+HxSList * hx_slist_reverse (HxSList * list);
+void hx_slist_foreach (HxSList * list, HxFunc func, hx_pointer user_data);
+void hx_slist_free (HxSList * list);
+void hx_slist_free_1 (HxSList * list);
+void hx_slist_free_full (HxSList * list, HxDestroyNotify free_func);
 
-/* ---- GList -------------------------------------------------------------- */
+/* ---- HxList -------------------------------------------------------------- */
 
-GList * g_list_append (GList * list, gpointer data);
-GList * g_list_prepend (GList * list, gpointer data);
-GList * g_list_insert (GList * list, gpointer data, gint position);
-GList * g_list_remove (GList * list, gconstpointer data);
-GList * g_list_remove_link (GList * list, GList * llink);
-GList * g_list_delete_link (GList * list, GList * link_);
-GList * g_list_find (GList * list, gconstpointer data);
-GList * g_list_first (GList * list);
-GList * g_list_last (GList * list);
-GList * g_list_nth (GList * list, guint n);
-gpointer g_list_nth_data (GList * list, guint n);
-guint g_list_length (GList * list);
-GList * g_list_reverse (GList * list);
-void g_list_foreach (GList * list, GFunc func, gpointer user_data);
-void g_list_free (GList * list);
-void g_list_free_full (GList * list, GDestroyNotify free_func);
+HxList * hx_list_append (HxList * list, hx_pointer data);
+HxList * hx_list_prepend (HxList * list, hx_pointer data);
+HxList * hx_list_insert (HxList * list, hx_pointer data, hx_int position);
+HxList * hx_list_remove (HxList * list, hx_constpointer data);
+HxList * hx_list_remove_link (HxList * list, HxList * llink);
+HxList * hx_list_delete_link (HxList * list, HxList * link_);
+HxList * hx_list_find (HxList * list, hx_constpointer data);
+HxList * hx_list_first (HxList * list);
+HxList * hx_list_last (HxList * list);
+HxList * hx_list_nth (HxList * list, hx_uint n);
+hx_pointer hx_list_nth_data (HxList * list, hx_uint n);
+hx_uint hx_list_length (HxList * list);
+HxList * hx_list_reverse (HxList * list);
+void hx_list_foreach (HxList * list, HxFunc func, hx_pointer user_data);
+void hx_list_free (HxList * list);
+void hx_list_free_full (HxList * list, HxDestroyNotify free_func);
 
-/* ---- GQueue ------------------------------------------------------------- */
+/* ---- HxQueue ------------------------------------------------------------- */
 
-GQueue * g_queue_new (void);
-void g_queue_init (GQueue * queue);
-void g_queue_clear (GQueue * queue);
-void g_queue_free (GQueue * queue);
-gboolean g_queue_is_empty (GQueue * queue);
-guint g_queue_get_length (GQueue * queue);
-void g_queue_push_head (GQueue * queue, gpointer data);
-void g_queue_push_tail (GQueue * queue, gpointer data);
-gpointer g_queue_pop_head (GQueue * queue);
-gpointer g_queue_pop_tail (GQueue * queue);
-gpointer g_queue_peek_head (GQueue * queue);
-gpointer g_queue_peek_tail (GQueue * queue);
-void g_queue_foreach (GQueue * queue, GFunc func, gpointer user_data);
-gboolean g_queue_remove (GQueue * queue, gconstpointer data);
+HxQueue * hx_queue_new (void);
+void hx_queue_init (HxQueue * queue);
+void hx_queue_clear (HxQueue * queue);
+void hx_queue_free (HxQueue * queue);
+hx_boolean hx_queue_is_empty (HxQueue * queue);
+hx_uint hx_queue_get_length (HxQueue * queue);
+void hx_queue_push_head (HxQueue * queue, hx_pointer data);
+void hx_queue_push_tail (HxQueue * queue, hx_pointer data);
+hx_pointer hx_queue_pop_head (HxQueue * queue);
+hx_pointer hx_queue_pop_tail (HxQueue * queue);
+hx_pointer hx_queue_peek_head (HxQueue * queue);
+hx_pointer hx_queue_peek_tail (HxQueue * queue);
+void hx_queue_foreach (HxQueue * queue, HxFunc func, hx_pointer user_data);
+hx_boolean hx_queue_remove (HxQueue * queue, hx_constpointer data);
 
-G_END_DECLS
+HX_END_DECLS
 
 #endif

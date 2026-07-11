@@ -11,12 +11,12 @@ typedef struct _TestSampleFixture TestSampleFixture;
 
 struct _TestSampleFixture
 {
-  gint value;
+  hx_int value;
 };
 
 static void
 test_sample_fixture_setup (TestSampleFixture * fixture,
-                           gconstpointer data)
+                           hx_constpointer data)
 {
   (void) data;
   fixture->value = 41;
@@ -24,14 +24,14 @@ test_sample_fixture_setup (TestSampleFixture * fixture,
 
 static void
 test_sample_fixture_teardown (TestSampleFixture * fixture,
-                              gconstpointer data)
+                              hx_constpointer data)
 {
   (void) fixture;
   (void) data;
 }
 
 #define TESTCASE(NAME) \
-    void test_sample_ ##NAME (TestSampleFixture * fixture, gconstpointer data)
+    void test_sample_ ##NAME (TestSampleFixture * fixture, hx_constpointer data)
 #define TESTENTRY(NAME) \
     TESTENTRY_WITH_FIXTURE ("Sample", test_sample, NAME, TestSampleFixture)
 
@@ -43,24 +43,24 @@ TESTLIST_END ()
 TESTCASE (fixture_is_initialised)
 {
   (void) data;
-  g_assert_cmpint (fixture->value, ==, 41);
+  hx_assert_cmpint (fixture->value, ==, 41);
   fixture->value++;
-  g_assert_cmpint (fixture->value, ==, 42);
+  hx_assert_cmpint (fixture->value, ==, 42);
 }
 
 TESTCASE (arithmetic)
 {
   (void) fixture;
   (void) data;
-  g_assert_cmpint (2 + 2, ==, 4);
-  g_assert_true (TRUE);
-  g_assert_null (NULL);
+  hx_assert_cmpint (2 + 2, ==, 4);
+  hx_assert_true (TRUE);
+  hx_assert_null (NULL);
 }
 
 static void
 test_sample_standalone (void)
 {
-  g_assert_cmphex (0xdeadbeef, ==, 0xdeadbeef);
+  hx_assert_cmphex (0xdeadbeef, ==, 0xdeadbeef);
 }
 
 TESTLIST_BEGIN (sample_simple)
@@ -70,10 +70,10 @@ TESTLIST_END ()
 int
 main (int argc, char ** argv)
 {
-  g_test_init (&argc, &argv, NULL);
+  hx_test_init (&argc, &argv, NULL);
 
   TESTLIST_REGISTER (sample);
   TESTLIST_REGISTER (sample_simple);
 
-  return g_test_run ();
+  return hx_test_run ();
 }

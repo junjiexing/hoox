@@ -26,27 +26,27 @@ list(APPEND HOOX_SOURCES
 if(HOOX_ARCH_FAMILY STREQUAL "x86")
   list(APPEND HOOX_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/disasm/hx_disasm_x86.c"
-    "${CMAKE_CURRENT_SOURCE_DIR}/arch/x86/gumx86writer.c"
-    "${CMAKE_CURRENT_SOURCE_DIR}/arch/x86/gumx86reader.c"
-    "${CMAKE_CURRENT_SOURCE_DIR}/arch/x86/gumx86relocator.c")
+    "${CMAKE_CURRENT_SOURCE_DIR}/arch/x86/hooxx86writer.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/arch/x86/hooxx86reader.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/arch/x86/hooxx86relocator.c")
   set(HOOX_PRIVATE_INCLUDE_DIRS ${HOOX_PRIVATE_INCLUDE_DIRS}
     "${CMAKE_CURRENT_SOURCE_DIR}/arch/x86")
 endif()
 
-# --- core (extracted gum primitives) ----------------------------------------
+# --- core (extracted hoox primitives) ----------------------------------------
 list(APPEND HOOX_SOURCES
-  "${CMAKE_CURRENT_SOURCE_DIR}/core/gumlibc.c"
-  "${CMAKE_CURRENT_SOURCE_DIR}/core/gumspinlock.c"
-  "${CMAKE_CURRENT_SOURCE_DIR}/core/gummetalarray.c"
-  "${CMAKE_CURRENT_SOURCE_DIR}/core/gummetalhash.c"
-  "${CMAKE_CURRENT_SOURCE_DIR}/core/gummemory.c"
-  "${CMAKE_CURRENT_SOURCE_DIR}/core/gumcodesegment.c"
-  "${CMAKE_CURRENT_SOURCE_DIR}/core/gumcloak-stub.c"
-  "${CMAKE_CURRENT_SOURCE_DIR}/core/gumcodeallocator.c"
-  "${CMAKE_CURRENT_SOURCE_DIR}/core/guminvocationcontext.c"
-  "${CMAKE_CURRENT_SOURCE_DIR}/core/guminvocationlistener.c"
-  "${CMAKE_CURRENT_SOURCE_DIR}/core/guminterceptor.c"
-  "${CMAKE_CURRENT_SOURCE_DIR}/core/gum.c")
+  "${CMAKE_CURRENT_SOURCE_DIR}/core/hooxlibc.c"
+  "${CMAKE_CURRENT_SOURCE_DIR}/core/hooxspinlock.c"
+  "${CMAKE_CURRENT_SOURCE_DIR}/core/hooxmetalarray.c"
+  "${CMAKE_CURRENT_SOURCE_DIR}/core/hooxmetalhash.c"
+  "${CMAKE_CURRENT_SOURCE_DIR}/core/hooxmemory.c"
+  "${CMAKE_CURRENT_SOURCE_DIR}/core/hooxcodesegment.c"
+  "${CMAKE_CURRENT_SOURCE_DIR}/core/hooxcloak-stub.c"
+  "${CMAKE_CURRENT_SOURCE_DIR}/core/hooxcodeallocator.c"
+  "${CMAKE_CURRENT_SOURCE_DIR}/core/hooxinvocationcontext.c"
+  "${CMAKE_CURRENT_SOURCE_DIR}/core/hooxinvocationlistener.c"
+  "${CMAKE_CURRENT_SOURCE_DIR}/core/hooxinterceptor.c"
+  "${CMAKE_CURRENT_SOURCE_DIR}/core/hoox.c")
 
 set(HOOX_PRIVATE_INCLUDE_DIRS ${HOOX_PRIVATE_INCLUDE_DIRS}
   "${CMAKE_CURRENT_SOURCE_DIR}/core")
@@ -54,19 +54,19 @@ set(HOOX_PRIVATE_INCLUDE_DIRS ${HOOX_PRIVATE_INCLUDE_DIRS}
 # --- backend (platform + arch) ----------------------------------------------
 if(WIN32)
   list(APPEND HOOX_SOURCES
-    "${CMAKE_CURRENT_SOURCE_DIR}/backend/windows/gummemory-windows.c"
-    "${CMAKE_CURRENT_SOURCE_DIR}/backend/windows/gumtls-windows.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/backend/windows/hooxmemory-windows.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/backend/windows/hooxtls-windows.c"
     "${CMAKE_CURRENT_SOURCE_DIR}/backend/windows/hoox_process-windows.c"
-    "${CMAKE_CURRENT_SOURCE_DIR}/backend/windows/gum_msvc_intrinsics.c")
+    "${CMAKE_CURRENT_SOURCE_DIR}/backend/windows/hoox_msvc_intrinsics.c")
   set(HOOX_PRIVATE_INCLUDE_DIRS ${HOOX_PRIVATE_INCLUDE_DIRS}
     "${CMAKE_CURRENT_SOURCE_DIR}/backend/windows")
 endif()
 
 if(HOOX_ARCH_FAMILY STREQUAL "x86")
   list(APPEND HOOX_SOURCES
-    "${CMAKE_CURRENT_SOURCE_DIR}/backend/x86/gumcpucontext-x86.c"
-    "${CMAKE_CURRENT_SOURCE_DIR}/backend/x86/gumcpu-x86.c"
-    "${CMAKE_CURRENT_SOURCE_DIR}/backend/x86/guminterceptor-x86.c")
+    "${CMAKE_CURRENT_SOURCE_DIR}/backend/x86/hooxcpucontext-x86.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/backend/x86/hooxcpu-x86.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/backend/x86/hooxinterceptor-x86.c")
 endif()
 
 add_library(hoox STATIC ${HOOX_SOURCES})
@@ -74,10 +74,10 @@ target_include_directories(hoox
   PUBLIC ${HOOX_PUBLIC_INCLUDE_DIRS}
   PRIVATE ${HOOX_PRIVATE_INCLUDE_DIRS})
 
-# Platform / arch feature macros expected by the extracted gum code.
-# GUM_STATIC makes GUM_API empty (we build a static archive).
-target_compile_definitions(hoox PUBLIC GUM_STATIC)
-target_compile_definitions(hoox PRIVATE GUM_USE_SYSTEM_ALLOC)
+# Platform / arch feature macros expected by the extracted hoox code.
+# HOOX_STATIC makes HOOX_API empty (we build a static archive).
+target_compile_definitions(hoox PUBLIC HOOX_STATIC)
+target_compile_definitions(hoox PRIVATE HOOX_USE_SYSTEM_ALLOC)
 if(WIN32)
   target_link_libraries(hoox PRIVATE psapi)
   target_compile_definitions(hoox PRIVATE _CRT_SECURE_NO_WARNINGS HAVE_WINDOWS)

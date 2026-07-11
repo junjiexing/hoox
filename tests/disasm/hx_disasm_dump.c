@@ -10,7 +10,7 @@
  * Licence: wxWindows Library Licence, Version 3.1
  */
 
-#include "capstone.h"
+#include "hx_disasm.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,10 +28,10 @@ hexval (char c)
 int
 main (int argc, char ** argv)
 {
-  csh handle;
-  cs_mode mode;
+  hx_csh handle;
+  hx_mode mode;
   char line[512];
-  cs_insn * insn;
+  hx_insn * insn;
 
   if (argc < 2)
   {
@@ -39,12 +39,12 @@ main (int argc, char ** argv)
     return 2;
   }
 
-  mode = (strcmp (argv[1], "64") == 0) ? CS_MODE_64 : CS_MODE_32;
+  mode = (strcmp (argv[1], "64") == 0) ? HX_MODE_64 : HX_MODE_32;
 
-  if (cs_open (CS_ARCH_X86, mode, &handle) != CS_ERR_OK)
+  if (hx_open (HX_ARCH_X86, mode, &handle) != HX_ERR_OK)
     return 1;
-  cs_option (handle, CS_OPT_DETAIL, CS_OPT_ON);
-  insn = cs_malloc (handle);
+  hx_option (handle, HX_OPT_DETAIL, HX_OPT_ON);
+  insn = hx_insn_alloc (handle);
 
   while (fgets (line, sizeof (line), stdin) != NULL)
   {
@@ -68,14 +68,14 @@ main (int argc, char ** argv)
     code = buf;
     remaining = len;
 
-    if (len != 0 && cs_disasm_iter (handle, &code, &remaining, &address, insn))
+    if (len != 0 && hx_disasm_iter (handle, &code, &remaining, &address, insn))
     {
-      cs_x86 * x86 = &insn->detail->x86;
+      hx_x86 * x86 = &insn->detail->x86;
       int rip = (x86->op_count >= 1 &&
-          x86->operands[0].type == X86_OP_MEM &&
-          x86->operands[0].mem.base == X86_REG_RIP) ? 1 : 0;
+          x86->operands[0].type == HX_OP_MEM &&
+          x86->operands[0].mem.base == HX_REG_RIP) ? 1 : 0;
       long long target = -1;
-      if (x86->op_count >= 1 && x86->operands[0].type == X86_OP_IMM)
+      if (x86->op_count >= 1 && x86->operands[0].type == HX_OP_IMM)
         target = (long long) x86->operands[0].imm;
       printf ("%u %u %d %lld\n", insn->size, insn->id, rip, target);
     }
@@ -86,8 +86,8 @@ main (int argc, char ** argv)
     fflush (stdout);
   }
 
-  cs_free (insn, 1);
-  cs_close (&handle);
+  hx_insn_free (insn, 1);
+  hx_close (&handle);
 
   return 0;
 }

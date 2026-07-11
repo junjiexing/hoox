@@ -9,8 +9,8 @@
 #include "hxmem.h"
 
 static void
-test_callback_listener_on_enter (GumInvocationListener * listener,
-                                 GumInvocationContext * context)
+test_callback_listener_on_enter (HooxInvocationListener * listener,
+                                 HooxInvocationContext * context)
 {
   TestCallbackListener * self = (TestCallbackListener *) listener;
 
@@ -19,8 +19,8 @@ test_callback_listener_on_enter (GumInvocationListener * listener,
 }
 
 static void
-test_callback_listener_on_leave (GumInvocationListener * listener,
-                                 GumInvocationContext * context)
+test_callback_listener_on_leave (HooxInvocationListener * listener,
+                                 HooxInvocationContext * context)
 {
   TestCallbackListener * self = (TestCallbackListener *) listener;
 
@@ -28,7 +28,7 @@ test_callback_listener_on_leave (GumInvocationListener * listener,
     self->on_leave (self->user_data, context);
 }
 
-static const GumInvocationListenerInterface test_callback_listener_iface =
+static const HooxInvocationListenerInterface test_callback_listener_iface =
 {
   test_callback_listener_on_enter,
   test_callback_listener_on_leave
@@ -37,9 +37,9 @@ static const GumInvocationListenerInterface test_callback_listener_iface =
 TestCallbackListener *
 test_callback_listener_new (void)
 {
-  TestCallbackListener * listener = g_new0 (TestCallbackListener, 1);
+  TestCallbackListener * listener = hx_new0 (TestCallbackListener, 1);
 
-  gum_invocation_listener_init (&listener->listener,
+  hoox_invocation_listener_init (&listener->listener,
       &test_callback_listener_iface, NULL);
 
   return listener;

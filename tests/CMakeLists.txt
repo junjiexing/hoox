@@ -80,11 +80,11 @@ if(HOOX_ARCH_FAMILY STREQUAL "x86")
         "${CMAKE_SOURCE_DIR}/tools/amalgamate.py"
         --out-c "${HOOX_AMALGAM_C}" --out-h "${HOOX_AMALGAM_H}"
         ${_amalgam_inc_args}
-        --header "${CMAKE_SOURCE_DIR}/src/core/gum.h"
+        --header "${CMAKE_SOURCE_DIR}/src/core/hoox.h"
         ${HOOX_ALL_SOURCES}
       DEPENDS ${HOOX_ALL_SOURCES}
         "${CMAKE_SOURCE_DIR}/tools/amalgamate.py"
-        "${CMAKE_SOURCE_DIR}/src/core/gum.h"
+        "${CMAKE_SOURCE_DIR}/src/core/hoox.h"
       COMMENT "Amalgamating hoox into a single .c/.h")
 
     # Build the interceptor suite against the single-file library only (the
@@ -104,7 +104,7 @@ if(HOOX_ARCH_FAMILY STREQUAL "x86")
       "${CMAKE_CURRENT_SOURCE_DIR}/../src/compat"
       "${CMAKE_CURRENT_SOURCE_DIR}/../src/disasm")
     target_compile_definitions(test_amalgam PRIVATE
-      GUM_STATIC GUM_USE_SYSTEM_ALLOC HAVE_I386)
+      HOOX_STATIC HOOX_USE_SYSTEM_ALLOC HAVE_I386)
     if(WIN32)
       target_link_libraries(test_amalgam PRIVATE psapi)
       target_compile_definitions(test_amalgam PRIVATE

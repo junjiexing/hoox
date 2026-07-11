@@ -1,5 +1,5 @@
 /*
- * hoox nano-glib: GArray / GPtrArray implementation.
+ * hoox nano-glib: HxArray / HxPtrArray implementation.
  *
  * Licence: wxWindows Library Licence, Version 3.1
  */
@@ -11,61 +11,61 @@
 #include <string.h>
 #include <stdlib.h>
 
-/* ---- GArray ------------------------------------------------------------- */
+/* ---- HxArray ------------------------------------------------------------- */
 
-typedef struct _GRealArray GRealArray;
+typedef struct _HxRealArray HxRealArray;
 
-struct _GRealArray
+struct _HxRealArray
 {
-  guint8 * data;
-  guint len;
+  hx_uint8 * data;
+  hx_uint len;
 
-  guint alloc;            /* capacity in elements */
-  guint elt_size;
-  guint zero_terminated : 1;
-  guint clear : 1;
-  gint ref_count;
-  GDestroyNotify clear_func;
+  hx_uint alloc;            /* capacity in elements */
+  hx_uint elt_size;
+  hx_uint zero_terminated : 1;
+  hx_uint clear : 1;
+  hx_int ref_count;
+  HxDestroyNotify clear_func;
 };
 
 static void
-hx_array_maybe_expand (GRealArray * a,
-                       guint extra)
+hx_array_maybe_expand (HxRealArray * a,
+                       hx_uint extra)
 {
-  guint want = a->len + extra + (a->zero_terminated ? 1 : 0);
+  hx_uint want = a->len + extra + (a->zero_terminated ? 1 : 0);
 
   if (want <= a->alloc)
     return;
 
-  guint new_alloc = (a->alloc != 0) ? a->alloc : 8;
+  hx_uint new_alloc = (a->alloc != 0) ? a->alloc : 8;
   while (new_alloc < want)
     new_alloc *= 2;
 
-  a->data = g_realloc (a->data, (gsize) new_alloc * a->elt_size);
+  a->data = hx_realloc (a->data, (hx_size) new_alloc * a->elt_size);
 
   if (a->clear)
   {
-    memset (a->data + (gsize) a->alloc * a->elt_size, 0,
-        (gsize) (new_alloc - a->alloc) * a->elt_size);
+    memset (a->data + (hx_size) a->alloc * a->elt_size, 0,
+        (hx_size) (new_alloc - a->alloc) * a->elt_size);
   }
 
   a->alloc = new_alloc;
 }
 
 static void
-hx_array_zero_terminate (GRealArray * a)
+hx_array_zero_terminate (HxRealArray * a)
 {
   if (a->zero_terminated)
-    memset (a->data + (gsize) a->len * a->elt_size, 0, a->elt_size);
+    memset (a->data + (hx_size) a->len * a->elt_size, 0, a->elt_size);
 }
 
-GArray *
-g_array_sized_new (gboolean zero_terminated,
-                   gboolean clear,
-                   guint element_size,
-                   guint reserved_size)
+HxArray *
+hx_array_sized_new (hx_boolean zero_terminated,
+                   hx_boolean clear,
+                   hx_uint element_size,
+                   hx_uint reserved_size)
 {
-  GRealArray * a = g_new0 (GRealArray, 1);
+  HxRealArray * a = hx_new0 (HxRealArray, 1);
 
   a->elt_size = element_size;
   a->zero_terminated = zero_terminated ? 1 : 0;
@@ -76,53 +76,53 @@ g_array_sized_new (gboolean zero_terminated,
   {
     hx_array_maybe_expand (a, reserved_size);
     if (clear || zero_terminated)
-      memset (a->data, 0, (gsize) a->alloc * a->elt_size);
+      memset (a->data, 0, (hx_size) a->alloc * a->elt_size);
   }
 
-  return (GArray *) a;
+  return (HxArray *) a;
 }
 
-GArray *
-g_array_new (gboolean zero_terminated,
-             gboolean clear,
-             guint element_size)
+HxArray *
+hx_array_new (hx_boolean zero_terminated,
+             hx_boolean clear,
+             hx_uint element_size)
 {
-  return g_array_sized_new (zero_terminated, clear, element_size, 0);
+  return hx_array_sized_new (zero_terminated, clear, element_size, 0);
 }
 
 void
-g_array_set_clear_func (GArray * array,
-                        GDestroyNotify clear_func)
+hx_array_set_clear_func (HxArray * array,
+                        HxDestroyNotify clear_func)
 {
-  ((GRealArray *) array)->clear_func = clear_func;
+  ((HxRealArray *) array)->clear_func = clear_func;
 }
 
-guint
-g_array_get_element_size (GArray * array)
+hx_uint
+hx_array_get_element_size (HxArray * array)
 {
-  return ((GRealArray *) array)->elt_size;
+  return ((HxRealArray *) array)->elt_size;
 }
 
 static void
-hx_array_call_clear (GRealArray * a,
-                     guint index_,
-                     guint length)
+hx_array_call_clear (HxRealArray * a,
+                     hx_uint index_,
+                     hx_uint length)
 {
-  guint i;
+  hx_uint i;
 
   if (a->clear_func == NULL)
     return;
 
   for (i = 0; i != length; i++)
-    a->clear_func (a->data + (gsize) (index_ + i) * a->elt_size);
+    a->clear_func (a->data + (hx_size) (index_ + i) * a->elt_size);
 }
 
-gchar *
-g_array_free (GArray * array,
-              gboolean free_segment)
+hx_char *
+hx_array_free (HxArray * array,
+              hx_boolean free_segment)
 {
-  GRealArray * a = (GRealArray *) array;
-  gchar * segment;
+  HxRealArray * a = (HxRealArray *) array;
+  hx_char * segment;
 
   if (array == NULL)
     return NULL;
@@ -131,69 +131,69 @@ g_array_free (GArray * array,
   {
     if (a->clear_func != NULL)
       hx_array_call_clear (a, 0, a->len);
-    g_free (a->data);
+    hx_free (a->data);
     segment = NULL;
   }
   else
   {
-    segment = (gchar *) a->data;
+    segment = (hx_char *) a->data;
   }
 
-  g_free (a);
+  hx_free (a);
 
   return segment;
 }
 
-GArray *
-g_array_ref (GArray * array)
+HxArray *
+hx_array_ref (HxArray * array)
 {
-  ((GRealArray *) array)->ref_count++;
+  ((HxRealArray *) array)->ref_count++;
   return array;
 }
 
 void
-g_array_unref (GArray * array)
+hx_array_unref (HxArray * array)
 {
-  GRealArray * a = (GRealArray *) array;
+  HxRealArray * a = (HxRealArray *) array;
 
   if (--a->ref_count == 0)
-    g_array_free (array, TRUE);
+    hx_array_free (array, TRUE);
 }
 
-GArray *
-g_array_append_vals (GArray * array,
-                     gconstpointer data,
-                     guint len)
+HxArray *
+hx_array_append_vals (HxArray * array,
+                     hx_constpointer data,
+                     hx_uint len)
 {
-  GRealArray * a = (GRealArray *) array;
+  HxRealArray * a = (HxRealArray *) array;
 
   if (len == 0)
     return array;
 
   hx_array_maybe_expand (a, len);
-  memcpy (a->data + (gsize) a->len * a->elt_size, data,
-      (gsize) len * a->elt_size);
+  memcpy (a->data + (hx_size) a->len * a->elt_size, data,
+      (hx_size) len * a->elt_size);
   a->len += len;
   hx_array_zero_terminate (a);
 
   return array;
 }
 
-GArray *
-g_array_prepend_vals (GArray * array,
-                      gconstpointer data,
-                      guint len)
+HxArray *
+hx_array_prepend_vals (HxArray * array,
+                      hx_constpointer data,
+                      hx_uint len)
 {
-  return g_array_insert_vals (array, 0, data, len);
+  return hx_array_insert_vals (array, 0, data, len);
 }
 
-GArray *
-g_array_insert_vals (GArray * array,
-                     guint index_,
-                     gconstpointer data,
-                     guint len)
+HxArray *
+hx_array_insert_vals (HxArray * array,
+                     hx_uint index_,
+                     hx_constpointer data,
+                     hx_uint len)
 {
-  GRealArray * a = (GRealArray *) array;
+  HxRealArray * a = (HxRealArray *) array;
 
   if (len == 0)
     return array;
@@ -202,32 +202,32 @@ g_array_insert_vals (GArray * array,
 
   if (index_ < a->len)
   {
-    memmove (a->data + (gsize) (index_ + len) * a->elt_size,
-        a->data + (gsize) index_ * a->elt_size,
-        (gsize) (a->len - index_) * a->elt_size);
+    memmove (a->data + (hx_size) (index_ + len) * a->elt_size,
+        a->data + (hx_size) index_ * a->elt_size,
+        (hx_size) (a->len - index_) * a->elt_size);
   }
 
-  memcpy (a->data + (gsize) index_ * a->elt_size, data,
-      (gsize) len * a->elt_size);
+  memcpy (a->data + (hx_size) index_ * a->elt_size, data,
+      (hx_size) len * a->elt_size);
   a->len += len;
   hx_array_zero_terminate (a);
 
   return array;
 }
 
-GArray *
-g_array_set_size (GArray * array,
-                  guint length)
+HxArray *
+hx_array_set_size (HxArray * array,
+                  hx_uint length)
 {
-  GRealArray * a = (GRealArray *) array;
+  HxRealArray * a = (HxRealArray *) array;
 
   if (length > a->len)
   {
     hx_array_maybe_expand (a, length - a->len);
     if (a->clear)
     {
-      memset (a->data + (gsize) a->len * a->elt_size, 0,
-          (gsize) (length - a->len) * a->elt_size);
+      memset (a->data + (hx_size) a->len * a->elt_size, 0,
+          (hx_size) (length - a->len) * a->elt_size);
     }
   }
   else if (length < a->len)
@@ -242,22 +242,22 @@ g_array_set_size (GArray * array,
   return array;
 }
 
-GArray *
-g_array_remove_index (GArray * array,
-                      guint index_)
+HxArray *
+hx_array_remove_index (HxArray * array,
+                      hx_uint index_)
 {
-  GRealArray * a = (GRealArray *) array;
+  HxRealArray * a = (HxRealArray *) array;
 
-  g_return_val_if_fail (index_ < a->len, array);
+  hx_return_val_if_fail (index_ < a->len, array);
 
   if (a->clear_func != NULL)
     hx_array_call_clear (a, index_, 1);
 
   if (index_ != a->len - 1)
   {
-    memmove (a->data + (gsize) index_ * a->elt_size,
-        a->data + (gsize) (index_ + 1) * a->elt_size,
-        (gsize) (a->len - index_ - 1) * a->elt_size);
+    memmove (a->data + (hx_size) index_ * a->elt_size,
+        a->data + (hx_size) (index_ + 1) * a->elt_size,
+        (hx_size) (a->len - index_ - 1) * a->elt_size);
   }
 
   a->len--;
@@ -266,21 +266,21 @@ g_array_remove_index (GArray * array,
   return array;
 }
 
-GArray *
-g_array_remove_index_fast (GArray * array,
-                           guint index_)
+HxArray *
+hx_array_remove_index_fast (HxArray * array,
+                           hx_uint index_)
 {
-  GRealArray * a = (GRealArray *) array;
+  HxRealArray * a = (HxRealArray *) array;
 
-  g_return_val_if_fail (index_ < a->len, array);
+  hx_return_val_if_fail (index_ < a->len, array);
 
   if (a->clear_func != NULL)
     hx_array_call_clear (a, index_, 1);
 
   if (index_ != a->len - 1)
   {
-    memcpy (a->data + (gsize) index_ * a->elt_size,
-        a->data + (gsize) (a->len - 1) * a->elt_size, a->elt_size);
+    memcpy (a->data + (hx_size) index_ * a->elt_size,
+        a->data + (hx_size) (a->len - 1) * a->elt_size, a->elt_size);
   }
 
   a->len--;
@@ -289,23 +289,23 @@ g_array_remove_index_fast (GArray * array,
   return array;
 }
 
-GArray *
-g_array_remove_range (GArray * array,
-                      guint index_,
-                      guint length)
+HxArray *
+hx_array_remove_range (HxArray * array,
+                      hx_uint index_,
+                      hx_uint length)
 {
-  GRealArray * a = (GRealArray *) array;
+  HxRealArray * a = (HxRealArray *) array;
 
-  g_return_val_if_fail (index_ + length <= a->len, array);
+  hx_return_val_if_fail (index_ + length <= a->len, array);
 
   if (a->clear_func != NULL)
     hx_array_call_clear (a, index_, length);
 
   if (index_ + length != a->len)
   {
-    memmove (a->data + (gsize) index_ * a->elt_size,
-        a->data + (gsize) (index_ + length) * a->elt_size,
-        (gsize) (a->len - (index_ + length)) * a->elt_size);
+    memmove (a->data + (hx_size) index_ * a->elt_size,
+        a->data + (hx_size) (index_ + length) * a->elt_size,
+        (hx_size) (a->len - (index_ + length)) * a->elt_size);
   }
 
   a->len -= length;
@@ -314,12 +314,12 @@ g_array_remove_range (GArray * array,
   return array;
 }
 
-gpointer
-g_array_steal (GArray * array,
-               gsize * len)
+hx_pointer
+hx_array_steal (HxArray * array,
+               hx_size * len)
 {
-  GRealArray * a = (GRealArray *) array;
-  gpointer segment = a->data;
+  HxRealArray * a = (HxRealArray *) array;
+  hx_pointer segment = a->data;
 
   if (len != NULL)
     *len = a->len;
@@ -331,26 +331,26 @@ g_array_steal (GArray * array,
   return segment;
 }
 
-/* ---- GPtrArray ---------------------------------------------------------- */
+/* ---- HxPtrArray ---------------------------------------------------------- */
 
-typedef struct _GRealPtrArray GRealPtrArray;
+typedef struct _HxRealPtrArray HxRealPtrArray;
 
-struct _GRealPtrArray
+struct _HxRealPtrArray
 {
-  gpointer * pdata;
-  guint len;
+  hx_pointer * pdata;
+  hx_uint len;
 
-  guint alloc;
-  gint ref_count;
-  GDestroyNotify element_free_func;
+  hx_uint alloc;
+  hx_int ref_count;
+  HxDestroyNotify element_free_func;
 };
 
 static void
-hx_ptr_array_maybe_expand (GRealPtrArray * a,
-                           guint extra)
+hx_ptr_array_maybe_expand (HxRealPtrArray * a,
+                           hx_uint extra)
 {
-  guint want = a->len + extra;
-  guint new_alloc;
+  hx_uint want = a->len + extra;
+  hx_uint new_alloc;
 
   if (want <= a->alloc)
     return;
@@ -359,58 +359,58 @@ hx_ptr_array_maybe_expand (GRealPtrArray * a,
   while (new_alloc < want)
     new_alloc *= 2;
 
-  a->pdata = g_realloc (a->pdata, (gsize) new_alloc * sizeof (gpointer));
+  a->pdata = hx_realloc (a->pdata, (hx_size) new_alloc * sizeof (hx_pointer));
   a->alloc = new_alloc;
 }
 
-GPtrArray *
-g_ptr_array_sized_new (guint reserved_size)
+HxPtrArray *
+hx_ptr_array_sized_new (hx_uint reserved_size)
 {
-  GRealPtrArray * a = g_new0 (GRealPtrArray, 1);
+  HxRealPtrArray * a = hx_new0 (HxRealPtrArray, 1);
 
   a->ref_count = 1;
   if (reserved_size != 0)
     hx_ptr_array_maybe_expand (a, reserved_size);
 
-  return (GPtrArray *) a;
+  return (HxPtrArray *) a;
 }
 
-GPtrArray *
-g_ptr_array_new (void)
+HxPtrArray *
+hx_ptr_array_new (void)
 {
-  return g_ptr_array_sized_new (0);
+  return hx_ptr_array_sized_new (0);
 }
 
-GPtrArray *
-g_ptr_array_new_with_free_func (GDestroyNotify element_free_func)
+HxPtrArray *
+hx_ptr_array_new_with_free_func (HxDestroyNotify element_free_func)
 {
-  GPtrArray * array = g_ptr_array_new ();
-  ((GRealPtrArray *) array)->element_free_func = element_free_func;
+  HxPtrArray * array = hx_ptr_array_new ();
+  ((HxRealPtrArray *) array)->element_free_func = element_free_func;
   return array;
 }
 
-GPtrArray *
-g_ptr_array_new_full (guint reserved_size,
-                      GDestroyNotify element_free_func)
+HxPtrArray *
+hx_ptr_array_new_full (hx_uint reserved_size,
+                      HxDestroyNotify element_free_func)
 {
-  GPtrArray * array = g_ptr_array_sized_new (reserved_size);
-  ((GRealPtrArray *) array)->element_free_func = element_free_func;
+  HxPtrArray * array = hx_ptr_array_sized_new (reserved_size);
+  ((HxRealPtrArray *) array)->element_free_func = element_free_func;
   return array;
 }
 
 void
-g_ptr_array_set_free_func (GPtrArray * array,
-                           GDestroyNotify element_free_func)
+hx_ptr_array_set_free_func (HxPtrArray * array,
+                           HxDestroyNotify element_free_func)
 {
-  ((GRealPtrArray *) array)->element_free_func = element_free_func;
+  ((HxRealPtrArray *) array)->element_free_func = element_free_func;
 }
 
-gpointer *
-g_ptr_array_free (GPtrArray * array,
-                  gboolean free_segment)
+hx_pointer *
+hx_ptr_array_free (HxPtrArray * array,
+                  hx_boolean free_segment)
 {
-  GRealPtrArray * a = (GRealPtrArray *) array;
-  gpointer * segment;
+  HxRealPtrArray * a = (HxRealPtrArray *) array;
+  hx_pointer * segment;
 
   if (array == NULL)
     return NULL;
@@ -419,14 +419,14 @@ g_ptr_array_free (GPtrArray * array,
   {
     if (a->element_free_func != NULL)
     {
-      guint i;
+      hx_uint i;
       for (i = 0; i != a->len; i++)
       {
         if (a->pdata[i] != NULL)
           a->element_free_func (a->pdata[i]);
       }
     }
-    g_free (a->pdata);
+    hx_free (a->pdata);
     segment = NULL;
   }
   else
@@ -434,55 +434,55 @@ g_ptr_array_free (GPtrArray * array,
     segment = a->pdata;
   }
 
-  g_free (a);
+  hx_free (a);
 
   return segment;
 }
 
-GPtrArray *
-g_ptr_array_ref (GPtrArray * array)
+HxPtrArray *
+hx_ptr_array_ref (HxPtrArray * array)
 {
-  ((GRealPtrArray *) array)->ref_count++;
+  ((HxRealPtrArray *) array)->ref_count++;
   return array;
 }
 
 void
-g_ptr_array_unref (GPtrArray * array)
+hx_ptr_array_unref (HxPtrArray * array)
 {
-  GRealPtrArray * a = (GRealPtrArray *) array;
+  HxRealPtrArray * a = (HxRealPtrArray *) array;
 
   if (--a->ref_count == 0)
-    g_ptr_array_free (array, TRUE);
+    hx_ptr_array_free (array, TRUE);
 }
 
 void
-g_ptr_array_add (GPtrArray * array,
-                 gpointer data)
+hx_ptr_array_add (HxPtrArray * array,
+                 hx_pointer data)
 {
-  GRealPtrArray * a = (GRealPtrArray *) array;
+  HxRealPtrArray * a = (HxRealPtrArray *) array;
 
   hx_ptr_array_maybe_expand (a, 1);
   a->pdata[a->len++] = data;
 }
 
 void
-g_ptr_array_set_size (GPtrArray * array,
-                      gint length)
+hx_ptr_array_set_size (HxPtrArray * array,
+                      hx_int length)
 {
-  GRealPtrArray * a = (GRealPtrArray *) array;
-  guint new_len = (guint) length;
+  HxRealPtrArray * a = (HxRealPtrArray *) array;
+  hx_uint new_len = (hx_uint) length;
 
   if (new_len > a->len)
   {
     hx_ptr_array_maybe_expand (a, new_len - a->len);
     memset (a->pdata + a->len, 0,
-        (gsize) (new_len - a->len) * sizeof (gpointer));
+        (hx_size) (new_len - a->len) * sizeof (hx_pointer));
   }
   else if (new_len < a->len)
   {
     if (a->element_free_func != NULL)
     {
-      guint i;
+      hx_uint i;
       for (i = new_len; i != a->len; i++)
       {
         if (a->pdata[i] != NULL)
@@ -494,35 +494,35 @@ g_ptr_array_set_size (GPtrArray * array,
   a->len = new_len;
 }
 
-gpointer
-g_ptr_array_remove_index (GPtrArray * array,
-                          guint index_)
+hx_pointer
+hx_ptr_array_remove_index (HxPtrArray * array,
+                          hx_uint index_)
 {
-  GRealPtrArray * a = (GRealPtrArray *) array;
-  gpointer result;
+  HxRealPtrArray * a = (HxRealPtrArray *) array;
+  hx_pointer result;
 
-  g_return_val_if_fail (index_ < a->len, NULL);
+  hx_return_val_if_fail (index_ < a->len, NULL);
 
   result = a->pdata[index_];
 
   if (index_ != a->len - 1)
   {
     memmove (a->pdata + index_, a->pdata + index_ + 1,
-        (gsize) (a->len - index_ - 1) * sizeof (gpointer));
+        (hx_size) (a->len - index_ - 1) * sizeof (hx_pointer));
   }
   a->len--;
 
   return result;
 }
 
-gpointer
-g_ptr_array_remove_index_fast (GPtrArray * array,
-                               guint index_)
+hx_pointer
+hx_ptr_array_remove_index_fast (HxPtrArray * array,
+                               hx_uint index_)
 {
-  GRealPtrArray * a = (GRealPtrArray *) array;
-  gpointer result;
+  HxRealPtrArray * a = (HxRealPtrArray *) array;
+  hx_pointer result;
 
-  g_return_val_if_fail (index_ < a->len, NULL);
+  hx_return_val_if_fail (index_ < a->len, NULL);
 
   result = a->pdata[index_];
   a->pdata[index_] = a->pdata[a->len - 1];
@@ -531,17 +531,17 @@ g_ptr_array_remove_index_fast (GPtrArray * array,
   return result;
 }
 
-gboolean
-g_ptr_array_remove (GPtrArray * array,
-                    gpointer data)
+hx_boolean
+hx_ptr_array_remove (HxPtrArray * array,
+                    hx_pointer data)
 {
-  guint i;
+  hx_uint i;
 
   for (i = 0; i != array->len; i++)
   {
     if (array->pdata[i] == data)
     {
-      g_ptr_array_remove_index (array, i);
+      hx_ptr_array_remove_index (array, i);
       return TRUE;
     }
   }
@@ -549,17 +549,17 @@ g_ptr_array_remove (GPtrArray * array,
   return FALSE;
 }
 
-gboolean
-g_ptr_array_remove_fast (GPtrArray * array,
-                         gpointer data)
+hx_boolean
+hx_ptr_array_remove_fast (HxPtrArray * array,
+                         hx_pointer data)
 {
-  guint i;
+  hx_uint i;
 
   for (i = 0; i != array->len; i++)
   {
     if (array->pdata[i] == data)
     {
-      g_ptr_array_remove_index_fast (array, i);
+      hx_ptr_array_remove_index_fast (array, i);
       return TRUE;
     }
   }
@@ -568,18 +568,18 @@ g_ptr_array_remove_fast (GPtrArray * array,
 }
 
 void
-g_ptr_array_foreach (GPtrArray * array,
-                     GFunc func,
-                     gpointer user_data)
+hx_ptr_array_foreach (HxPtrArray * array,
+                     HxFunc func,
+                     hx_pointer user_data)
 {
-  guint i;
+  hx_uint i;
 
   for (i = 0; i != array->len; i++)
     func (array->pdata[i], user_data);
 }
 
-/* GLib's g_ptr_array_sort passes pointers-to-elements to the comparator. */
-static GCompareFunc hx_ptr_sort_cmp;
+/* GLib's hx_ptr_array_sort passes pointers-to-elements to the comparator. */
+static HxCompareFunc hx_ptr_sort_cmp;
 
 static int
 hx_ptr_sort_thunk (const void * a,
@@ -589,19 +589,19 @@ hx_ptr_sort_thunk (const void * a,
 }
 
 void
-g_ptr_array_sort (GPtrArray * array,
-                  GCompareFunc compare_func)
+hx_ptr_array_sort (HxPtrArray * array,
+                  HxCompareFunc compare_func)
 {
   hx_ptr_sort_cmp = compare_func;
-  qsort (array->pdata, array->len, sizeof (gpointer), hx_ptr_sort_thunk);
+  qsort (array->pdata, array->len, sizeof (hx_pointer), hx_ptr_sort_thunk);
 }
 
-gboolean
-g_ptr_array_find (GPtrArray * array,
-                  gconstpointer needle,
-                  guint * index_)
+hx_boolean
+hx_ptr_array_find (HxPtrArray * array,
+                  hx_constpointer needle,
+                  hx_uint * index_)
 {
-  guint i;
+  hx_uint i;
 
   for (i = 0; i != array->len; i++)
   {
@@ -616,12 +616,12 @@ g_ptr_array_find (GPtrArray * array,
   return FALSE;
 }
 
-gpointer *
-g_ptr_array_steal (GPtrArray * array,
-                   gsize * len)
+hx_pointer *
+hx_ptr_array_steal (HxPtrArray * array,
+                   hx_size * len)
 {
-  GRealPtrArray * a = (GRealPtrArray *) array;
-  gpointer * segment = a->pdata;
+  HxRealPtrArray * a = (HxRealPtrArray *) array;
+  hx_pointer * segment = a->pdata;
 
   if (len != NULL)
     *len = a->len;

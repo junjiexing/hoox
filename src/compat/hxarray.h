@@ -1,9 +1,9 @@
 /*
- * hoox nano-glib: GArray and GPtrArray.
+ * hoox nano-glib: HxArray and HxPtrArray.
  *
- * Public struct layout matches GLib (GArray = {data,len}, GPtrArray =
- * {pdata,len}) so g_array_index / g_ptr_array_index and direct field access in
- * extracted gum code keep working.
+ * Public struct layout matches GLib (HxArray = {data,len}, HxPtrArray =
+ * {pdata,len}) so hx_array_index / hx_ptr_array_index and direct field access in
+ * extracted hoox code keep working.
  *
  * Licence: wxWindows Library Licence, Version 3.1
  */
@@ -13,77 +13,77 @@
 
 #include "hxdefs.h"
 
-G_BEGIN_DECLS
+HX_BEGIN_DECLS
 
-typedef struct _GArray GArray;
-typedef struct _GPtrArray GPtrArray;
+typedef struct _HxArray HxArray;
+typedef struct _HxPtrArray HxPtrArray;
 
-struct _GArray
+struct _HxArray
 {
-  gchar * data;
-  guint len;
+  hx_char * data;
+  hx_uint len;
 };
 
-struct _GPtrArray
+struct _HxPtrArray
 {
-  gpointer * pdata;
-  guint len;
+  hx_pointer * pdata;
+  hx_uint len;
 };
 
-/* ---- GArray ------------------------------------------------------------- */
+/* ---- HxArray ------------------------------------------------------------- */
 
-GArray * g_array_new (gboolean zero_terminated, gboolean clear,
-    guint element_size);
-GArray * g_array_sized_new (gboolean zero_terminated, gboolean clear,
-    guint element_size, guint reserved_size);
-void g_array_set_clear_func (GArray * array, GDestroyNotify clear_func);
-gchar * g_array_free (GArray * array, gboolean free_segment);
-GArray * g_array_ref (GArray * array);
-void g_array_unref (GArray * array);
-guint g_array_get_element_size (GArray * array);
+HxArray * hx_array_new (hx_boolean zero_terminated, hx_boolean clear,
+    hx_uint element_size);
+HxArray * hx_array_sized_new (hx_boolean zero_terminated, hx_boolean clear,
+    hx_uint element_size, hx_uint reserved_size);
+void hx_array_set_clear_func (HxArray * array, HxDestroyNotify clear_func);
+hx_char * hx_array_free (HxArray * array, hx_boolean free_segment);
+HxArray * hx_array_ref (HxArray * array);
+void hx_array_unref (HxArray * array);
+hx_uint hx_array_get_element_size (HxArray * array);
 
-GArray * g_array_append_vals (GArray * array, gconstpointer data, guint len);
-GArray * g_array_prepend_vals (GArray * array, gconstpointer data, guint len);
-GArray * g_array_insert_vals (GArray * array, guint index_,
-    gconstpointer data, guint len);
-GArray * g_array_set_size (GArray * array, guint length);
-GArray * g_array_remove_index (GArray * array, guint index_);
-GArray * g_array_remove_index_fast (GArray * array, guint index_);
-GArray * g_array_remove_range (GArray * array, guint index_, guint length);
-gpointer g_array_steal (GArray * array, gsize * len);
+HxArray * hx_array_append_vals (HxArray * array, hx_constpointer data, hx_uint len);
+HxArray * hx_array_prepend_vals (HxArray * array, hx_constpointer data, hx_uint len);
+HxArray * hx_array_insert_vals (HxArray * array, hx_uint index_,
+    hx_constpointer data, hx_uint len);
+HxArray * hx_array_set_size (HxArray * array, hx_uint length);
+HxArray * hx_array_remove_index (HxArray * array, hx_uint index_);
+HxArray * hx_array_remove_index_fast (HxArray * array, hx_uint index_);
+HxArray * hx_array_remove_range (HxArray * array, hx_uint index_, hx_uint length);
+hx_pointer hx_array_steal (HxArray * array, hx_size * len);
 
-#define g_array_append_val(a, v) g_array_append_vals ((a), &(v), 1)
-#define g_array_prepend_val(a, v) g_array_prepend_vals ((a), &(v), 1)
-#define g_array_insert_val(a, i, v) g_array_insert_vals ((a), (i), &(v), 1)
-#define g_array_index(a, type, i) (((type *) (void *) (a)->data)[(i)])
+#define hx_array_append_val(a, v) hx_array_append_vals ((a), &(v), 1)
+#define hx_array_prepend_val(a, v) hx_array_prepend_vals ((a), &(v), 1)
+#define hx_array_insert_val(a, i, v) hx_array_insert_vals ((a), (i), &(v), 1)
+#define hx_array_index(a, type, i) (((type *) (void *) (a)->data)[(i)])
 
-/* ---- GPtrArray ---------------------------------------------------------- */
+/* ---- HxPtrArray ---------------------------------------------------------- */
 
-GPtrArray * g_ptr_array_new (void);
-GPtrArray * g_ptr_array_sized_new (guint reserved_size);
-GPtrArray * g_ptr_array_new_with_free_func (GDestroyNotify element_free_func);
-GPtrArray * g_ptr_array_new_full (guint reserved_size,
-    GDestroyNotify element_free_func);
-void g_ptr_array_set_free_func (GPtrArray * array,
-    GDestroyNotify element_free_func);
-gpointer * g_ptr_array_free (GPtrArray * array, gboolean free_segment);
-GPtrArray * g_ptr_array_ref (GPtrArray * array);
-void g_ptr_array_unref (GPtrArray * array);
+HxPtrArray * hx_ptr_array_new (void);
+HxPtrArray * hx_ptr_array_sized_new (hx_uint reserved_size);
+HxPtrArray * hx_ptr_array_new_with_free_func (HxDestroyNotify element_free_func);
+HxPtrArray * hx_ptr_array_new_full (hx_uint reserved_size,
+    HxDestroyNotify element_free_func);
+void hx_ptr_array_set_free_func (HxPtrArray * array,
+    HxDestroyNotify element_free_func);
+hx_pointer * hx_ptr_array_free (HxPtrArray * array, hx_boolean free_segment);
+HxPtrArray * hx_ptr_array_ref (HxPtrArray * array);
+void hx_ptr_array_unref (HxPtrArray * array);
 
-void g_ptr_array_add (GPtrArray * array, gpointer data);
-void g_ptr_array_set_size (GPtrArray * array, gint length);
-gboolean g_ptr_array_remove (GPtrArray * array, gpointer data);
-gboolean g_ptr_array_remove_fast (GPtrArray * array, gpointer data);
-gpointer g_ptr_array_remove_index (GPtrArray * array, guint index_);
-gpointer g_ptr_array_remove_index_fast (GPtrArray * array, guint index_);
-void g_ptr_array_foreach (GPtrArray * array, GFunc func, gpointer user_data);
-void g_ptr_array_sort (GPtrArray * array, GCompareFunc compare_func);
-gboolean g_ptr_array_find (GPtrArray * array, gconstpointer needle,
-    guint * index_);
-gpointer * g_ptr_array_steal (GPtrArray * array, gsize * len);
+void hx_ptr_array_add (HxPtrArray * array, hx_pointer data);
+void hx_ptr_array_set_size (HxPtrArray * array, hx_int length);
+hx_boolean hx_ptr_array_remove (HxPtrArray * array, hx_pointer data);
+hx_boolean hx_ptr_array_remove_fast (HxPtrArray * array, hx_pointer data);
+hx_pointer hx_ptr_array_remove_index (HxPtrArray * array, hx_uint index_);
+hx_pointer hx_ptr_array_remove_index_fast (HxPtrArray * array, hx_uint index_);
+void hx_ptr_array_foreach (HxPtrArray * array, HxFunc func, hx_pointer user_data);
+void hx_ptr_array_sort (HxPtrArray * array, HxCompareFunc compare_func);
+hx_boolean hx_ptr_array_find (HxPtrArray * array, hx_constpointer needle,
+    hx_uint * index_);
+hx_pointer * hx_ptr_array_steal (HxPtrArray * array, hx_size * len);
 
-#define g_ptr_array_index(a, i) ((a)->pdata[(i)])
+#define hx_ptr_array_index(a, i) ((a)->pdata[(i)])
 
-G_END_DECLS
+HX_END_DECLS
 
 #endif

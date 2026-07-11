@@ -13,7 +13,7 @@
  * Licence: wxWindows Library Licence, Version 3.1
  */
 
-#include "gum.h"
+#include "hoox.h"
 #include "interceptor-callbacklistener.h"
 #include "interceptor-functiondatalistener.h"
 
@@ -21,9 +21,9 @@
 
 #include <string.h>
 
-extern gpointer gum_test_target_function (GString * str);
-extern gpointer gum_test_target_nop_function_a (gpointer data);
-extern gpointer gum_test_target_nop_function_b (gpointer data);
+extern hx_pointer hoox_test_target_function (HxString * str);
+extern hx_pointer hoox_test_target_nop_function_a (hx_pointer data);
+extern hx_pointer hoox_test_target_nop_function_b (hx_pointer data);
 
 /* ---- fixture ------------------------------------------------------------ */
 
@@ -34,52 +34,52 @@ struct _ListenerContext
 {
   TestCallbackListener * listener;
   TestInterceptorFixture * fixture;
-  gchar enter_char;
-  gchar leave_char;
-  gsize last_seen_argument;
-  gpointer last_return_value;
+  hx_char enter_char;
+  hx_char leave_char;
+  hx_size last_seen_argument;
+  hx_pointer last_return_value;
 };
 
 struct _TestInterceptorFixture
 {
-  GumInterceptor * interceptor;
-  GString * result;
+  HooxInterceptor * interceptor;
+  HxString * result;
   ListenerContext * listener_context[2];
 };
 
 static void
 listener_context_on_enter (ListenerContext * self,
-                           GumInvocationContext * context)
+                           HooxInvocationContext * context)
 {
-  g_string_append_c (self->fixture->result, self->enter_char);
-  self->last_seen_argument = (gsize)
-      gum_invocation_context_get_nth_argument (context, 0);
+  hx_string_append_c (self->fixture->result, self->enter_char);
+  self->last_seen_argument = (hx_size)
+      hoox_invocation_context_get_nth_argument (context, 0);
 }
 
 static void
 listener_context_on_leave (ListenerContext * self,
-                           GumInvocationContext * context)
+                           HooxInvocationContext * context)
 {
-  g_string_append_c (self->fixture->result, self->leave_char);
+  hx_string_append_c (self->fixture->result, self->leave_char);
   self->last_return_value =
-      gum_invocation_context_get_return_value (context);
+      hoox_invocation_context_get_return_value (context);
 }
 
 static void
 listener_context_free (ListenerContext * ctx)
 {
-  gum_invocation_listener_unref (GUM_INVOCATION_LISTENER (ctx->listener));
-  g_free (ctx);
+  hoox_invocation_listener_unref (HOOX_INVOCATION_LISTENER (ctx->listener));
+  hx_free (ctx);
 }
 
-static GumAttachReturn
+static HooxAttachReturn
 fixture_attach (TestInterceptorFixture * h,
-                guint listener_index,
-                gpointer test_func,
-                gchar enter_char,
-                gchar leave_char)
+                hx_uint listener_index,
+                hx_pointer test_func,
+                hx_char enter_char,
+                hx_char leave_char)
 {
-  GumAttachReturn result;
+  HooxAttachReturn result;
   ListenerContext * ctx;
 
   ctx = h->listener_context[listener_index];
@@ -89,7 +89,7 @@ fixture_attach (TestInterceptorFixture * h,
     h->listener_context[listener_index] = NULL;
   }
 
-  ctx = g_new0 (ListenerContext, 1);
+  ctx = hx_new0 (ListenerContext, 1);
   ctx->listener = test_callback_listener_new ();
   ctx->listener->on_enter = (TestCallbackListenerFunc) listener_context_on_enter;
   ctx->listener->on_leave = (TestCallbackListenerFunc) listener_context_on_leave;
@@ -98,9 +98,9 @@ fixture_attach (TestInterceptorFixture * h,
   ctx->enter_char = enter_char;
   ctx->leave_char = leave_char;
 
-  result = gum_interceptor_attach (h->interceptor, test_func,
-      GUM_INVOCATION_LISTENER (ctx->listener), NULL);
-  if (result == GUM_ATTACH_OK)
+  result = hoox_interceptor_attach (h->interceptor, test_func,
+      HOOX_INVOCATION_LISTENER (ctx->listener), NULL);
+  if (result == HOOX_ATTACH_OK)
     h->listener_context[listener_index] = ctx;
   else
     listener_context_free (ctx);
@@ -110,39 +110,39 @@ fixture_attach (TestInterceptorFixture * h,
 
 static void
 test_interceptor_fixture_setup (TestInterceptorFixture * fixture,
-                                gconstpointer data)
+                                hx_constpointer data)
 {
   (void) data;
-  fixture->interceptor = gum_interceptor_obtain ();
-  fixture->result = g_string_sized_new (256);
+  fixture->interceptor = hoox_interceptor_obtain ();
+  fixture->result = hx_string_sized_new (256);
   memset (&fixture->listener_context, 0, sizeof (fixture->listener_context));
 }
 
 static void
 test_interceptor_fixture_teardown (TestInterceptorFixture * fixture,
-                                   gconstpointer data)
+                                   hx_constpointer data)
 {
-  guint i;
+  hx_uint i;
   (void) data;
 
-  for (i = 0; i != G_N_ELEMENTS (fixture->listener_context); i++)
+  for (i = 0; i != HX_N_ELEMENTS (fixture->listener_context); i++)
   {
     ListenerContext * ctx = fixture->listener_context[i];
     if (ctx != NULL)
     {
-      gum_interceptor_detach (fixture->interceptor,
-          GUM_INVOCATION_LISTENER (ctx->listener));
+      hoox_interceptor_detach (fixture->interceptor,
+          HOOX_INVOCATION_LISTENER (ctx->listener));
       listener_context_free (ctx);
     }
   }
 
-  g_string_free (fixture->result, TRUE);
-  gum_interceptor_unref (fixture->interceptor);
+  hx_string_free (fixture->result, TRUE);
+  hoox_interceptor_unref (fixture->interceptor);
 }
 
 #define TESTCASE(NAME) \
     void test_interceptor_ ## NAME ( \
-        TestInterceptorFixture * fixture, gconstpointer data)
+        TestInterceptorFixture * fixture, hx_constpointer data)
 #define TESTENTRY(NAME) \
     TESTENTRY_WITH_FIXTURE ("Core/Interceptor", test_interceptor, NAME, \
         TestInterceptorFixture)
@@ -162,147 +162,147 @@ TESTLIST_END ()
 
 TESTCASE (attach_one)
 {
-  fixture_attach (fixture, 0, gum_test_target_function, '>', '<');
-  gum_test_target_function (fixture->result);
-  g_assert_cmpstr (fixture->result->str, ==, ">|<");
+  fixture_attach (fixture, 0, hoox_test_target_function, '>', '<');
+  hoox_test_target_function (fixture->result);
+  hx_assert_cmpstr (fixture->result->str, ==, ">|<");
 }
 
 TESTCASE (attach_two)
 {
-  fixture_attach (fixture, 0, gum_test_target_function, 'a', 'A');
-  fixture_attach (fixture, 1, gum_test_target_function, 'b', 'B');
-  gum_test_target_function (fixture->result);
-  g_assert_cmpstr (fixture->result->str, ==, "ab|AB");
+  fixture_attach (fixture, 0, hoox_test_target_function, 'a', 'A');
+  fixture_attach (fixture, 1, hoox_test_target_function, 'b', 'B');
+  hoox_test_target_function (fixture->result);
+  hx_assert_cmpstr (fixture->result->str, ==, "ab|AB");
 }
 
 TESTCASE (detach)
 {
-  fixture_attach (fixture, 0, gum_test_target_function, '>', '<');
-  fixture_attach (fixture, 1, gum_test_target_function, 'a', 'A');
+  fixture_attach (fixture, 0, hoox_test_target_function, '>', '<');
+  fixture_attach (fixture, 1, hoox_test_target_function, 'a', 'A');
 
-  gum_test_target_function (fixture->result);
-  g_assert_cmpstr (fixture->result->str, ==, ">a|<A");
+  hoox_test_target_function (fixture->result);
+  hx_assert_cmpstr (fixture->result->str, ==, ">a|<A");
 
-  gum_interceptor_detach (fixture->interceptor,
-      GUM_INVOCATION_LISTENER (fixture->listener_context[0]->listener));
+  hoox_interceptor_detach (fixture->interceptor,
+      HOOX_INVOCATION_LISTENER (fixture->listener_context[0]->listener));
 
-  g_string_truncate (fixture->result, 0);
-  gum_test_target_function (fixture->result);
-  g_assert_cmpstr (fixture->result->str, ==, "a|A");
+  hx_string_truncate (fixture->result, 0);
+  hoox_test_target_function (fixture->result);
+  hx_assert_cmpstr (fixture->result->str, ==, "a|A");
 }
 
 TESTCASE (already_attached)
 {
-  GumAttachReturn r;
+  HooxAttachReturn r;
 
-  fixture_attach (fixture, 0, gum_test_target_function, '>', '<');
+  fixture_attach (fixture, 0, hoox_test_target_function, '>', '<');
 
-  r = gum_interceptor_attach (fixture->interceptor, gum_test_target_function,
-      GUM_INVOCATION_LISTENER (fixture->listener_context[0]->listener), NULL);
-  g_assert_cmpint (r, ==, GUM_ATTACH_ALREADY_ATTACHED);
+  r = hoox_interceptor_attach (fixture->interceptor, hoox_test_target_function,
+      HOOX_INVOCATION_LISTENER (fixture->listener_context[0]->listener), NULL);
+  hx_assert_cmpint (r, ==, HOOX_ATTACH_ALREADY_ATTACHED);
 }
 
 TESTCASE (function_arguments)
 {
-  fixture_attach (fixture, 0, gum_test_target_nop_function_a, '>', '<');
-  gum_test_target_nop_function_a (GSIZE_TO_POINTER (0x12345678));
-  g_assert_cmphex (fixture->listener_context[0]->last_seen_argument, ==,
+  fixture_attach (fixture, 0, hoox_test_target_nop_function_a, '>', '<');
+  hoox_test_target_nop_function_a (HX_SIZE_TO_POINTER (0x12345678));
+  hx_assert_cmphex (fixture->listener_context[0]->last_seen_argument, ==,
       0x12345678);
 }
 
 TESTCASE (function_return_value)
 {
-  gpointer ret;
-  fixture_attach (fixture, 0, gum_test_target_nop_function_a, '>', '<');
-  ret = gum_test_target_nop_function_a (NULL);
-  g_assert_cmphex (GPOINTER_TO_SIZE (fixture->listener_context[0]->
-      last_return_value), ==, GPOINTER_TO_SIZE (ret));
-  g_assert_cmphex (GPOINTER_TO_SIZE (ret), ==, 0x1337);
+  hx_pointer ret;
+  fixture_attach (fixture, 0, hoox_test_target_nop_function_a, '>', '<');
+  ret = hoox_test_target_nop_function_a (NULL);
+  hx_assert_cmphex (HX_POINTER_TO_SIZE (fixture->listener_context[0]->
+      last_return_value), ==, HX_POINTER_TO_SIZE (ret));
+  hx_assert_cmphex (HX_POINTER_TO_SIZE (ret), ==, 0x1337);
 }
 
 /* ---- replace ------------------------------------------------------------ */
 
-static gpointer (* replace_nop_a_orig) (gpointer) = NULL;
+static hx_pointer (* replace_nop_a_orig) (hx_pointer) = NULL;
 
-static gpointer
-replace_nop_a (gpointer data)
+static hx_pointer
+replace_nop_a (hx_pointer data)
 {
   (void) data;
-  return GSIZE_TO_POINTER (0xbeef);
+  return HX_SIZE_TO_POINTER (0xbeef);
 }
 
-static gpointer
-replace_nop_a_calling_original (gpointer data)
+static hx_pointer
+replace_nop_a_calling_original (hx_pointer data)
 {
-  gsize orig = GPOINTER_TO_SIZE (replace_nop_a_orig (data));
-  return GSIZE_TO_POINTER (orig + 1);
+  hx_size orig = HX_POINTER_TO_SIZE (replace_nop_a_orig (data));
+  return HX_SIZE_TO_POINTER (orig + 1);
 }
 
 TESTCASE (replace_one)
 {
-  gpointer ret;
-  GumReplaceReturn rr;
+  hx_pointer ret;
+  HooxReplaceReturn rr;
 
-  rr = gum_interceptor_replace (fixture->interceptor,
-      gum_test_target_nop_function_a, replace_nop_a, NULL, NULL);
-  g_assert_cmpint (rr, ==, GUM_REPLACE_OK);
+  rr = hoox_interceptor_replace (fixture->interceptor,
+      hoox_test_target_nop_function_a, replace_nop_a, NULL, NULL);
+  hx_assert_cmpint (rr, ==, HOOX_REPLACE_OK);
 
-  ret = gum_test_target_nop_function_a (NULL);
-  g_assert_cmphex (GPOINTER_TO_SIZE (ret), ==, 0xbeef);
+  ret = hoox_test_target_nop_function_a (NULL);
+  hx_assert_cmphex (HX_POINTER_TO_SIZE (ret), ==, 0xbeef);
 
-  gum_interceptor_revert (fixture->interceptor, gum_test_target_nop_function_a);
-  ret = gum_test_target_nop_function_a (NULL);
-  g_assert_cmphex (GPOINTER_TO_SIZE (ret), ==, 0x1337);
+  hoox_interceptor_revert (fixture->interceptor, hoox_test_target_nop_function_a);
+  ret = hoox_test_target_nop_function_a (NULL);
+  hx_assert_cmphex (HX_POINTER_TO_SIZE (ret), ==, 0x1337);
 }
 
 TESTCASE (replace_keep_original)
 {
-  gpointer ret;
+  hx_pointer ret;
 
-  gum_interceptor_replace (fixture->interceptor, gum_test_target_nop_function_a,
-      replace_nop_a_calling_original, (gpointer *) &replace_nop_a_orig, NULL);
+  hoox_interceptor_replace (fixture->interceptor, hoox_test_target_nop_function_a,
+      replace_nop_a_calling_original, (hx_pointer *) &replace_nop_a_orig, NULL);
 
-  ret = gum_test_target_nop_function_a (NULL);
-  g_assert_cmphex (GPOINTER_TO_SIZE (ret), ==, 0x1338); /* 0x1337 + 1 */
+  ret = hoox_test_target_nop_function_a (NULL);
+  hx_assert_cmphex (HX_POINTER_TO_SIZE (ret), ==, 0x1338); /* 0x1337 + 1 */
 
-  gum_interceptor_revert (fixture->interceptor, gum_test_target_nop_function_a);
+  hoox_interceptor_revert (fixture->interceptor, hoox_test_target_nop_function_a);
 }
 
 TESTCASE (replace_then_attach)
 {
   /* Attach a listener, then replace a different function; both must work. */
-  fixture_attach (fixture, 0, gum_test_target_function, '>', '<');
+  fixture_attach (fixture, 0, hoox_test_target_function, '>', '<');
 
-  gum_interceptor_replace (fixture->interceptor, gum_test_target_nop_function_b,
+  hoox_interceptor_replace (fixture->interceptor, hoox_test_target_nop_function_b,
       replace_nop_a, NULL, NULL);
 
-  gum_test_target_function (fixture->result);
-  g_assert_cmpstr (fixture->result->str, ==, ">|<");
+  hoox_test_target_function (fixture->result);
+  hx_assert_cmpstr (fixture->result->str, ==, ">|<");
 
-  g_assert_cmphex (GPOINTER_TO_SIZE (gum_test_target_nop_function_b (NULL)), ==,
+  hx_assert_cmphex (HX_POINTER_TO_SIZE (hoox_test_target_nop_function_b (NULL)), ==,
       0xbeef);
 
-  gum_interceptor_revert (fixture->interceptor, gum_test_target_nop_function_b);
+  hoox_interceptor_revert (fixture->interceptor, hoox_test_target_nop_function_b);
 }
 
 TESTCASE (function_data)
 {
   TestFunctionDataListener * fd = test_function_data_listener_new ();
-  GumAttachOptions options = { 0, };
+  HooxAttachOptions options = { 0, };
 
-  options.listener_function_data = (gpointer) "a";
-  gum_interceptor_attach (fixture->interceptor, gum_test_target_function,
-      GUM_INVOCATION_LISTENER (fd), &options);
+  options.listener_function_data = (hx_pointer) "a";
+  hoox_interceptor_attach (fixture->interceptor, hoox_test_target_function,
+      HOOX_INVOCATION_LISTENER (fd), &options);
 
-  gum_test_target_function (fixture->result);
+  hoox_test_target_function (fixture->result);
 
-  g_assert_cmpuint (fd->on_enter_call_count, ==, 1);
-  g_assert_cmpuint (fd->on_leave_call_count, ==, 1);
-  g_assert_cmpstr (fd->last_on_enter_data.thread_data.name, ==, "a1");
-  g_assert_true (fd->last_on_enter_data.function_data == (gpointer) "a");
+  hx_assert_cmpuint (fd->on_enter_call_count, ==, 1);
+  hx_assert_cmpuint (fd->on_leave_call_count, ==, 1);
+  hx_assert_cmpstr (fd->last_on_enter_data.thread_data.name, ==, "a1");
+  hx_assert_true (fd->last_on_enter_data.function_data == (hx_pointer) "a");
 
-  gum_interceptor_detach (fixture->interceptor, GUM_INVOCATION_LISTENER (fd));
-  gum_invocation_listener_unref (GUM_INVOCATION_LISTENER (fd));
+  hoox_interceptor_detach (fixture->interceptor, HOOX_INVOCATION_LISTENER (fd));
+  hoox_invocation_listener_unref (HOOX_INVOCATION_LISTENER (fd));
 }
 
 int
@@ -310,11 +310,11 @@ main (int argc, char ** argv)
 {
   int result;
 
-  gum_init ();
-  g_test_init (&argc, &argv, NULL);
+  hoox_init ();
+  hx_test_init (&argc, &argv, NULL);
   TESTLIST_REGISTER (interceptor);
-  result = g_test_run ();
-  gum_deinit ();
+  result = hx_test_run ();
+  hoox_deinit ();
 
   return result;
 }

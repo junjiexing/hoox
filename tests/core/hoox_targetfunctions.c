@@ -1,46 +1,46 @@
 #include "hxglib.h"
 
 #ifdef _MSC_VER
-# define GUM_NOINLINE __declspec (noinline)
+# define HOOX_NOINLINE __declspec (noinline)
 #else
-# define GUM_NOINLINE __attribute__ ((noinline))
+# define HOOX_NOINLINE __attribute__ ((noinline))
 #endif
 
-gpointer GUM_NOINLINE
-gum_test_target_function (GString * str)
+hx_pointer HOOX_NOINLINE
+hoox_test_target_function (HxString * str)
 {
   if (str != NULL)
-    g_string_append_c (str, '|');
+    hx_string_append_c (str, '|');
   else
-    g_usleep (G_USEC_PER_SEC / 100);
+    hx_usleep (HX_USEC_PER_SEC / 100);
 
   return NULL;
 }
 
-static guint gum_test_target_functions_counter = 0;
+static hx_uint hoox_test_target_functions_counter = 0;
 
-gpointer GUM_NOINLINE
-gum_test_target_nop_function_a (gpointer data)
+hx_pointer HOOX_NOINLINE
+hoox_test_target_nop_function_a (hx_pointer data)
 {
-  gum_test_target_functions_counter++;
+  hoox_test_target_functions_counter++;
 
-  return GSIZE_TO_POINTER (0x1337);
+  return HX_SIZE_TO_POINTER (0x1337);
 }
 
-gpointer GUM_NOINLINE
-gum_test_target_nop_function_b (gpointer data)
+hx_pointer HOOX_NOINLINE
+hoox_test_target_nop_function_b (hx_pointer data)
 {
-  gum_test_target_functions_counter += 2;
+  hoox_test_target_functions_counter += 2;
 
-  return GSIZE_TO_POINTER (2);
+  return HX_SIZE_TO_POINTER (2);
 }
 
-gpointer GUM_NOINLINE
-gum_test_target_nop_function_c (gpointer data)
+hx_pointer HOOX_NOINLINE
+hoox_test_target_nop_function_c (hx_pointer data)
 {
-  gum_test_target_functions_counter += 3;
+  hoox_test_target_functions_counter += 3;
 
-  gum_test_target_nop_function_a (data);
+  hoox_test_target_nop_function_a (data);
 
-  return GSIZE_TO_POINTER (3);
+  return HX_SIZE_TO_POINTER (3);
 }

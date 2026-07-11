@@ -1,8 +1,8 @@
 /*
  * hoox — Windows process/thread/module shim.
  *
- * A thin replacement for the slice of gumprocess/gummodule the hook engine
- * needs, avoiding the full frida gumprocess.c tree. See PLAN.md 2.1: on
+ * A thin replacement for the slice of hooxprocess/hooxmodule the hook engine
+ * needs, avoiding the full frida hooxprocess.c tree. See PLAN.md 2.1: on
  * Windows x64 the thread-enumeration / suspend path is a *link* requirement
  * (patch_code takes the RWX path at runtime), while the module range is used
  * by the tests.
@@ -10,9 +10,9 @@
  * Licence: wxWindows Library Licence, Version 3.1
  */
 
-#include "gumprocess.h"
-#include "gumprocess-priv.h"
-#include "gummodule.h"
+#include "hooxprocess.h"
+#include "hooxprocess-priv.h"
+#include "hooxmodule.h"
 
 #ifndef WIN32_LEAN_AND_MEAN
 # define WIN32_LEAN_AND_MEAN
@@ -23,27 +23,27 @@
 
 /* ---- thread ------------------------------------------------------------- */
 
-GumThreadId
-gum_process_get_current_thread_id (void)
+HooxThreadId
+hoox_process_get_current_thread_id (void)
 {
-  return (GumThreadId) GetCurrentThreadId ();
+  return (HooxThreadId) GetCurrentThreadId ();
 }
 
-gint
-gum_thread_get_system_error (void)
+hx_int
+hoox_thread_get_system_error (void)
 {
-  return (gint) GetLastError ();
+  return (hx_int) GetLastError ();
 }
 
 void
-gum_thread_set_system_error (gint value)
+hoox_thread_set_system_error (hx_int value)
 {
   SetLastError ((DWORD) value);
 }
 
-gboolean
-gum_thread_suspend (GumThreadId thread_id,
-                    GError ** error)
+hx_boolean
+hoox_thread_suspend (HooxThreadId thread_id,
+                    HxError ** error)
 {
   HANDLE thread;
 
@@ -59,9 +59,9 @@ gum_thread_suspend (GumThreadId thread_id,
   return TRUE;
 }
 
-gboolean
-gum_thread_resume (GumThreadId thread_id,
-                   GError ** error)
+hx_boolean
+hoox_thread_resume (HooxThreadId thread_id,
+                   HxError ** error)
 {
   HANDLE thread;
 
@@ -78,9 +78,9 @@ gum_thread_resume (GumThreadId thread_id,
 }
 
 void
-_gum_process_enumerate_threads (GumFoundThreadFunc func,
-                                gpointer user_data,
-                                GumThreadFlags flags)
+_hoox_process_enumerate_threads (HooxFoundThreadFunc func,
+                                hx_pointer user_data,
+                                HooxThreadFlags flags)
 {
   DWORD pid = GetCurrentProcessId ();
   HANDLE snapshot;
@@ -95,14 +95,14 @@ _gum_process_enumerate_threads (GumFoundThreadFunc func,
   {
     do
     {
-      GumThreadDetails details;
+      HooxThreadDetails details;
 
       if (entry.th32OwnerProcessID != pid)
         continue;
 
       memset (&details, 0, sizeof (details));
-      details.flags = GUM_THREAD_FLAGS_NONE;
-      details.id = (GumThreadId) entry.th32ThreadID;
+      details.flags = HOOX_THREAD_FLAGS_NONE;
+      details.id = (HooxThreadId) entry.th32ThreadID;
 
       if (!func (&details, user_data))
         break;
@@ -116,36 +116,36 @@ _gum_process_enumerate_threads (GumFoundThreadFunc func,
 
 /* ---- code signing ------------------------------------------------------- */
 
-static GumCodeSigningPolicy gum_code_signing_policy = GUM_CODE_SIGNING_OPTIONAL;
+static HooxCodeSigningPolicy hoox_code_signing_policy = HOOX_CODE_SIGNING_OPTIONAL;
 
-GumCodeSigningPolicy
-gum_process_get_code_signing_policy (void)
+HooxCodeSigningPolicy
+hoox_process_get_code_signing_policy (void)
 {
-  return gum_code_signing_policy;
+  return hoox_code_signing_policy;
 }
 
 void
-gum_process_set_code_signing_policy (GumCodeSigningPolicy policy)
+hoox_process_set_code_signing_policy (HooxCodeSigningPolicy policy)
 {
-  gum_code_signing_policy = policy;
+  hoox_code_signing_policy = policy;
 }
 
 /* ---- module (main-module range for tests) ------------------------------- */
 
-struct _GumModule
+struct _HooxModule
 {
-  gchar name[MAX_PATH];
-  gchar path[MAX_PATH];
-  GumMemoryRange range;
-  gboolean initialized;
+  hx_char name[MAX_PATH];
+  hx_char path[MAX_PATH];
+  HooxMemoryRange range;
+  hx_boolean initialized;
 };
 
-static GumModule gum_main_module;
+static HooxModule hoox_main_module;
 
-static GumModule *
-gum_main_module_get (void)
+static HooxModule *
+hoox_main_module_get (void)
 {
-  GumModule * m = &gum_main_module;
+  HooxModule * m = &hoox_main_module;
   HMODULE handle;
   MODULEINFO info;
   DWORD len;
@@ -171,7 +171,7 @@ gum_main_module_get (void)
   if (GetModuleInformation (GetCurrentProcess (), handle, &info,
       sizeof (info)))
   {
-    m->range.base_address = GUM_ADDRESS (info.lpBaseOfDll);
+    m->range.base_address = HOOX_ADDRESS (info.lpBaseOfDll);
     m->range.size = info.SizeOfImage;
   }
 
@@ -179,34 +179,34 @@ gum_main_module_get (void)
   return m;
 }
 
-GumModule *
-gum_process_get_main_module (void)
+HooxModule *
+hoox_process_get_main_module (void)
 {
-  return gum_main_module_get ();
+  return hoox_main_module_get ();
 }
 
-const gchar *
-gum_module_get_name (GumModule * self)
+const hx_char *
+hoox_module_get_name (HooxModule * self)
 {
   return self->name;
 }
 
-const gchar *
-gum_module_get_path (GumModule * self)
+const hx_char *
+hoox_module_get_path (HooxModule * self)
 {
   return self->path;
 }
 
-const GumMemoryRange *
-gum_module_get_range (GumModule * self)
+const HooxMemoryRange *
+hoox_module_get_range (HooxModule * self)
 {
   return &self->range;
 }
 
-GumAddress
-gum_module_find_export_by_name (GumModule * self,
-                                const gchar * symbol_name)
+HooxAddress
+hoox_module_find_export_by_name (HooxModule * self,
+                                const hx_char * symbol_name)
 {
   (void) self;
-  return GUM_ADDRESS (GetProcAddress (GetModuleHandleW (NULL), symbol_name));
+  return HOOX_ADDRESS (GetProcAddress (GetModuleHandleW (NULL), symbol_name));
 }

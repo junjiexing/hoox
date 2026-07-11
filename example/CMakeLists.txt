@@ -45,8 +45,8 @@ target_include_directories(hook_example PRIVATE "${HOOX_AMALGAM_DIR}")
 # hoox is compiled straight into the executable (no shared-lib export dance)
 # and uses the system allocator rather than a bundled dlmalloc.
 target_compile_definitions(hook_example PRIVATE
-  GUM_STATIC
-  GUM_USE_SYSTEM_ALLOC)
+  HOOX_STATIC
+  HOOX_USE_SYSTEM_ALLOC)
 
 # --- Architecture family --------------------------------------------------
 # The amalgam selects its writer/relocator via HAVE_I386 (x86 + x86_64).

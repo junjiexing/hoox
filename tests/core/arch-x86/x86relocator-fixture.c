@@ -4,16 +4,16 @@
  * Licence: wxWindows Library Licence, Version 3.1
  */
 
-#include "gumx86relocator.h"
+#include "hooxx86relocator.h"
 
-#include "gummemory.h"
+#include "hooxmemory.h"
 #include "testutil.h"
 
 #include <string.h>
 
 #define TESTCASE(NAME) \
     void test_relocator_ ## NAME ( \
-        TestRelocatorFixture * fixture, gconstpointer data)
+        TestRelocatorFixture * fixture, hx_constpointer data)
 #define TESTENTRY(NAME) \
     TESTENTRY_WITH_FIXTURE ("Core/X86Relocator", test_relocator, NAME, \
         TestRelocatorFixture)
@@ -22,48 +22,48 @@
 
 typedef struct _TestRelocatorFixture
 {
-  guint8 * output;
-  GumX86Writer cw;
-  GumX86Relocator rl;
+  hx_uint8 * output;
+  HooxX86Writer cw;
+  HooxX86Relocator rl;
 } TestRelocatorFixture;
 
 static void
 test_relocator_fixture_setup (TestRelocatorFixture * fixture,
-                              gconstpointer data)
+                              hx_constpointer data)
 {
-  guint page_size;
-  guint8 stack_data[1] = { 42 };
-  GumAddressSpec as;
+  hx_uint page_size;
+  hx_uint8 stack_data[1] = { 42 };
+  HooxAddressSpec as;
 
-  page_size = gum_query_page_size ();
+  page_size = hoox_query_page_size ();
 
-  as.near_address = (gpointer) stack_data;
-  as.max_distance = G_MAXINT32 - page_size;
+  as.near_address = (hx_pointer) stack_data;
+  as.max_distance = HX_MAXINT32 - page_size;
 
-  fixture->output = (guint8 *) gum_alloc_n_pages_near (1, GUM_PAGE_RW, &as);
+  fixture->output = (hx_uint8 *) hoox_alloc_n_pages_near (1, HOOX_PAGE_RW, &as);
   memset (fixture->output, 0, page_size);
 
-  gum_x86_writer_init (&fixture->cw, fixture->output);
+  hoox_x86_writer_init (&fixture->cw, fixture->output);
 }
 
 static void
 test_relocator_fixture_teardown (TestRelocatorFixture * fixture,
-                                 gconstpointer data)
+                                 hx_constpointer data)
 {
-  gum_x86_relocator_clear (&fixture->rl);
-  gum_x86_writer_clear (&fixture->cw);
-  gum_free_pages (fixture->output);
+  hoox_x86_relocator_clear (&fixture->rl);
+  hoox_x86_writer_clear (&fixture->cw);
+  hoox_free_pages (fixture->output);
 }
 
 static void
 test_relocator_fixture_assert_output_equals (TestRelocatorFixture * fixture,
-                                             const guint8 * expected_code,
-                                             guint expected_length)
+                                             const hx_uint8 * expected_code,
+                                             hx_uint expected_length)
 {
-  guint actual_length;
-  gboolean same_length, same_content;
+  hx_uint actual_length;
+  hx_boolean same_length, same_content;
 
-  actual_length = gum_x86_writer_offset (&fixture->cw);
+  actual_length = hoox_x86_writer_offset (&fixture->cw);
   same_length = (actual_length == expected_length);
   if (same_length)
   {
@@ -77,33 +77,33 @@ test_relocator_fixture_assert_output_equals (TestRelocatorFixture * fixture,
 
   if (!same_length || !same_content)
   {
-    gchar * diff;
+    hx_char * diff;
 
     if (actual_length != 0)
     {
       diff = test_util_diff_binary (expected_code, expected_length,
           fixture->output, actual_length);
-      g_print ("\n\nRelocated code is not equal to expected code:\n\n%s\n",
+      hx_print ("\n\nRelocated code is not equal to expected code:\n\n%s\n",
           diff);
-      g_free (diff);
+      hx_free (diff);
     }
     else
     {
-      g_print ("\n\nNo code was relocated!\n\n");
+      hx_print ("\n\nNo code was relocated!\n\n");
     }
   }
 
-  g_assert_true (same_length);
-  g_assert_true (same_content);
+  hx_assert_true (same_length);
+  hx_assert_true (same_content);
 }
 
-static const guint8 cleared_outbuf[TEST_OUTBUF_SIZE] = { 0, };
+static const hx_uint8 cleared_outbuf[TEST_OUTBUF_SIZE] = { 0, };
 
 #define SETUP_RELOCATOR_WITH(CODE) \
-    gum_x86_relocator_init (&fixture->rl, CODE, &fixture->cw)
+    hoox_x86_relocator_init (&fixture->rl, CODE, &fixture->cw)
 
 #define assert_outbuf_still_zeroed_from_offset(OFF) \
-    g_assert_cmpint (memcmp (fixture->output + OFF, cleared_outbuf + OFF, \
+    hx_assert_cmpint (memcmp (fixture->output + OFF, cleared_outbuf + OFF, \
         sizeof (cleared_outbuf) - OFF), ==, 0)
 #define assert_output_equals(e) test_relocator_fixture_assert_output_equals \
     (fixture, e, sizeof (e))

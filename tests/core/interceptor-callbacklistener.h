@@ -7,26 +7,26 @@
 #ifndef __INTERCEPTOR_CALLBACKLISTENER_H__
 #define __INTERCEPTOR_CALLBACKLISTENER_H__
 
-#include "guminvocationlistener.h"
+#include "hooxinvocationlistener.h"
 
-G_BEGIN_DECLS
+HX_BEGIN_DECLS
 
 typedef struct _TestCallbackListener TestCallbackListener;
 
-typedef void (* TestCallbackListenerFunc) (gpointer user_data,
-    GumInvocationContext * context);
+typedef void (* TestCallbackListenerFunc) (hx_pointer user_data,
+    HooxInvocationContext * context);
 
 struct _TestCallbackListener
 {
-  GumInvocationListener listener;   /* plain-C base (vtable + refcount) */
+  HooxInvocationListener listener;   /* plain-C base (vtable + refcount) */
 
   TestCallbackListenerFunc on_enter;
   TestCallbackListenerFunc on_leave;
-  gpointer user_data;
+  hx_pointer user_data;
 };
 
 TestCallbackListener * test_callback_listener_new (void);
 
-G_END_DECLS
+HX_END_DECLS
 
 #endif

@@ -10,28 +10,28 @@
 #include <string.h>
 #include <stdio.h>
 
-gchar *
-g_strdup (const gchar * str)
+hx_char *
+hx_strdup (const hx_char * str)
 {
-  gsize len;
-  gchar * copy;
+  hx_size len;
+  hx_char * copy;
 
   if (str == NULL)
     return NULL;
 
   len = strlen (str) + 1;
-  copy = g_malloc (len);
+  copy = hx_malloc (len);
   memcpy (copy, str, len);
 
   return copy;
 }
 
-gchar *
-g_strndup (const gchar * str,
-           gsize n)
+hx_char *
+hx_strndup (const hx_char * str,
+           hx_size n)
 {
-  gchar * copy;
-  gsize len;
+  hx_char * copy;
+  hx_size len;
 
   if (str == NULL)
     return NULL;
@@ -40,80 +40,80 @@ g_strndup (const gchar * str,
   if (len > n)
     len = n;
 
-  copy = g_malloc (len + 1);
+  copy = hx_malloc (len + 1);
   memcpy (copy, str, len);
   copy[len] = '\0';
 
   return copy;
 }
 
-gchar *
-g_strdup_vprintf (const gchar * format,
+hx_char *
+hx_strdup_vprintf (const hx_char * format,
                   va_list args)
 {
   va_list args2;
   int needed;
-  gchar * result;
+  hx_char * result;
 
   va_copy (args2, args);
   needed = vsnprintf (NULL, 0, format, args2);
   va_end (args2);
 
   if (needed < 0)
-    return g_strdup ("");
+    return hx_strdup ("");
 
-  result = g_malloc ((gsize) needed + 1);
-  vsnprintf (result, (gsize) needed + 1, format, args);
+  result = hx_malloc ((hx_size) needed + 1);
+  vsnprintf (result, (hx_size) needed + 1, format, args);
 
   return result;
 }
 
-gchar *
-g_strdup_printf (const gchar * format,
+hx_char *
+hx_strdup_printf (const hx_char * format,
                  ...)
 {
   va_list args;
-  gchar * result;
+  hx_char * result;
 
   va_start (args, format);
-  result = g_strdup_vprintf (format, args);
+  result = hx_strdup_vprintf (format, args);
   va_end (args);
 
   return result;
 }
 
-gchar *
-g_strconcat (const gchar * string1,
+hx_char *
+hx_strconcat (const hx_char * string1,
              ...)
 {
   va_list args;
-  gsize total;
-  gchar * result;
-  gchar * p;
-  const gchar * s;
+  hx_size total;
+  hx_char * result;
+  hx_char * p;
+  const hx_char * s;
 
   if (string1 == NULL)
     return NULL;
 
   total = strlen (string1);
   va_start (args, string1);
-  while ((s = va_arg (args, const gchar *)) != NULL)
+  while ((s = va_arg (args, const hx_char *)) != NULL)
     total += strlen (s);
   va_end (args);
 
-  result = g_malloc (total + 1);
+  result = hx_malloc (total + 1);
   p = result;
 
   {
-    gsize n1 = strlen (string1);
+    hx_size n1 = strlen (string1);
     memcpy (p, string1, n1);
     p += n1;
   }
 
   va_start (args, string1);
-  while ((s = va_arg (args, const gchar *)) != NULL)
+  while ((s = va_arg (args, const hx_char *)) != NULL)
   {
-    gsize n = strlen (s);
+    hx_size n = strlen (s);
     memcpy (p, s, n);
     p += n;
   }
@@ -124,9 +124,9 @@ g_strconcat (const gchar * string1,
   return result;
 }
 
-gint
-g_strcmp0 (const gchar * str1,
-           const gchar * str2)
+hx_int
+hx_strcmp0 (const hx_char * str1,
+           const hx_char * str2)
 {
   if (str1 == NULL)
     return -(str1 != str2);
@@ -135,19 +135,19 @@ g_strcmp0 (const gchar * str1,
   return strcmp (str1, str2);
 }
 
-gboolean
-g_str_has_prefix (const gchar * str,
-                  const gchar * prefix)
+hx_boolean
+hx_str_has_prefix (const hx_char * str,
+                  const hx_char * prefix)
 {
   return strncmp (str, prefix, strlen (prefix)) == 0;
 }
 
-gboolean
-g_str_has_suffix (const gchar * str,
-                  const gchar * suffix)
+hx_boolean
+hx_str_has_suffix (const hx_char * str,
+                  const hx_char * suffix)
 {
-  gsize str_len = strlen (str);
-  gsize suffix_len = strlen (suffix);
+  hx_size str_len = strlen (str);
+  hx_size suffix_len = strlen (suffix);
 
   if (suffix_len > str_len)
     return FALSE;
@@ -155,16 +155,16 @@ g_str_has_suffix (const gchar * str,
   return strcmp (str + str_len - suffix_len, suffix) == 0;
 }
 
-gsize
-g_strlcpy (gchar * dest,
-           const gchar * src,
-           gsize dest_size)
+hx_size
+hx_strlcpy (hx_char * dest,
+           const hx_char * src,
+           hx_size dest_size)
 {
-  gsize src_len = strlen (src);
+  hx_size src_len = strlen (src);
 
   if (dest_size != 0)
   {
-    gsize n = (src_len < dest_size - 1) ? src_len : dest_size - 1;
+    hx_size n = (src_len < dest_size - 1) ? src_len : dest_size - 1;
     memcpy (dest, src, n);
     dest[n] = '\0';
   }
@@ -172,16 +172,16 @@ g_strlcpy (gchar * dest,
   return src_len;
 }
 
-gsize
-g_strlcat (gchar * dest,
-           const gchar * src,
-           gsize dest_size)
+hx_size
+hx_strlcat (hx_char * dest,
+           const hx_char * src,
+           hx_size dest_size)
 {
-  gsize dest_len = strlen (dest);
-  gsize src_len = strlen (src);
+  hx_size dest_len = strlen (dest);
+  hx_size src_len = strlen (src);
 
   if (dest_len < dest_size)
-    g_strlcpy (dest + dest_len, src, dest_size - dest_len);
+    hx_strlcpy (dest + dest_len, src, dest_size - dest_len);
 
   return dest_len + src_len;
 }

@@ -15,8 +15,8 @@ typedef struct _HxTest HxTest;
 struct _HxTest
 {
   char * path;
-  gsize fixture_size;
-  gconstpointer fixture_data;
+  hx_size fixture_size;
+  hx_constpointer fixture_data;
   HxTestFixtureFunc setup;
   HxTestFixtureFunc test;
   HxTestFixtureFunc teardown;
@@ -26,19 +26,19 @@ struct _HxTest
 
 static HxTest * hx_tests_head = NULL;
 static HxTest * hx_tests_tail = NULL;
-static guint hx_test_count = 0;
+static hx_uint hx_test_count = 0;
 
 static char ** hx_filters = NULL;
 static int hx_n_filters = 0;
 
-static gboolean hx_current_failed = FALSE;
+static hx_boolean hx_current_failed = FALSE;
 
 static HxTest *
 hx_test_new (const char * path)
 {
-  HxTest * t = g_new0 (HxTest, 1);
+  HxTest * t = hx_new0 (HxTest, 1);
 
-  t->path = g_strdup (path);
+  t->path = hx_strdup (path);
 
   if (hx_tests_tail != NULL)
     hx_tests_tail->next = t;
@@ -52,8 +52,8 @@ hx_test_new (const char * path)
 
 void
 hx_test_add_vtable (const char * path,
-                    gsize fixture_size,
-                    gconstpointer fixture_data,
+                    hx_size fixture_size,
+                    hx_constpointer fixture_data,
                     HxTestFixtureFunc setup,
                     HxTestFixtureFunc test,
                     HxTestFixtureFunc teardown)
@@ -68,15 +68,15 @@ hx_test_add_vtable (const char * path,
 }
 
 void
-hx_test_add_func (const char * path,
-                  HxTestSimpleFunc func)
+hx_test_add_simple (const char * path,
+                    HxTestSimpleFunc func)
 {
   HxTest * t = hx_test_new (path);
   t->simple = func;
 }
 
 void
-g_test_init (int * argc,
+hx_test_init (int * argc,
              char *** argv,
              void * unused)
 {
@@ -89,7 +89,7 @@ g_test_init (int * argc,
   if (av == NULL || n <= 1)
     return;
 
-  hx_filters = g_new0 (char *, n);
+  hx_filters = hx_new0 (char *, n);
   hx_n_filters = 0;
 
   for (i = 1; i != n; i++)
@@ -98,16 +98,16 @@ g_test_init (int * argc,
 
     if (strcmp (a, "-p") == 0 && i + 1 < n)
     {
-      hx_filters[hx_n_filters++] = g_strdup (av[++i]);
+      hx_filters[hx_n_filters++] = hx_strdup (av[++i]);
     }
     else if (a[0] == '/')
     {
-      hx_filters[hx_n_filters++] = g_strdup (a);
+      hx_filters[hx_n_filters++] = hx_strdup (a);
     }
   }
 }
 
-static gboolean
+static hx_boolean
 hx_test_selected (const HxTest * t)
 {
   int i;
@@ -118,7 +118,7 @@ hx_test_selected (const HxTest * t)
   for (i = 0; i != hx_n_filters; i++)
   {
     const char * f = hx_filters[i];
-    gsize len = strlen (f);
+    hx_size len = strlen (f);
 
     if (strncmp (t->path, f, len) == 0 &&
         (t->path[len] == '\0' || t->path[len] == '/'))
@@ -129,13 +129,13 @@ hx_test_selected (const HxTest * t)
 }
 
 void
-g_test_fail (void)
+hx_test_fail (void)
 {
   hx_current_failed = TRUE;
 }
 
 void
-g_test_message (const char * format,
+hx_test_message (const char * format,
                 ...)
 {
   va_list args;
@@ -146,11 +146,11 @@ g_test_message (const char * format,
 }
 
 int
-g_test_run (void)
+hx_test_run (void)
 {
   HxTest * t;
-  guint ran = 0;
-  guint failed = 0;
+  hx_uint ran = 0;
+  hx_uint failed = 0;
 
   for (t = hx_tests_head; t != NULL; t = t->next)
   {
@@ -167,8 +167,8 @@ g_test_run (void)
     }
     else
     {
-      gpointer fixture = (t->fixture_size != 0)
-          ? g_malloc0 (t->fixture_size)
+      hx_pointer fixture = (t->fixture_size != 0)
+          ? hx_malloc0 (t->fixture_size)
           : NULL;
 
       if (t->setup != NULL)
@@ -179,7 +179,7 @@ g_test_run (void)
       if (t->teardown != NULL)
         t->teardown (fixture, t->fixture_data);
 
-      g_free (fixture);
+      hx_free (fixture);
     }
 
     if (hx_current_failed)

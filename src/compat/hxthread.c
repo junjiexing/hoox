@@ -1,8 +1,8 @@
 /*
  * hoox nano-glib: threading primitives implementation.
  *
- * Windows: GMutex over SRWLOCK (zero-init == SRWLOCK_INIT, no lazy-init
- * race), GRecMutex manually recursive over SRWLOCK, GPrivate over FLS (so
+ * Windows: HxMutex over SRWLOCK (zero-init == SRWLOCK_INIT, no lazy-init
+ * race), HxRecMutex manually recursive over SRWLOCK, HxPrivate over FLS (so
  * per-thread destructors run on thread exit).
  * POSIX: pthread mutex/key.
  *
@@ -16,36 +16,36 @@
 
 /* ---- one-time init (portable, above the platform split) ----------------- */
 
-static GMutex hx_once_mutex;
+static HxMutex hx_once_mutex;
 
-gboolean
-g_once_init_enter_impl (volatile void * location)
+hx_boolean
+hx_once_init_enter_impl (volatile void * location)
 {
-  gsize * loc = (gsize *) location;
-  gboolean need_init;
+  hx_size * loc = (hx_size *) location;
+  hx_boolean need_init;
 
-  g_mutex_lock (&hx_once_mutex);
+  hx_mutex_lock (&hx_once_mutex);
   if (*loc == 0)
   {
-    need_init = TRUE;   /* keep the lock held until g_once_init_leave */
+    need_init = TRUE;   /* keep the lock held until hx_once_init_leave */
   }
   else
   {
     need_init = FALSE;
-    g_mutex_unlock (&hx_once_mutex);
+    hx_mutex_unlock (&hx_once_mutex);
   }
 
   return need_init;
 }
 
 void
-g_once_init_leave_impl (volatile void * location,
-                        gsize result)
+hx_once_init_leave_impl (volatile void * location,
+                        hx_size result)
 {
-  gsize * loc = (gsize *) location;
+  hx_size * loc = (hx_size *) location;
 
-  g_atomic_pointer_set (loc, result);
-  g_mutex_unlock (&hx_once_mutex);
+  hx_atomic_pointer_set (loc, result);
+  hx_mutex_unlock (&hx_once_mutex);
 }
 
 #ifdef _WIN32
@@ -55,56 +55,56 @@ g_once_init_leave_impl (volatile void * location,
 #endif
 #include <windows.h>
 
-G_STATIC_ASSERT (sizeof (SRWLOCK) == sizeof (void *));
+HX_STATIC_ASSERT (sizeof (SRWLOCK) == sizeof (void *));
 
-GThread *
-g_thread_self (void)
+HxThread *
+hx_thread_self (void)
 {
-  return (GThread *) (gsize) GetCurrentThreadId ();
+  return (HxThread *) (hx_size) GetCurrentThreadId ();
 }
 
 void
-g_usleep (gulong microseconds)
+hx_usleep (hx_ulong microseconds)
 {
   Sleep ((DWORD) (microseconds / 1000));
 }
 
-/* ---- GMutex (SRWLOCK) --------------------------------------------------- */
+/* ---- HxMutex (SRWLOCK) --------------------------------------------------- */
 
 void
-g_mutex_init (GMutex * mutex)
+hx_mutex_init (HxMutex * mutex)
 {
   mutex->p = NULL; /* SRWLOCK_INIT */
 }
 
 void
-g_mutex_clear (GMutex * mutex)
+hx_mutex_clear (HxMutex * mutex)
 {
   (void) mutex;
 }
 
 void
-g_mutex_lock (GMutex * mutex)
+hx_mutex_lock (HxMutex * mutex)
 {
   AcquireSRWLockExclusive ((PSRWLOCK) &mutex->p);
 }
 
-gboolean
-g_mutex_trylock (GMutex * mutex)
+hx_boolean
+hx_mutex_trylock (HxMutex * mutex)
 {
   return TryAcquireSRWLockExclusive ((PSRWLOCK) &mutex->p);
 }
 
 void
-g_mutex_unlock (GMutex * mutex)
+hx_mutex_unlock (HxMutex * mutex)
 {
   ReleaseSRWLockExclusive ((PSRWLOCK) &mutex->p);
 }
 
-/* ---- GRecMutex (recursive over SRWLOCK) --------------------------------- */
+/* ---- HxRecMutex (recursive over SRWLOCK) --------------------------------- */
 
 void
-g_rec_mutex_init (GRecMutex * mutex)
+hx_rec_mutex_init (HxRecMutex * mutex)
 {
   mutex->srw = NULL;
   mutex->owner = 0;
@@ -112,15 +112,15 @@ g_rec_mutex_init (GRecMutex * mutex)
 }
 
 void
-g_rec_mutex_clear (GRecMutex * mutex)
+hx_rec_mutex_clear (HxRecMutex * mutex)
 {
   (void) mutex;
 }
 
 void
-g_rec_mutex_lock (GRecMutex * mutex)
+hx_rec_mutex_lock (HxRecMutex * mutex)
 {
-  gsize self = (gsize) GetCurrentThreadId ();
+  hx_size self = (hx_size) GetCurrentThreadId ();
 
   if (mutex->owner == self)
   {
@@ -133,10 +133,10 @@ g_rec_mutex_lock (GRecMutex * mutex)
   mutex->count = 1;
 }
 
-gboolean
-g_rec_mutex_trylock (GRecMutex * mutex)
+hx_boolean
+hx_rec_mutex_trylock (HxRecMutex * mutex)
 {
-  gsize self = (gsize) GetCurrentThreadId ();
+  hx_size self = (hx_size) GetCurrentThreadId ();
 
   if (mutex->owner == self)
   {
@@ -153,7 +153,7 @@ g_rec_mutex_trylock (GRecMutex * mutex)
 }
 
 void
-g_rec_mutex_unlock (GRecMutex * mutex)
+hx_rec_mutex_unlock (HxRecMutex * mutex)
 {
   if (--mutex->count == 0)
   {
@@ -162,14 +162,14 @@ g_rec_mutex_unlock (GRecMutex * mutex)
   }
 }
 
-/* ---- GPrivate (FLS with per-thread destructor) -------------------------- */
+/* ---- HxPrivate (FLS with per-thread destructor) -------------------------- */
 
 typedef struct _HxPrivateSlot HxPrivateSlot;
 
 struct _HxPrivateSlot
 {
-  GDestroyNotify notify;
-  gpointer value;
+  HxDestroyNotify notify;
+  hx_pointer value;
 };
 
 static void NTAPI
@@ -183,28 +183,28 @@ hx_private_fls_cb (PVOID data)
   if (slot->notify != NULL && slot->value != NULL)
     slot->notify (slot->value);
 
-  g_free (slot);
+  hx_free (slot);
 }
 
 static DWORD
-hx_private_index (GPrivate * key)
+hx_private_index (HxPrivate * key)
 {
-  gsize stored;
+  hx_size stored;
 
-  stored = (gsize) g_atomic_pointer_get (&key->impl);
+  stored = (hx_size) hx_atomic_pointer_get (&key->impl);
   if (stored == 0)
   {
     DWORD index = FlsAlloc (hx_private_fls_cb);
-    gpointer desired = (gpointer) (gsize) (index + 1);
+    hx_pointer desired = (hx_pointer) (hx_size) (index + 1);
 
-    if (g_atomic_pointer_compare_and_exchange (&key->impl, NULL, desired))
+    if (hx_atomic_pointer_compare_and_exchange (&key->impl, NULL, desired))
     {
-      stored = (gsize) desired;
+      stored = (hx_size) desired;
     }
     else
     {
       FlsFree (index);
-      stored = (gsize) g_atomic_pointer_get (&key->impl);
+      stored = (hx_size) hx_atomic_pointer_get (&key->impl);
     }
   }
 
@@ -212,15 +212,15 @@ hx_private_index (GPrivate * key)
 }
 
 static HxPrivateSlot *
-hx_private_slot (GPrivate * key,
-                 gboolean create)
+hx_private_slot (HxPrivate * key,
+                 hx_boolean create)
 {
   DWORD index = hx_private_index (key);
   HxPrivateSlot * slot = FlsGetValue (index);
 
   if (slot == NULL && create)
   {
-    slot = g_new0 (HxPrivateSlot, 1);
+    slot = hx_new0 (HxPrivateSlot, 1);
     slot->notify = key->notify;
     FlsSetValue (index, slot);
   }
@@ -228,24 +228,24 @@ hx_private_slot (GPrivate * key,
   return slot;
 }
 
-gpointer
-g_private_get (GPrivate * key)
+hx_pointer
+hx_private_get (HxPrivate * key)
 {
   HxPrivateSlot * slot = hx_private_slot (key, FALSE);
   return (slot != NULL) ? slot->value : NULL;
 }
 
 void
-g_private_set (GPrivate * key,
-               gpointer value)
+hx_private_set (HxPrivate * key,
+               hx_pointer value)
 {
   HxPrivateSlot * slot = hx_private_slot (key, TRUE);
   slot->value = value;
 }
 
 void
-g_private_replace (GPrivate * key,
-                   gpointer value)
+hx_private_replace (HxPrivate * key,
+                   hx_pointer value)
 {
   HxPrivateSlot * slot = hx_private_slot (key, TRUE);
 
@@ -260,124 +260,124 @@ g_private_replace (GPrivate * key,
 #include <pthread.h>
 #include <unistd.h>
 
-GThread *
-g_thread_self (void)
+HxThread *
+hx_thread_self (void)
 {
-  return (GThread *) (gsize) pthread_self ();
+  return (HxThread *) (hx_size) pthread_self ();
 }
 
 void
-g_usleep (gulong microseconds)
+hx_usleep (hx_ulong microseconds)
 {
   usleep (microseconds);
 }
 
 void
-g_mutex_init (GMutex * mutex)
+hx_mutex_init (HxMutex * mutex)
 {
-  pthread_mutex_t * m = g_new0 (pthread_mutex_t, 1);
+  pthread_mutex_t * m = hx_new0 (pthread_mutex_t, 1);
   pthread_mutex_init (m, NULL);
   mutex->p = m;
 }
 
 void
-g_mutex_clear (GMutex * mutex)
+hx_mutex_clear (HxMutex * mutex)
 {
   if (mutex->p != NULL)
   {
     pthread_mutex_destroy (mutex->p);
-    g_free (mutex->p);
+    hx_free (mutex->p);
     mutex->p = NULL;
   }
 }
 
 static pthread_mutex_t *
-hx_mutex_get (GMutex * mutex)
+hx_mutex_get (HxMutex * mutex)
 {
-  /* Lazy init for statically-declared GMutex. */
-  if (g_atomic_pointer_get (&mutex->p) == NULL)
+  /* Lazy init for statically-declared HxMutex. */
+  if (hx_atomic_pointer_get (&mutex->p) == NULL)
   {
-    pthread_mutex_t * m = g_new0 (pthread_mutex_t, 1);
+    pthread_mutex_t * m = hx_new0 (pthread_mutex_t, 1);
     pthread_mutex_init (m, NULL);
-    if (!g_atomic_pointer_compare_and_exchange (&mutex->p, NULL, m))
+    if (!hx_atomic_pointer_compare_and_exchange (&mutex->p, NULL, m))
     {
       pthread_mutex_destroy (m);
-      g_free (m);
+      hx_free (m);
     }
   }
   return mutex->p;
 }
 
 void
-g_mutex_lock (GMutex * mutex)
+hx_mutex_lock (HxMutex * mutex)
 {
   pthread_mutex_lock (hx_mutex_get (mutex));
 }
 
-gboolean
-g_mutex_trylock (GMutex * mutex)
+hx_boolean
+hx_mutex_trylock (HxMutex * mutex)
 {
   return pthread_mutex_trylock (hx_mutex_get (mutex)) == 0;
 }
 
 void
-g_mutex_unlock (GMutex * mutex)
+hx_mutex_unlock (HxMutex * mutex)
 {
   pthread_mutex_unlock (hx_mutex_get (mutex));
 }
 
 static pthread_mutex_t *
-hx_rec_get (GRecMutex * mutex)
+hx_rec_get (HxRecMutex * mutex)
 {
-  if (g_atomic_pointer_get (&mutex->srw) == NULL)
+  if (hx_atomic_pointer_get (&mutex->srw) == NULL)
   {
-    pthread_mutex_t * m = g_new0 (pthread_mutex_t, 1);
+    pthread_mutex_t * m = hx_new0 (pthread_mutex_t, 1);
     pthread_mutexattr_t attr;
     pthread_mutexattr_init (&attr);
     pthread_mutexattr_settype (&attr, PTHREAD_MUTEX_RECURSIVE);
     pthread_mutex_init (m, &attr);
     pthread_mutexattr_destroy (&attr);
-    if (!g_atomic_pointer_compare_and_exchange (&mutex->srw, NULL, m))
+    if (!hx_atomic_pointer_compare_and_exchange (&mutex->srw, NULL, m))
     {
       pthread_mutex_destroy (m);
-      g_free (m);
+      hx_free (m);
     }
   }
   return mutex->srw;
 }
 
 void
-g_rec_mutex_init (GRecMutex * mutex)
+hx_rec_mutex_init (HxRecMutex * mutex)
 {
   mutex->srw = NULL;
   (void) hx_rec_get (mutex);
 }
 
 void
-g_rec_mutex_clear (GRecMutex * mutex)
+hx_rec_mutex_clear (HxRecMutex * mutex)
 {
   if (mutex->srw != NULL)
   {
     pthread_mutex_destroy (mutex->srw);
-    g_free (mutex->srw);
+    hx_free (mutex->srw);
     mutex->srw = NULL;
   }
 }
 
 void
-g_rec_mutex_lock (GRecMutex * mutex)
+hx_rec_mutex_lock (HxRecMutex * mutex)
 {
   pthread_mutex_lock (hx_rec_get (mutex));
 }
 
-gboolean
-g_rec_mutex_trylock (GRecMutex * mutex)
+hx_boolean
+hx_rec_mutex_trylock (HxRecMutex * mutex)
 {
   return pthread_mutex_trylock (hx_rec_get (mutex)) == 0;
 }
 
 void
-g_rec_mutex_unlock (GRecMutex * mutex)
+hx_rec_mutex_unlock (HxRecMutex * mutex)
 {
   pthread_mutex_unlock (hx_rec_get (mutex));
 }
@@ -390,45 +390,45 @@ struct _HxPrivateKey
 };
 
 static pthread_key_t
-hx_private_key (GPrivate * key)
+hx_private_key (HxPrivate * key)
 {
   HxPrivateKey * pk;
 
-  pk = g_atomic_pointer_get (&key->impl);
+  pk = hx_atomic_pointer_get (&key->impl);
   if (pk == NULL)
   {
-    pk = g_new0 (HxPrivateKey, 1);
+    pk = hx_new0 (HxPrivateKey, 1);
     pthread_key_create (&pk->key, key->notify);
-    if (!g_atomic_pointer_compare_and_exchange (&key->impl, NULL, pk))
+    if (!hx_atomic_pointer_compare_and_exchange (&key->impl, NULL, pk))
     {
       pthread_key_delete (pk->key);
-      g_free (pk);
-      pk = g_atomic_pointer_get (&key->impl);
+      hx_free (pk);
+      pk = hx_atomic_pointer_get (&key->impl);
     }
   }
 
   return pk->key;
 }
 
-gpointer
-g_private_get (GPrivate * key)
+hx_pointer
+hx_private_get (HxPrivate * key)
 {
   return pthread_getspecific (hx_private_key (key));
 }
 
 void
-g_private_set (GPrivate * key,
-               gpointer value)
+hx_private_set (HxPrivate * key,
+               hx_pointer value)
 {
   pthread_setspecific (hx_private_key (key), value);
 }
 
 void
-g_private_replace (GPrivate * key,
-                   gpointer value)
+hx_private_replace (HxPrivate * key,
+                   hx_pointer value)
 {
   pthread_key_t k = hx_private_key (key);
-  gpointer old = pthread_getspecific (k);
+  hx_pointer old = pthread_getspecific (k);
 
   if (old != NULL && key->notify != NULL && old != value)
     key->notify (old);

@@ -1,5 +1,5 @@
 /*
- * hoox nano-glib: GHashTable.
+ * hoox nano-glib: HxHashTable.
  *
  * Separate-chaining hash table with GLib-compatible API, iterator, and the
  * common hash/equal helpers.
@@ -12,69 +12,69 @@
 
 #include "hxdefs.h"
 
-G_BEGIN_DECLS
+HX_BEGIN_DECLS
 
-typedef struct _GHashTable GHashTable;
+typedef struct _HxHashTable HxHashTable;
 
-typedef struct _GHashTableIter GHashTableIter;
+typedef struct _HxHashTableIter HxHashTableIter;
 
-struct _GHashTableIter
+struct _HxHashTableIter
 {
-  gpointer table;
-  gssize bucket;
-  gpointer node;
-  gpointer prev;
+  hx_pointer table;
+  hx_ssize bucket;
+  hx_pointer node;
+  hx_pointer prev;
   int version;
   int reserved;
 };
 
-GHashTable * g_hash_table_new (GHashFunc hash_func, GEqualFunc key_equal_func);
-GHashTable * g_hash_table_new_full (GHashFunc hash_func,
-    GEqualFunc key_equal_func, GDestroyNotify key_destroy_func,
-    GDestroyNotify value_destroy_func);
+HxHashTable * hx_hash_table_new (HxHashFunc hash_func, HxEqualFunc key_equal_func);
+HxHashTable * hx_hash_table_new_full (HxHashFunc hash_func,
+    HxEqualFunc key_equal_func, HxDestroyNotify key_destroy_func,
+    HxDestroyNotify value_destroy_func);
 
-GHashTable * g_hash_table_ref (GHashTable * hash_table);
-void g_hash_table_unref (GHashTable * hash_table);
-void g_hash_table_destroy (GHashTable * hash_table);
+HxHashTable * hx_hash_table_ref (HxHashTable * hash_table);
+void hx_hash_table_unref (HxHashTable * hash_table);
+void hx_hash_table_destroy (HxHashTable * hash_table);
 
-gboolean g_hash_table_insert (GHashTable * hash_table, gpointer key,
-    gpointer value);
-gboolean g_hash_table_replace (GHashTable * hash_table, gpointer key,
-    gpointer value);
-gboolean g_hash_table_add (GHashTable * hash_table, gpointer key);
+hx_boolean hx_hash_table_insert (HxHashTable * hash_table, hx_pointer key,
+    hx_pointer value);
+hx_boolean hx_hash_table_replace (HxHashTable * hash_table, hx_pointer key,
+    hx_pointer value);
+hx_boolean hx_hash_table_add (HxHashTable * hash_table, hx_pointer key);
 
-gpointer g_hash_table_lookup (GHashTable * hash_table, gconstpointer key);
-gboolean g_hash_table_lookup_extended (GHashTable * hash_table,
-    gconstpointer lookup_key, gpointer * orig_key, gpointer * value);
-gboolean g_hash_table_contains (GHashTable * hash_table, gconstpointer key);
+hx_pointer hx_hash_table_lookup (HxHashTable * hash_table, hx_constpointer key);
+hx_boolean hx_hash_table_lookup_extended (HxHashTable * hash_table,
+    hx_constpointer lookup_key, hx_pointer * orig_key, hx_pointer * value);
+hx_boolean hx_hash_table_contains (HxHashTable * hash_table, hx_constpointer key);
 
-gboolean g_hash_table_remove (GHashTable * hash_table, gconstpointer key);
-gboolean g_hash_table_steal (GHashTable * hash_table, gconstpointer key);
-void g_hash_table_remove_all (GHashTable * hash_table);
+hx_boolean hx_hash_table_remove (HxHashTable * hash_table, hx_constpointer key);
+hx_boolean hx_hash_table_steal (HxHashTable * hash_table, hx_constpointer key);
+void hx_hash_table_remove_all (HxHashTable * hash_table);
 
-void g_hash_table_foreach (GHashTable * hash_table, GHFunc func,
-    gpointer user_data);
-guint g_hash_table_foreach_remove (GHashTable * hash_table, GHRFunc func,
-    gpointer user_data);
-gpointer g_hash_table_find (GHashTable * hash_table, GHRFunc predicate,
-    gpointer user_data);
-guint g_hash_table_size (GHashTable * hash_table);
+void hx_hash_table_foreach (HxHashTable * hash_table, HxHFunc func,
+    hx_pointer user_data);
+hx_uint hx_hash_table_foreach_remove (HxHashTable * hash_table, HxHRFunc func,
+    hx_pointer user_data);
+hx_pointer hx_hash_table_find (HxHashTable * hash_table, HxHRFunc predicate,
+    hx_pointer user_data);
+hx_uint hx_hash_table_size (HxHashTable * hash_table);
 
-void g_hash_table_iter_init (GHashTableIter * iter, GHashTable * hash_table);
-gboolean g_hash_table_iter_next (GHashTableIter * iter, gpointer * key,
-    gpointer * value);
-void g_hash_table_iter_remove (GHashTableIter * iter);
+void hx_hash_table_iter_init (HxHashTableIter * iter, HxHashTable * hash_table);
+hx_boolean hx_hash_table_iter_next (HxHashTableIter * iter, hx_pointer * key,
+    hx_pointer * value);
+void hx_hash_table_iter_remove (HxHashTableIter * iter);
 
 /* hash / equal helpers */
-guint g_direct_hash (gconstpointer v);
-gboolean g_direct_equal (gconstpointer a, gconstpointer b);
-guint g_int_hash (gconstpointer v);
-gboolean g_int_equal (gconstpointer a, gconstpointer b);
-guint g_int64_hash (gconstpointer v);
-gboolean g_int64_equal (gconstpointer a, gconstpointer b);
-guint g_str_hash (gconstpointer v);
-gboolean g_str_equal (gconstpointer a, gconstpointer b);
+hx_uint hx_direct_hash (hx_constpointer v);
+hx_boolean hx_direct_equal (hx_constpointer a, hx_constpointer b);
+hx_uint hx_int_hash (hx_constpointer v);
+hx_boolean hx_int_equal (hx_constpointer a, hx_constpointer b);
+hx_uint hx_int64_hash (hx_constpointer v);
+hx_boolean hx_int64_equal (hx_constpointer a, hx_constpointer b);
+hx_uint hx_str_hash (hx_constpointer v);
+hx_boolean hx_str_equal (hx_constpointer a, hx_constpointer b);
 
-G_END_DECLS
+HX_END_DECLS
 
 #endif

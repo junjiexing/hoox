@@ -14,13 +14,13 @@
 
 #include "testrunner.h"
 
-G_BEGIN_DECLS
+HX_BEGIN_DECLS
 
-gchar * test_util_diff_binary (const guint8 * expected_bytes,
-    guint expected_length, const guint8 * actual_bytes, guint actual_length);
-gchar * test_util_diff_text (const gchar * expected_text,
-    const gchar * actual_text);
+hx_char * test_util_diff_binary (const hx_uint8 * expected_bytes,
+    hx_uint expected_length, const hx_uint8 * actual_bytes, hx_uint actual_length);
+hx_char * test_util_diff_text (const hx_char * expected_text,
+    const hx_char * actual_text);
 
-G_END_DECLS
+HX_END_DECLS
 
 #endif

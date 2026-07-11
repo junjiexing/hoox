@@ -1,5 +1,5 @@
 /*
- * hoox nano-glib: GSList / GList / GQueue implementation.
+ * hoox nano-glib: HxSList / HxList / HxQueue implementation.
  *
  * Licence: wxWindows Library Licence, Version 3.1
  */
@@ -7,52 +7,52 @@
 #include "hxlist.h"
 #include "hxmem.h"
 
-/* ---- GSList ------------------------------------------------------------- */
+/* ---- HxSList ------------------------------------------------------------- */
 
-GSList *
-g_slist_append (GSList * list,
-                gpointer data)
+HxSList *
+hx_slist_append (HxSList * list,
+                hx_pointer data)
 {
-  GSList * node = g_slice_new (GSList);
+  HxSList * node = hx_slice_new (HxSList);
   node->data = data;
   node->next = NULL;
 
   if (list == NULL)
     return node;
 
-  GSList * last = g_slist_last (list);
+  HxSList * last = hx_slist_last (list);
   last->next = node;
   return list;
 }
 
-GSList *
-g_slist_prepend (GSList * list,
-                 gpointer data)
+HxSList *
+hx_slist_prepend (HxSList * list,
+                 hx_pointer data)
 {
-  GSList * node = g_slice_new (GSList);
+  HxSList * node = hx_slice_new (HxSList);
   node->data = data;
   node->next = list;
   return node;
 }
 
-GSList *
-g_slist_insert (GSList * list,
-                gpointer data,
-                gint position)
+HxSList *
+hx_slist_insert (HxSList * list,
+                hx_pointer data,
+                hx_int position)
 {
-  GSList * prev;
-  GSList * node;
+  HxSList * prev;
+  HxSList * node;
 
   if (position < 0 || list == NULL)
-    return g_slist_append (list, data);
+    return hx_slist_append (list, data);
   if (position == 0)
-    return g_slist_prepend (list, data);
+    return hx_slist_prepend (list, data);
 
   prev = list;
   while (--position > 0 && prev->next != NULL)
     prev = prev->next;
 
-  node = g_slice_new (GSList);
+  node = hx_slice_new (HxSList);
   node->data = data;
   node->next = prev->next;
   prev->next = node;
@@ -60,12 +60,12 @@ g_slist_insert (GSList * list,
   return list;
 }
 
-GSList *
-g_slist_remove (GSList * list,
-                gconstpointer data)
+HxSList *
+hx_slist_remove (HxSList * list,
+                hx_constpointer data)
 {
-  GSList * prev = NULL;
-  GSList * cur = list;
+  HxSList * prev = NULL;
+  HxSList * cur = list;
 
   while (cur != NULL)
   {
@@ -75,7 +75,7 @@ g_slist_remove (GSList * list,
         prev->next = cur->next;
       else
         list = cur->next;
-      g_slice_free (GSList, cur);
+      hx_slice_free (HxSList, cur);
       break;
     }
     prev = cur;
@@ -85,12 +85,12 @@ g_slist_remove (GSList * list,
   return list;
 }
 
-GSList *
-g_slist_remove_link (GSList * list,
-                     GSList * link_)
+HxSList *
+hx_slist_remove_link (HxSList * list,
+                     HxSList * link_)
 {
-  GSList * prev = NULL;
-  GSList * cur = list;
+  HxSList * prev = NULL;
+  HxSList * cur = list;
 
   while (cur != NULL)
   {
@@ -110,18 +110,18 @@ g_slist_remove_link (GSList * list,
   return list;
 }
 
-GSList *
-g_slist_delete_link (GSList * list,
-                     GSList * link_)
+HxSList *
+hx_slist_delete_link (HxSList * list,
+                     HxSList * link_)
 {
-  list = g_slist_remove_link (list, link_);
-  g_slice_free (GSList, link_);
+  list = hx_slist_remove_link (list, link_);
+  hx_slice_free (HxSList, link_);
   return list;
 }
 
-GSList *
-g_slist_find (GSList * list,
-              gconstpointer data)
+HxSList *
+hx_slist_find (HxSList * list,
+              hx_constpointer data)
 {
   while (list != NULL)
   {
@@ -132,8 +132,8 @@ g_slist_find (GSList * list,
   return NULL;
 }
 
-GSList *
-g_slist_last (GSList * list)
+HxSList *
+hx_slist_last (HxSList * list)
 {
   if (list == NULL)
     return NULL;
@@ -142,27 +142,27 @@ g_slist_last (GSList * list)
   return list;
 }
 
-GSList *
-g_slist_nth (GSList * list,
-             guint n)
+HxSList *
+hx_slist_nth (HxSList * list,
+             hx_uint n)
 {
   while (n-- > 0 && list != NULL)
     list = list->next;
   return list;
 }
 
-gpointer
-g_slist_nth_data (GSList * list,
-                  guint n)
+hx_pointer
+hx_slist_nth_data (HxSList * list,
+                  hx_uint n)
 {
-  GSList * node = g_slist_nth (list, n);
+  HxSList * node = hx_slist_nth (list, n);
   return (node != NULL) ? node->data : NULL;
 }
 
-guint
-g_slist_length (GSList * list)
+hx_uint
+hx_slist_length (HxSList * list)
 {
-  guint n = 0;
+  hx_uint n = 0;
   while (list != NULL)
   {
     n++;
@@ -171,14 +171,14 @@ g_slist_length (GSList * list)
   return n;
 }
 
-GSList *
-g_slist_reverse (GSList * list)
+HxSList *
+hx_slist_reverse (HxSList * list)
 {
-  GSList * prev = NULL;
+  HxSList * prev = NULL;
 
   while (list != NULL)
   {
-    GSList * next = list->next;
+    HxSList * next = list->next;
     list->next = prev;
     prev = list;
     list = next;
@@ -188,53 +188,53 @@ g_slist_reverse (GSList * list)
 }
 
 void
-g_slist_foreach (GSList * list,
-                 GFunc func,
-                 gpointer user_data)
+hx_slist_foreach (HxSList * list,
+                 HxFunc func,
+                 hx_pointer user_data)
 {
   while (list != NULL)
   {
-    GSList * next = list->next;
+    HxSList * next = list->next;
     func (list->data, user_data);
     list = next;
   }
 }
 
 void
-g_slist_free_1 (GSList * list)
+hx_slist_free_1 (HxSList * list)
 {
-  g_slice_free (GSList, list);
+  hx_slice_free (HxSList, list);
 }
 
 void
-g_slist_free (GSList * list)
+hx_slist_free (HxSList * list)
 {
   while (list != NULL)
   {
-    GSList * next = list->next;
-    g_slice_free (GSList, list);
+    HxSList * next = list->next;
+    hx_slice_free (HxSList, list);
     list = next;
   }
 }
 
 void
-g_slist_free_full (GSList * list,
-                   GDestroyNotify free_func)
+hx_slist_free_full (HxSList * list,
+                   HxDestroyNotify free_func)
 {
   while (list != NULL)
   {
-    GSList * next = list->next;
+    HxSList * next = list->next;
     if (free_func != NULL)
       free_func (list->data);
-    g_slice_free (GSList, list);
+    hx_slice_free (HxSList, list);
     list = next;
   }
 }
 
-/* ---- GList -------------------------------------------------------------- */
+/* ---- HxList -------------------------------------------------------------- */
 
-GList *
-g_list_last (GList * list)
+HxList *
+hx_list_last (HxList * list)
 {
   if (list == NULL)
     return NULL;
@@ -243,8 +243,8 @@ g_list_last (GList * list)
   return list;
 }
 
-GList *
-g_list_first (GList * list)
+HxList *
+hx_list_first (HxList * list)
 {
   if (list == NULL)
     return NULL;
@@ -253,12 +253,12 @@ g_list_first (GList * list)
   return list;
 }
 
-GList *
-g_list_append (GList * list,
-               gpointer data)
+HxList *
+hx_list_append (HxList * list,
+               hx_pointer data)
 {
-  GList * node = g_slice_new (GList);
-  GList * last;
+  HxList * node = hx_slice_new (HxList);
+  HxList * last;
 
   node->data = data;
   node->next = NULL;
@@ -269,18 +269,18 @@ g_list_append (GList * list,
     return node;
   }
 
-  last = g_list_last (list);
+  last = hx_list_last (list);
   last->next = node;
   node->prev = last;
 
   return list;
 }
 
-GList *
-g_list_prepend (GList * list,
-                gpointer data)
+HxList *
+hx_list_prepend (HxList * list,
+                hx_pointer data)
 {
-  GList * node = g_slice_new (GList);
+  HxList * node = hx_slice_new (HxList);
 
   node->data = data;
   node->next = list;
@@ -292,24 +292,24 @@ g_list_prepend (GList * list,
   return node;
 }
 
-GList *
-g_list_insert (GList * list,
-               gpointer data,
-               gint position)
+HxList *
+hx_list_insert (HxList * list,
+               hx_pointer data,
+               hx_int position)
 {
-  GList * tmp;
-  GList * node;
+  HxList * tmp;
+  HxList * node;
 
   if (position < 0 || list == NULL)
-    return g_list_append (list, data);
+    return hx_list_append (list, data);
   if (position == 0)
-    return g_list_prepend (list, data);
+    return hx_list_prepend (list, data);
 
-  tmp = g_list_nth (list, (guint) position);
+  tmp = hx_list_nth (list, (hx_uint) position);
   if (tmp == NULL)
-    return g_list_append (list, data);
+    return hx_list_append (list, data);
 
-  node = g_slice_new (GList);
+  node = hx_slice_new (HxList);
   node->data = data;
   node->prev = tmp->prev;
   node->next = tmp;
@@ -320,9 +320,9 @@ g_list_insert (GList * list,
   return (node->prev == NULL) ? node : list;
 }
 
-GList *
-g_list_remove_link (GList * list,
-                    GList * llink)
+HxList *
+hx_list_remove_link (HxList * list,
+                    HxList * llink)
 {
   if (llink == NULL)
     return list;
@@ -341,26 +341,26 @@ g_list_remove_link (GList * list,
   return list;
 }
 
-GList *
-g_list_delete_link (GList * list,
-                    GList * link_)
+HxList *
+hx_list_delete_link (HxList * list,
+                    HxList * link_)
 {
-  list = g_list_remove_link (list, link_);
-  g_slice_free (GList, link_);
+  list = hx_list_remove_link (list, link_);
+  hx_slice_free (HxList, link_);
   return list;
 }
 
-GList *
-g_list_remove (GList * list,
-               gconstpointer data)
+HxList *
+hx_list_remove (HxList * list,
+               hx_constpointer data)
 {
-  GList * cur = list;
+  HxList * cur = list;
 
   while (cur != NULL)
   {
     if (cur->data == data)
     {
-      list = g_list_delete_link (list, cur);
+      list = hx_list_delete_link (list, cur);
       break;
     }
     cur = cur->next;
@@ -369,9 +369,9 @@ g_list_remove (GList * list,
   return list;
 }
 
-GList *
-g_list_find (GList * list,
-             gconstpointer data)
+HxList *
+hx_list_find (HxList * list,
+             hx_constpointer data)
 {
   while (list != NULL)
   {
@@ -382,27 +382,27 @@ g_list_find (GList * list,
   return NULL;
 }
 
-GList *
-g_list_nth (GList * list,
-            guint n)
+HxList *
+hx_list_nth (HxList * list,
+            hx_uint n)
 {
   while (n-- > 0 && list != NULL)
     list = list->next;
   return list;
 }
 
-gpointer
-g_list_nth_data (GList * list,
-                 guint n)
+hx_pointer
+hx_list_nth_data (HxList * list,
+                 hx_uint n)
 {
-  GList * node = g_list_nth (list, n);
+  HxList * node = hx_list_nth (list, n);
   return (node != NULL) ? node->data : NULL;
 }
 
-guint
-g_list_length (GList * list)
+hx_uint
+hx_list_length (HxList * list)
 {
-  guint n = 0;
+  hx_uint n = 0;
   while (list != NULL)
   {
     n++;
@@ -411,10 +411,10 @@ g_list_length (GList * list)
   return n;
 }
 
-GList *
-g_list_reverse (GList * list)
+HxList *
+hx_list_reverse (HxList * list)
 {
-  GList * last = NULL;
+  HxList * last = NULL;
 
   while (list != NULL)
   {
@@ -428,53 +428,53 @@ g_list_reverse (GList * list)
 }
 
 void
-g_list_foreach (GList * list,
-                GFunc func,
-                gpointer user_data)
+hx_list_foreach (HxList * list,
+                HxFunc func,
+                hx_pointer user_data)
 {
   while (list != NULL)
   {
-    GList * next = list->next;
+    HxList * next = list->next;
     func (list->data, user_data);
     list = next;
   }
 }
 
 void
-g_list_free (GList * list)
+hx_list_free (HxList * list)
 {
   while (list != NULL)
   {
-    GList * next = list->next;
-    g_slice_free (GList, list);
+    HxList * next = list->next;
+    hx_slice_free (HxList, list);
     list = next;
   }
 }
 
 void
-g_list_free_full (GList * list,
-                  GDestroyNotify free_func)
+hx_list_free_full (HxList * list,
+                  HxDestroyNotify free_func)
 {
   while (list != NULL)
   {
-    GList * next = list->next;
+    HxList * next = list->next;
     if (free_func != NULL)
       free_func (list->data);
-    g_slice_free (GList, list);
+    hx_slice_free (HxList, list);
     list = next;
   }
 }
 
-/* ---- GQueue ------------------------------------------------------------- */
+/* ---- HxQueue ------------------------------------------------------------- */
 
-GQueue *
-g_queue_new (void)
+HxQueue *
+hx_queue_new (void)
 {
-  return g_new0 (GQueue, 1);
+  return hx_new0 (HxQueue, 1);
 }
 
 void
-g_queue_init (GQueue * queue)
+hx_queue_init (HxQueue * queue)
 {
   queue->head = NULL;
   queue->tail = NULL;
@@ -482,48 +482,48 @@ g_queue_init (GQueue * queue)
 }
 
 void
-g_queue_clear (GQueue * queue)
+hx_queue_clear (HxQueue * queue)
 {
-  g_list_free (queue->head);
-  g_queue_init (queue);
+  hx_list_free (queue->head);
+  hx_queue_init (queue);
 }
 
 void
-g_queue_free (GQueue * queue)
+hx_queue_free (HxQueue * queue)
 {
   if (queue == NULL)
     return;
-  g_list_free (queue->head);
-  g_free (queue);
+  hx_list_free (queue->head);
+  hx_free (queue);
 }
 
-gboolean
-g_queue_is_empty (GQueue * queue)
+hx_boolean
+hx_queue_is_empty (HxQueue * queue)
 {
   return queue->head == NULL;
 }
 
-guint
-g_queue_get_length (GQueue * queue)
+hx_uint
+hx_queue_get_length (HxQueue * queue)
 {
   return queue->length;
 }
 
 void
-g_queue_push_head (GQueue * queue,
-                   gpointer data)
+hx_queue_push_head (HxQueue * queue,
+                   hx_pointer data)
 {
-  queue->head = g_list_prepend (queue->head, data);
+  queue->head = hx_list_prepend (queue->head, data);
   if (queue->tail == NULL)
     queue->tail = queue->head;
   queue->length++;
 }
 
 void
-g_queue_push_tail (GQueue * queue,
-                   gpointer data)
+hx_queue_push_tail (HxQueue * queue,
+                   hx_pointer data)
 {
-  GList * node = g_slice_new (GList);
+  HxList * node = hx_slice_new (HxList);
 
   node->data = data;
   node->next = NULL;
@@ -538,11 +538,11 @@ g_queue_push_tail (GQueue * queue,
   queue->length++;
 }
 
-gpointer
-g_queue_pop_head (GQueue * queue)
+hx_pointer
+hx_queue_pop_head (HxQueue * queue)
 {
-  GList * node;
-  gpointer data;
+  HxList * node;
+  hx_pointer data;
 
   if (queue->head == NULL)
     return NULL;
@@ -556,17 +556,17 @@ g_queue_pop_head (GQueue * queue)
   else
     queue->tail = NULL;
 
-  g_slice_free (GList, node);
+  hx_slice_free (HxList, node);
   queue->length--;
 
   return data;
 }
 
-gpointer
-g_queue_pop_tail (GQueue * queue)
+hx_pointer
+hx_queue_pop_tail (HxQueue * queue)
 {
-  GList * node;
-  gpointer data;
+  HxList * node;
+  hx_pointer data;
 
   if (queue->tail == NULL)
     return NULL;
@@ -580,50 +580,50 @@ g_queue_pop_tail (GQueue * queue)
   else
     queue->head = NULL;
 
-  g_slice_free (GList, node);
+  hx_slice_free (HxList, node);
   queue->length--;
 
   return data;
 }
 
-gpointer
-g_queue_peek_head (GQueue * queue)
+hx_pointer
+hx_queue_peek_head (HxQueue * queue)
 {
   return (queue->head != NULL) ? queue->head->data : NULL;
 }
 
-gpointer
-g_queue_peek_tail (GQueue * queue)
+hx_pointer
+hx_queue_peek_tail (HxQueue * queue)
 {
   return (queue->tail != NULL) ? queue->tail->data : NULL;
 }
 
 void
-g_queue_foreach (GQueue * queue,
-                 GFunc func,
-                 gpointer user_data)
+hx_queue_foreach (HxQueue * queue,
+                 HxFunc func,
+                 hx_pointer user_data)
 {
-  GList * node = queue->head;
+  HxList * node = queue->head;
   while (node != NULL)
   {
-    GList * next = node->next;
+    HxList * next = node->next;
     func (node->data, user_data);
     node = next;
   }
 }
 
-gboolean
-g_queue_remove (GQueue * queue,
-                gconstpointer data)
+hx_boolean
+hx_queue_remove (HxQueue * queue,
+                hx_constpointer data)
 {
-  GList * node = g_list_find (queue->head, data);
+  HxList * node = hx_list_find (queue->head, data);
 
   if (node == NULL)
     return FALSE;
 
   if (node == queue->tail)
     queue->tail = node->prev;
-  queue->head = g_list_delete_link (queue->head, node);
+  queue->head = hx_list_delete_link (queue->head, node);
   queue->length--;
 
   return TRUE;

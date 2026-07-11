@@ -15,7 +15,7 @@
  * Corporation; see NOTICE.
  */
 
-#include "capstone.h"
+#include "hx_disasm.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -148,14 +148,14 @@ typedef struct
   bool rep;               /* F3 */
 } DecState;
 
-static x86_reg
+static hx_x86_reg
 gpr64 (int idx)
 {
-  static const x86_reg map[16] = {
-    X86_REG_RAX, X86_REG_RCX, X86_REG_RDX, X86_REG_RBX,
-    X86_REG_RSP, X86_REG_RBP, X86_REG_RSI, X86_REG_RDI,
-    X86_REG_R8, X86_REG_R9, X86_REG_R10, X86_REG_R11,
-    X86_REG_R12, X86_REG_R13, X86_REG_R14, X86_REG_R15
+  static const hx_x86_reg map[16] = {
+    HX_REG_RAX, HX_REG_RCX, HX_REG_RDX, HX_REG_RBX,
+    HX_REG_RSP, HX_REG_RBP, HX_REG_RSI, HX_REG_RDI,
+    HX_REG_R8, HX_REG_R9, HX_REG_R10, HX_REG_R11,
+    HX_REG_R12, HX_REG_R13, HX_REG_R14, HX_REG_R15
   };
   return map[idx & 15];
 }
@@ -167,11 +167,11 @@ imm_z_size (DecState * st)
 }
 
 /* Decode ModRM + SIB + displacement; advance cursor past them. Fills the
- * cs_x86 detail (modrm byte, offsets, disp, first memory/reg operand). */
+ * hx_x86 detail (modrm byte, offsets, disp, first memory/reg operand). */
 static void
 decode_modrm (DecState * st,
-              cs_insn * insn,
-              cs_x86 * x86,
+              hx_insn * insn,
+              hx_x86 * x86,
               const uint8_t * insn_start)
 {
   uint8_t modrm = *st->p;
@@ -189,7 +189,7 @@ decode_modrm (DecState * st,
   if (mod == 3)
   {
     /* register operand */
-    x86->operands[0].type = X86_OP_REG;
+    x86->operands[0].type = HX_OP_REG;
     x86->operands[0].reg = gpr64 (rm + ((st->rex & 0x1) ? 8 : 0));
     x86->op_count = 1;
     (void) reg;
@@ -227,17 +227,17 @@ decode_modrm (DecState * st,
 
   /* first operand = memory */
   {
-    cs_x86_op * op = &x86->operands[0];
-    op->type = X86_OP_MEM;
-    op->mem.segment = X86_REG_INVALID;
+    hx_x86_op * op = &x86->operands[0];
+    op->type = HX_OP_MEM;
+    op->mem.segment = HX_REG_INVALID;
     op->mem.scale = 1;
-    op->mem.index = X86_REG_INVALID;
-    op->mem.base = X86_REG_INVALID;
+    op->mem.index = HX_REG_INVALID;
+    op->mem.base = HX_REG_INVALID;
     op->mem.disp = 0;
 
     if (mod == 0 && rm == 5)
     {
-      op->mem.base = st->mode64 ? X86_REG_RIP : X86_REG_INVALID;
+      op->mem.base = st->mode64 ? HX_REG_RIP : HX_REG_INVALID;
     }
     else if (has_sib)
     {
@@ -286,67 +286,67 @@ skip_imm (DecState * st, int n)
 
 /* ---- control-flow classification ---------------------------------------- */
 
-static const x86_insn jcc_map[16] = {
-  X86_INS_JO, X86_INS_JNO, X86_INS_JB, X86_INS_JAE,
-  X86_INS_JE, X86_INS_JNE, X86_INS_JBE, X86_INS_JA,
-  X86_INS_JS, X86_INS_JNS, X86_INS_JP, X86_INS_JNP,
-  X86_INS_JL, X86_INS_JGE, X86_INS_JLE, X86_INS_JG
+static const hx_x86_insn jcc_map[16] = {
+  HX_INS_JO, HX_INS_JNO, HX_INS_JB, HX_INS_JAE,
+  HX_INS_JE, HX_INS_JNE, HX_INS_JBE, HX_INS_JA,
+  HX_INS_JS, HX_INS_JNS, HX_INS_JP, HX_INS_JNP,
+  HX_INS_JL, HX_INS_JGE, HX_INS_JLE, HX_INS_JG
 };
 
 static void
-set_imm_target (cs_x86 * x86, int64_t target)
+set_imm_target (hx_x86 * x86, int64_t target)
 {
-  x86->operands[0].type = X86_OP_IMM;
+  x86->operands[0].type = HX_OP_IMM;
   x86->operands[0].imm = target;
   x86->op_count = 1;
 }
 
-static const x86_insn alu_group[8] = {
-  X86_INS_ADD, X86_INS_OR, X86_INS_ADC, X86_INS_SBB,
-  X86_INS_AND, X86_INS_SUB, X86_INS_XOR, X86_INS_CMP
+static const hx_x86_insn alu_group[8] = {
+  HX_INS_ADD, HX_INS_OR, HX_INS_ADC, HX_INS_SBB,
+  HX_INS_AND, HX_INS_SUB, HX_INS_XOR, HX_INS_CMP
 };
 
 /* Classify common one-byte data-processing opcodes (best-effort; anything not
- * recognised stays X86_INS_OTHER). */
-static x86_insn
+ * recognised stays HX_INS_OTHER). */
+static hx_x86_insn
 classify_dp_1byte (uint8_t p, uint8_t modrm, bool mode64)
 {
   if (p < 0x40 && (p & 7) <= 5)
     return alu_group[(p >> 3) & 7];      /* ADD..CMP r/imm forms */
   if (p >= 0x88 && p <= 0x8B)
-    return X86_INS_MOV;
+    return HX_INS_MOV;
   if (p == 0x8C || p == 0x8E)
-    return X86_INS_MOV;
+    return HX_INS_MOV;
   if (p == 0x8D)
-    return X86_INS_LEA;
+    return HX_INS_LEA;
   if (p >= 0xB0 && p <= 0xBF)
-    return X86_INS_MOV;
+    return HX_INS_MOV;
   if (p == 0xC6 || p == 0xC7)
-    return X86_INS_MOV;
+    return HX_INS_MOV;
   if (p >= 0xA0 && p <= 0xA3)
-    return X86_INS_MOV;
+    return HX_INS_MOV;
   if (p == 0x84 || p == 0x85 || p == 0xA8 || p == 0xA9)
-    return X86_INS_TEST;
+    return HX_INS_TEST;
   if (p >= 0x58 && p <= 0x5F)
-    return X86_INS_POP;
+    return HX_INS_POP;
   if (p == 0x80 || p == 0x81 || p == 0x82 || p == 0x83)
     return alu_group[(modrm >> 3) & 7];  /* group 1 */
   if (p == 0xFE)
-    return (((modrm >> 3) & 7) == 0) ? X86_INS_INC : X86_INS_DEC;
+    return (((modrm >> 3) & 7) == 0) ? HX_INS_INC : HX_INS_DEC;
   if (!mode64 && p >= 0x40 && p <= 0x47)
-    return X86_INS_INC;
+    return HX_INS_INC;
   if (!mode64 && p >= 0x48 && p <= 0x4F)
-    return X86_INS_DEC;
-  return X86_INS_OTHER;
+    return HX_INS_DEC;
+  return HX_INS_OTHER;
 }
 
 /* Populate detail->regs_read/write for the curated set of RIP-capable
  * instructions that implicitly use GP registers, keeping the relocator
- * scratch-register selection (via cs_reg_read/write) safe. */
+ * scratch-register selection (via hx_reg_read/write) safe. */
 static void
-note_implicit_regs (cs_insn * insn, uint8_t op1, uint8_t op0f, uint8_t modrm)
+note_implicit_regs (hx_insn * insn, uint8_t op1, uint8_t op0f, uint8_t modrm)
 {
-  cs_detail * d = insn->detail;
+  hx_detail * d = insn->detail;
   int ext = (modrm >> 3) & 7;
 
   d->regs_read_count = 0;
@@ -358,33 +358,33 @@ note_implicit_regs (cs_insn * insn, uint8_t op1, uint8_t op0f, uint8_t modrm)
     {
       if (ext >= 4) /* MUL/IMUL/DIV/IDIV */
       {
-        d->regs_read[d->regs_read_count++] = X86_REG_RAX;
-        d->regs_write[d->regs_write_count++] = X86_REG_RAX;
+        d->regs_read[d->regs_read_count++] = HX_REG_RAX;
+        d->regs_write[d->regs_write_count++] = HX_REG_RAX;
         if (op1 == 0xF7)
         {
-          d->regs_read[d->regs_read_count++] = X86_REG_RDX;
-          d->regs_write[d->regs_write_count++] = X86_REG_RDX;
+          d->regs_read[d->regs_read_count++] = HX_REG_RDX;
+          d->regs_write[d->regs_write_count++] = HX_REG_RDX;
         }
       }
     }
     else if (op1 == 0xD2 || op1 == 0xD3) /* shift by CL */
     {
-      d->regs_read[d->regs_read_count++] = X86_REG_RCX;
+      d->regs_read[d->regs_read_count++] = HX_REG_RCX;
     }
   }
   else
   {
     if (op0f == 0xB0 || op0f == 0xB1) /* CMPXCHG */
     {
-      d->regs_read[d->regs_read_count++] = X86_REG_RAX;
-      d->regs_write[d->regs_write_count++] = X86_REG_RAX;
+      d->regs_read[d->regs_read_count++] = HX_REG_RAX;
+      d->regs_write[d->regs_write_count++] = HX_REG_RAX;
     }
     else if (op0f == 0xC7) /* CMPXCHG8B/16B */
     {
-      d->regs_read[d->regs_read_count++] = X86_REG_RAX;
-      d->regs_read[d->regs_read_count++] = X86_REG_RDX;
-      d->regs_write[d->regs_write_count++] = X86_REG_RAX;
-      d->regs_write[d->regs_write_count++] = X86_REG_RDX;
+      d->regs_read[d->regs_read_count++] = HX_REG_RAX;
+      d->regs_read[d->regs_read_count++] = HX_REG_RDX;
+      d->regs_write[d->regs_write_count++] = HX_REG_RAX;
+      d->regs_write[d->regs_write_count++] = HX_REG_RDX;
     }
   }
 }
@@ -396,10 +396,10 @@ hx_decode (bool mode64,
            const uint8_t * code,
            size_t avail,
            uint64_t address,
-           cs_insn * insn)
+           hx_insn * insn)
 {
   DecState st;
-  cs_x86 * x86 = &insn->detail->x86;
+  hx_x86 * x86 = &insn->detail->x86;
   const uint8_t * insn_start = code;
   uint8_t op, op0f = 0;
   uint8_t oc;
@@ -413,7 +413,7 @@ hx_decode (bool mode64,
   st.start = code;
 
   memset (x86, 0, sizeof (*x86));
-  insn->id = X86_INS_OTHER;
+  insn->id = HX_INS_OTHER;
   insn->address = address;
   insn->detail->regs_read_count = 0;
   insn->detail->regs_write_count = 0;
@@ -625,43 +625,43 @@ done:
 
     if (!is_vex && !two_byte)
     {
-      if (primary == 0xE8) insn->id = X86_INS_CALL;
-      else if (primary == 0xE9 || primary == 0xEB) insn->id = X86_INS_JMP;
+      if (primary == 0xE8) insn->id = HX_INS_CALL;
+      else if (primary == 0xE9 || primary == 0xEB) insn->id = HX_INS_JMP;
       else if (primary >= 0x70 && primary <= 0x7F)
         insn->id = jcc_map[primary - 0x70];
       else if (primary == 0xE3)
-        insn->id = st.mode64 ? X86_INS_JRCXZ : X86_INS_JECXZ;
-      else if (primary == 0xE0) insn->id = X86_INS_LOOPNE;
-      else if (primary == 0xE1) insn->id = X86_INS_LOOPE;
-      else if (primary == 0xE2) insn->id = X86_INS_LOOP;
-      else if (primary == 0xC2 || primary == 0xC3) insn->id = X86_INS_RET;
-      else if (primary == 0xCA || primary == 0xCB) insn->id = X86_INS_RETF;
-      else if (primary == 0xCC) insn->id = X86_INS_INT3;
-      else if (primary == 0xCD || primary == 0xF1) insn->id = X86_INS_INT;
-      else if (primary == 0x90 && !st.rep) insn->id = X86_INS_NOP;
-      else if (primary >= 0x50 && primary <= 0x57) insn->id = X86_INS_PUSH;
-      else if (primary == 0x68 || primary == 0x6A) insn->id = X86_INS_PUSH;
+        insn->id = st.mode64 ? HX_INS_JRCXZ : HX_INS_JECXZ;
+      else if (primary == 0xE0) insn->id = HX_INS_LOOPNE;
+      else if (primary == 0xE1) insn->id = HX_INS_LOOPE;
+      else if (primary == 0xE2) insn->id = HX_INS_LOOP;
+      else if (primary == 0xC2 || primary == 0xC3) insn->id = HX_INS_RET;
+      else if (primary == 0xCA || primary == 0xCB) insn->id = HX_INS_RETF;
+      else if (primary == 0xCC) insn->id = HX_INS_INT3;
+      else if (primary == 0xCD || primary == 0xF1) insn->id = HX_INS_INT;
+      else if (primary == 0x90 && !st.rep) insn->id = HX_INS_NOP;
+      else if (primary >= 0x50 && primary <= 0x57) insn->id = HX_INS_PUSH;
+      else if (primary == 0x68 || primary == 0x6A) insn->id = HX_INS_PUSH;
       else if (primary == 0xFF)
       {
         int ext = (x86->modrm >> 3) & 7;
-        if (ext == 2 || ext == 3) insn->id = X86_INS_CALL;
-        else if (ext == 4 || ext == 5) insn->id = X86_INS_JMP;
-        else if (ext == 6) insn->id = X86_INS_PUSH;
-        else if (ext == 0) insn->id = X86_INS_INC;
-        else if (ext == 1) insn->id = X86_INS_DEC;
+        if (ext == 2 || ext == 3) insn->id = HX_INS_CALL;
+        else if (ext == 4 || ext == 5) insn->id = HX_INS_JMP;
+        else if (ext == 6) insn->id = HX_INS_PUSH;
+        else if (ext == 0) insn->id = HX_INS_INC;
+        else if (ext == 1) insn->id = HX_INS_DEC;
       }
 
-      if (insn->id == X86_INS_OTHER)
+      if (insn->id == HX_INS_OTHER)
         insn->id = classify_dp_1byte (primary, x86->modrm, st.mode64);
     }
     else if (!is_vex && two_byte)
     {
       if (primary >= 0x80 && primary <= 0x8F)
         insn->id = jcc_map[primary - 0x80];   /* near Jcc (0F 8x rel32) */
-      else if (primary == 0x05) insn->id = X86_INS_SYSCALL;
-      else if (primary == 0x34) insn->id = X86_INS_SYSENTER;
-      else if (primary == 0x1F) insn->id = X86_INS_NOP;
-      else if (primary == 0xB0 || primary == 0xB1) insn->id = X86_INS_CMPXCHG;
+      else if (primary == 0x05) insn->id = HX_INS_SYSCALL;
+      else if (primary == 0x34) insn->id = HX_INS_SYSENTER;
+      else if (primary == 0x1F) insn->id = HX_INS_NOP;
+      else if (primary == 0xB0 || primary == 0xB1) insn->id = HX_INS_CMPXCHG;
     }
 
     if (!is_vex)
@@ -680,56 +680,56 @@ typedef struct
   bool detail;
 } HxHandle;
 
-cs_err
-cs_open (cs_arch arch, cs_mode mode, csh * handle)
+hx_err
+hx_open (hx_arch arch, hx_mode mode, hx_csh * handle)
 {
   HxHandle * h;
 
-  if (arch != CS_ARCH_X86)
-    return CS_ERR_ARCH;
+  if (arch != HX_ARCH_X86)
+    return HX_ERR_ARCH;
 
   h = calloc (1, sizeof (HxHandle));
   if (h == NULL)
-    return CS_ERR_MEM;
+    return HX_ERR_MEM;
 
-  h->mode64 = (mode & CS_MODE_64) != 0;
+  h->mode64 = (mode & HX_MODE_64) != 0;
   h->detail = false;
-  *handle = (csh) (size_t) h;
+  *handle = (hx_csh) (size_t) h;
 
-  return CS_ERR_OK;
+  return HX_ERR_OK;
 }
 
-cs_err
-cs_close (csh * handle)
+hx_err
+hx_close (hx_csh * handle)
 {
   if (handle == NULL || *handle == 0)
-    return CS_ERR_HANDLE;
+    return HX_ERR_HANDLE;
   free ((void *) (size_t) *handle);
   *handle = 0;
-  return CS_ERR_OK;
+  return HX_ERR_OK;
 }
 
-cs_err
-cs_option (csh handle, cs_opt_type type, size_t value)
+hx_err
+hx_option (hx_csh handle, hx_opt_type type, size_t value)
 {
   HxHandle * h = (HxHandle *) (size_t) handle;
 
-  if (type == CS_OPT_DETAIL)
-    h->detail = (value == CS_OPT_ON);
-  else if (type == CS_OPT_MODE)
-    h->mode64 = (value & CS_MODE_64) != 0;
+  if (type == HX_OPT_DETAIL)
+    h->detail = (value == HX_OPT_ON);
+  else if (type == HX_OPT_MODE)
+    h->mode64 = (value & HX_MODE_64) != 0;
 
-  return CS_ERR_OK;
+  return HX_ERR_OK;
 }
 
-cs_insn *
-cs_malloc (csh handle)
+hx_insn *
+hx_insn_alloc (hx_csh handle)
 {
-  cs_insn * insn = calloc (1, sizeof (cs_insn));
+  hx_insn * insn = calloc (1, sizeof (hx_insn));
   (void) handle;
   if (insn == NULL)
     return NULL;
-  insn->detail = calloc (1, sizeof (cs_detail));
+  insn->detail = calloc (1, sizeof (hx_detail));
   if (insn->detail == NULL)
   {
     free (insn);
@@ -739,7 +739,7 @@ cs_malloc (csh handle)
 }
 
 void
-cs_free (cs_insn * insn, size_t count)
+hx_insn_free (hx_insn * insn, size_t count)
 {
   size_t i;
   for (i = 0; i < count; i++)
@@ -748,8 +748,8 @@ cs_free (cs_insn * insn, size_t count)
 }
 
 bool
-cs_disasm_iter (csh handle, const uint8_t ** code, size_t * size,
-    uint64_t * address, cs_insn * insn)
+hx_disasm_iter (hx_csh handle, const uint8_t ** code, size_t * size,
+    uint64_t * address, hx_insn * insn)
 {
   HxHandle * h = (HxHandle *) (size_t) handle;
 
@@ -767,13 +767,13 @@ cs_disasm_iter (csh handle, const uint8_t ** code, size_t * size,
 }
 
 size_t
-cs_disasm (csh handle, const uint8_t * code, size_t code_size,
-    uint64_t address, size_t count, cs_insn ** insn)
+hx_disasm (hx_csh handle, const uint8_t * code, size_t code_size,
+    uint64_t address, size_t count, hx_insn ** insn)
 {
   HxHandle * h = (HxHandle *) (size_t) handle;
   size_t cap = (count != 0) ? count : 64;
   size_t n = 0;
-  cs_insn * arr = calloc (cap, sizeof (cs_insn));
+  hx_insn * arr = calloc (cap, sizeof (hx_insn));
   const uint8_t * p = code;
   size_t remaining = code_size;
   uint64_t addr = address;
@@ -783,7 +783,7 @@ cs_disasm (csh handle, const uint8_t * code, size_t code_size,
 
   while (remaining > 0 && (count == 0 || n < count))
   {
-    cs_detail * detail = calloc (1, sizeof (cs_detail));
+    hx_detail * detail = calloc (1, sizeof (hx_detail));
     arr[n].detail = detail;
     if (!hx_decode (h->mode64, p, remaining, addr, &arr[n]))
     {
@@ -798,7 +798,7 @@ cs_disasm (csh handle, const uint8_t * code, size_t code_size,
     if (n == cap && count == 0)
     {
       cap *= 2;
-      arr = realloc (arr, cap * sizeof (cs_insn));
+      arr = realloc (arr, cap * sizeof (hx_insn));
     }
   }
 
@@ -817,7 +817,7 @@ reg_in (const uint16_t * arr, uint8_t n, unsigned int reg)
 }
 
 bool
-cs_reg_read (csh handle, const cs_insn * insn, unsigned int reg_id)
+hx_reg_read (hx_csh handle, const hx_insn * insn, unsigned int reg_id)
 {
   (void) handle;
   return reg_in (insn->detail->regs_read, insn->detail->regs_read_count,
@@ -825,7 +825,7 @@ cs_reg_read (csh handle, const cs_insn * insn, unsigned int reg_id)
 }
 
 bool
-cs_reg_write (csh handle, const cs_insn * insn, unsigned int reg_id)
+hx_reg_write (hx_csh handle, const hx_insn * insn, unsigned int reg_id)
 {
   (void) handle;
   return reg_in (insn->detail->regs_write, insn->detail->regs_write_count,
@@ -833,6 +833,6 @@ cs_reg_write (csh handle, const cs_insn * insn, unsigned int reg_id)
 }
 
 void
-cs_arch_register_x86 (void)
+hx_arch_register_x86 (void)
 {
 }

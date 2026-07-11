@@ -1,5 +1,5 @@
 /*
- * hoox nano-glib: GHashTable implementation (separate chaining).
+ * hoox nano-glib: HxHashTable implementation (separate chaining).
  *
  * Licence: wxWindows Library Licence, Version 3.1
  */
@@ -14,64 +14,64 @@ typedef struct _HxNode HxNode;
 
 struct _HxNode
 {
-  gpointer key;
-  gpointer value;
-  guint hash;
+  hx_pointer key;
+  hx_pointer value;
+  hx_uint hash;
   HxNode * next;
 };
 
-struct _GHashTable
+struct _HxHashTable
 {
   HxNode ** buckets;
-  guint n_buckets;      /* power of two */
-  guint n_items;
-  gint ref_count;
+  hx_uint n_buckets;      /* power of two */
+  hx_uint n_items;
+  hx_int ref_count;
   int version;
 
-  GHashFunc hash_func;
-  GEqualFunc key_equal_func;
-  GDestroyNotify key_destroy_func;
-  GDestroyNotify value_destroy_func;
+  HxHashFunc hash_func;
+  HxEqualFunc key_equal_func;
+  HxDestroyNotify key_destroy_func;
+  HxDestroyNotify value_destroy_func;
 };
 
 #define HX_HASH_INITIAL_BUCKETS 8
 
-static guint
-hx_hash_key (GHashTable * ht,
-             gconstpointer key)
+static hx_uint
+hx_hash_key (HxHashTable * ht,
+             hx_constpointer key)
 {
   return (ht->hash_func != NULL)
       ? ht->hash_func (key)
-      : (guint) GPOINTER_TO_SIZE (key);
+      : (hx_uint) HX_POINTER_TO_SIZE (key);
 }
 
-static gboolean
-hx_keys_equal (GHashTable * ht,
-               gconstpointer a,
-               gconstpointer b)
+static hx_boolean
+hx_keys_equal (HxHashTable * ht,
+               hx_constpointer a,
+               hx_constpointer b)
 {
   if (ht->key_equal_func != NULL)
     return ht->key_equal_func (a, b);
   return a == b;
 }
 
-GHashTable *
-g_hash_table_new (GHashFunc hash_func,
-                  GEqualFunc key_equal_func)
+HxHashTable *
+hx_hash_table_new (HxHashFunc hash_func,
+                  HxEqualFunc key_equal_func)
 {
-  return g_hash_table_new_full (hash_func, key_equal_func, NULL, NULL);
+  return hx_hash_table_new_full (hash_func, key_equal_func, NULL, NULL);
 }
 
-GHashTable *
-g_hash_table_new_full (GHashFunc hash_func,
-                       GEqualFunc key_equal_func,
-                       GDestroyNotify key_destroy_func,
-                       GDestroyNotify value_destroy_func)
+HxHashTable *
+hx_hash_table_new_full (HxHashFunc hash_func,
+                       HxEqualFunc key_equal_func,
+                       HxDestroyNotify key_destroy_func,
+                       HxDestroyNotify value_destroy_func)
 {
-  GHashTable * ht = g_new0 (GHashTable, 1);
+  HxHashTable * ht = hx_new0 (HxHashTable, 1);
 
   ht->n_buckets = HX_HASH_INITIAL_BUCKETS;
-  ht->buckets = g_new0 (HxNode *, ht->n_buckets);
+  ht->buckets = hx_new0 (HxNode *, ht->n_buckets);
   ht->ref_count = 1;
   ht->hash_func = hash_func;
   ht->key_equal_func = key_equal_func;
@@ -82,11 +82,11 @@ g_hash_table_new_full (GHashFunc hash_func,
 }
 
 static void
-hx_hash_resize (GHashTable * ht)
+hx_hash_resize (HxHashTable * ht)
 {
-  guint new_n = ht->n_buckets * 2;
-  HxNode ** new_buckets = g_new0 (HxNode *, new_n);
-  guint i;
+  hx_uint new_n = ht->n_buckets * 2;
+  HxNode ** new_buckets = hx_new0 (HxNode *, new_n);
+  hx_uint i;
 
   for (i = 0; i != ht->n_buckets; i++)
   {
@@ -94,26 +94,26 @@ hx_hash_resize (GHashTable * ht)
     while (node != NULL)
     {
       HxNode * next = node->next;
-      guint idx = node->hash & (new_n - 1);
+      hx_uint idx = node->hash & (new_n - 1);
       node->next = new_buckets[idx];
       new_buckets[idx] = node;
       node = next;
     }
   }
 
-  g_free (ht->buckets);
+  hx_free (ht->buckets);
   ht->buckets = new_buckets;
   ht->n_buckets = new_n;
 }
 
 static HxNode *
-hx_hash_find (GHashTable * ht,
-              gconstpointer key,
-              guint hash,
+hx_hash_find (HxHashTable * ht,
+              hx_constpointer key,
+              hx_uint hash,
               HxNode ** out_prev,
-              guint * out_index)
+              hx_uint * out_index)
 {
-  guint idx = hash & (ht->n_buckets - 1);
+  hx_uint idx = hash & (ht->n_buckets - 1);
   HxNode * prev = NULL;
   HxNode * node = ht->buckets[idx];
 
@@ -133,14 +133,14 @@ hx_hash_find (GHashTable * ht,
   return node;
 }
 
-static gboolean
-hx_hash_insert (GHashTable * ht,
-                gpointer key,
-                gpointer value,
-                gboolean keep_new_key)
+static hx_boolean
+hx_hash_insert (HxHashTable * ht,
+                hx_pointer key,
+                hx_pointer value,
+                hx_boolean keep_new_key)
 {
-  guint hash = hx_hash_key (ht, key);
-  guint idx;
+  hx_uint hash = hx_hash_key (ht, key);
+  hx_uint idx;
   HxNode * node = hx_hash_find (ht, key, hash, NULL, &idx);
 
   if (node != NULL)
@@ -171,7 +171,7 @@ hx_hash_insert (GHashTable * ht,
     idx = hash & (ht->n_buckets - 1);
   }
 
-  node = g_new (HxNode, 1);
+  node = hx_new (HxNode, 1);
   node->key = key;
   node->value = value;
   node->hash = hash;
@@ -183,45 +183,45 @@ hx_hash_insert (GHashTable * ht,
   return TRUE;
 }
 
-gboolean
-g_hash_table_insert (GHashTable * hash_table,
-                     gpointer key,
-                     gpointer value)
+hx_boolean
+hx_hash_table_insert (HxHashTable * hash_table,
+                     hx_pointer key,
+                     hx_pointer value)
 {
   return hx_hash_insert (hash_table, key, value, FALSE);
 }
 
-gboolean
-g_hash_table_replace (GHashTable * hash_table,
-                      gpointer key,
-                      gpointer value)
+hx_boolean
+hx_hash_table_replace (HxHashTable * hash_table,
+                      hx_pointer key,
+                      hx_pointer value)
 {
   return hx_hash_insert (hash_table, key, value, TRUE);
 }
 
-gboolean
-g_hash_table_add (GHashTable * hash_table,
-                  gpointer key)
+hx_boolean
+hx_hash_table_add (HxHashTable * hash_table,
+                  hx_pointer key)
 {
   return hx_hash_insert (hash_table, key, key, TRUE);
 }
 
-gpointer
-g_hash_table_lookup (GHashTable * hash_table,
-                     gconstpointer key)
+hx_pointer
+hx_hash_table_lookup (HxHashTable * hash_table,
+                     hx_constpointer key)
 {
-  guint hash = hx_hash_key (hash_table, key);
+  hx_uint hash = hx_hash_key (hash_table, key);
   HxNode * node = hx_hash_find (hash_table, key, hash, NULL, NULL);
   return (node != NULL) ? node->value : NULL;
 }
 
-gboolean
-g_hash_table_lookup_extended (GHashTable * hash_table,
-                              gconstpointer lookup_key,
-                              gpointer * orig_key,
-                              gpointer * value)
+hx_boolean
+hx_hash_table_lookup_extended (HxHashTable * hash_table,
+                              hx_constpointer lookup_key,
+                              hx_pointer * orig_key,
+                              hx_pointer * value)
 {
-  guint hash = hx_hash_key (hash_table, lookup_key);
+  hx_uint hash = hx_hash_key (hash_table, lookup_key);
   HxNode * node = hx_hash_find (hash_table, lookup_key, hash, NULL, NULL);
 
   if (node == NULL)
@@ -235,21 +235,21 @@ g_hash_table_lookup_extended (GHashTable * hash_table,
   return TRUE;
 }
 
-gboolean
-g_hash_table_contains (GHashTable * hash_table,
-                       gconstpointer key)
+hx_boolean
+hx_hash_table_contains (HxHashTable * hash_table,
+                       hx_constpointer key)
 {
-  guint hash = hx_hash_key (hash_table, key);
+  hx_uint hash = hx_hash_key (hash_table, key);
   return hx_hash_find (hash_table, key, hash, NULL, NULL) != NULL;
 }
 
-static gboolean
-hx_hash_remove_internal (GHashTable * ht,
-                         gconstpointer key,
-                         gboolean notify)
+static hx_boolean
+hx_hash_remove_internal (HxHashTable * ht,
+                         hx_constpointer key,
+                         hx_boolean notify)
 {
-  guint hash = hx_hash_key (ht, key);
-  guint idx;
+  hx_uint hash = hx_hash_key (ht, key);
+  hx_uint idx;
   HxNode * prev;
   HxNode * node = hx_hash_find (ht, key, hash, &prev, &idx);
 
@@ -269,31 +269,31 @@ hx_hash_remove_internal (GHashTable * ht,
       ht->value_destroy_func (node->value);
   }
 
-  g_free (node);
+  hx_free (node);
   ht->n_items--;
   ht->version++;
 
   return TRUE;
 }
 
-gboolean
-g_hash_table_remove (GHashTable * hash_table,
-                     gconstpointer key)
+hx_boolean
+hx_hash_table_remove (HxHashTable * hash_table,
+                     hx_constpointer key)
 {
   return hx_hash_remove_internal (hash_table, key, TRUE);
 }
 
-gboolean
-g_hash_table_steal (GHashTable * hash_table,
-                    gconstpointer key)
+hx_boolean
+hx_hash_table_steal (HxHashTable * hash_table,
+                    hx_constpointer key)
 {
   return hx_hash_remove_internal (hash_table, key, FALSE);
 }
 
 void
-g_hash_table_remove_all (GHashTable * hash_table)
+hx_hash_table_remove_all (HxHashTable * hash_table)
 {
-  guint i;
+  hx_uint i;
 
   for (i = 0; i != hash_table->n_buckets; i++)
   {
@@ -305,7 +305,7 @@ g_hash_table_remove_all (GHashTable * hash_table)
         hash_table->key_destroy_func (node->key);
       if (hash_table->value_destroy_func != NULL)
         hash_table->value_destroy_func (node->value);
-      g_free (node);
+      hx_free (node);
       node = next;
     }
     hash_table->buckets[i] = NULL;
@@ -315,37 +315,37 @@ g_hash_table_remove_all (GHashTable * hash_table)
   hash_table->version++;
 }
 
-GHashTable *
-g_hash_table_ref (GHashTable * hash_table)
+HxHashTable *
+hx_hash_table_ref (HxHashTable * hash_table)
 {
   hash_table->ref_count++;
   return hash_table;
 }
 
 void
-g_hash_table_unref (GHashTable * hash_table)
+hx_hash_table_unref (HxHashTable * hash_table)
 {
   if (--hash_table->ref_count == 0)
   {
-    g_hash_table_remove_all (hash_table);
-    g_free (hash_table->buckets);
-    g_free (hash_table);
+    hx_hash_table_remove_all (hash_table);
+    hx_free (hash_table->buckets);
+    hx_free (hash_table);
   }
 }
 
 void
-g_hash_table_destroy (GHashTable * hash_table)
+hx_hash_table_destroy (HxHashTable * hash_table)
 {
-  g_hash_table_remove_all (hash_table);
-  g_hash_table_unref (hash_table);
+  hx_hash_table_remove_all (hash_table);
+  hx_hash_table_unref (hash_table);
 }
 
 void
-g_hash_table_foreach (GHashTable * hash_table,
-                      GHFunc func,
-                      gpointer user_data)
+hx_hash_table_foreach (HxHashTable * hash_table,
+                      HxHFunc func,
+                      hx_pointer user_data)
 {
-  guint i;
+  hx_uint i;
 
   for (i = 0; i != hash_table->n_buckets; i++)
   {
@@ -359,13 +359,13 @@ g_hash_table_foreach (GHashTable * hash_table,
   }
 }
 
-guint
-g_hash_table_foreach_remove (GHashTable * hash_table,
-                             GHRFunc func,
-                             gpointer user_data)
+hx_uint
+hx_hash_table_foreach_remove (HxHashTable * hash_table,
+                             HxHRFunc func,
+                             hx_pointer user_data)
 {
-  guint i;
-  guint removed = 0;
+  hx_uint i;
+  hx_uint removed = 0;
 
   for (i = 0; i != hash_table->n_buckets; i++)
   {
@@ -387,7 +387,7 @@ g_hash_table_foreach_remove (GHashTable * hash_table,
           hash_table->key_destroy_func (node->key);
         if (hash_table->value_destroy_func != NULL)
           hash_table->value_destroy_func (node->value);
-        g_free (node);
+        hx_free (node);
         hash_table->n_items--;
         removed++;
       }
@@ -406,12 +406,12 @@ g_hash_table_foreach_remove (GHashTable * hash_table,
   return removed;
 }
 
-gpointer
-g_hash_table_find (GHashTable * hash_table,
-                   GHRFunc predicate,
-                   gpointer user_data)
+hx_pointer
+hx_hash_table_find (HxHashTable * hash_table,
+                   HxHRFunc predicate,
+                   hx_pointer user_data)
 {
-  guint i;
+  hx_uint i;
 
   for (i = 0; i != hash_table->n_buckets; i++)
   {
@@ -427,8 +427,8 @@ g_hash_table_find (GHashTable * hash_table,
   return NULL;
 }
 
-guint
-g_hash_table_size (GHashTable * hash_table)
+hx_uint
+hx_hash_table_size (HxHashTable * hash_table)
 {
   return hash_table->n_items;
 }
@@ -436,8 +436,8 @@ g_hash_table_size (GHashTable * hash_table)
 /* ---- iterator ----------------------------------------------------------- */
 
 void
-g_hash_table_iter_init (GHashTableIter * iter,
-                        GHashTable * hash_table)
+hx_hash_table_iter_init (HxHashTableIter * iter,
+                        HxHashTable * hash_table)
 {
   iter->table = hash_table;
   iter->bucket = -1;
@@ -446,12 +446,12 @@ g_hash_table_iter_init (GHashTableIter * iter,
   iter->version = hash_table->version;
 }
 
-gboolean
-g_hash_table_iter_next (GHashTableIter * iter,
-                        gpointer * key,
-                        gpointer * value)
+hx_boolean
+hx_hash_table_iter_next (HxHashTableIter * iter,
+                        hx_pointer * key,
+                        hx_pointer * value)
 {
-  GHashTable * ht = iter->table;
+  HxHashTable * ht = iter->table;
   HxNode * node = iter->node;
 
   iter->prev = node;
@@ -462,7 +462,7 @@ g_hash_table_iter_next (GHashTableIter * iter,
   while (node == NULL)
   {
     iter->bucket++;
-    if ((guint) iter->bucket >= ht->n_buckets)
+    if ((hx_uint) iter->bucket >= ht->n_buckets)
     {
       iter->node = NULL;
       return FALSE;
@@ -482,9 +482,9 @@ g_hash_table_iter_next (GHashTableIter * iter,
 }
 
 void
-g_hash_table_iter_remove (GHashTableIter * iter)
+hx_hash_table_iter_remove (HxHashTableIter * iter)
 {
-  GHashTable * ht = iter->table;
+  HxHashTable * ht = iter->table;
   HxNode * node = iter->node;
   HxNode * prev = iter->prev;
 
@@ -501,7 +501,7 @@ g_hash_table_iter_remove (GHashTableIter * iter)
   if (ht->value_destroy_func != NULL)
     ht->value_destroy_func (node->value);
 
-  g_free (node);
+  hx_free (node);
   ht->n_items--;
 
   /* Reposition so the next iter_next resumes correctly. */
@@ -512,61 +512,61 @@ g_hash_table_iter_remove (GHashTableIter * iter)
 
 /* ---- hash / equal helpers ----------------------------------------------- */
 
-guint
-g_direct_hash (gconstpointer v)
+hx_uint
+hx_direct_hash (hx_constpointer v)
 {
-  return (guint) GPOINTER_TO_SIZE (v);
+  return (hx_uint) HX_POINTER_TO_SIZE (v);
 }
 
-gboolean
-g_direct_equal (gconstpointer a,
-                gconstpointer b)
+hx_boolean
+hx_direct_equal (hx_constpointer a,
+                hx_constpointer b)
 {
   return a == b;
 }
 
-guint
-g_int_hash (gconstpointer v)
+hx_uint
+hx_int_hash (hx_constpointer v)
 {
-  return (guint) *(const gint *) v;
+  return (hx_uint) *(const hx_int *) v;
 }
 
-gboolean
-g_int_equal (gconstpointer a,
-             gconstpointer b)
+hx_boolean
+hx_int_equal (hx_constpointer a,
+             hx_constpointer b)
 {
-  return *(const gint *) a == *(const gint *) b;
+  return *(const hx_int *) a == *(const hx_int *) b;
 }
 
-guint
-g_int64_hash (gconstpointer v)
+hx_uint
+hx_int64_hash (hx_constpointer v)
 {
-  guint64 k = *(const guint64 *) v;
-  return (guint) (k ^ (k >> 32));
+  hx_uint64 k = *(const hx_uint64 *) v;
+  return (hx_uint) (k ^ (k >> 32));
 }
 
-gboolean
-g_int64_equal (gconstpointer a,
-               gconstpointer b)
+hx_boolean
+hx_int64_equal (hx_constpointer a,
+               hx_constpointer b)
 {
-  return *(const guint64 *) a == *(const guint64 *) b;
+  return *(const hx_uint64 *) a == *(const hx_uint64 *) b;
 }
 
-guint
-g_str_hash (gconstpointer v)
+hx_uint
+hx_str_hash (hx_constpointer v)
 {
   const signed char * p;
-  guint32 h = 5381;
+  hx_uint32 h = 5381;
 
   for (p = v; *p != '\0'; p++)
-    h = (h << 5) + h + (guint32) *p;
+    h = (h << 5) + h + (hx_uint32) *p;
 
   return h;
 }
 
-gboolean
-g_str_equal (gconstpointer a,
-             gconstpointer b)
+hx_boolean
+hx_str_equal (hx_constpointer a,
+             hx_constpointer b)
 {
   return strcmp (a, b) == 0;
 }

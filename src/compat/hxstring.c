@@ -1,5 +1,5 @@
 /*
- * hoox nano-glib: GString implementation.
+ * hoox nano-glib: HxString implementation.
  *
  * Licence: wxWindows Library Licence, Version 3.1
  */
@@ -11,11 +11,11 @@
 #include <stdio.h>
 
 static void
-hx_string_maybe_expand (GString * s,
-                        gsize extra)
+hx_string_maybe_expand (HxString * s,
+                        hx_size extra)
 {
-  gsize want = s->len + extra + 1;
-  gsize new_alloc;
+  hx_size want = s->len + extra + 1;
+  hx_size new_alloc;
 
   if (want <= s->allocated_len)
     return;
@@ -24,47 +24,47 @@ hx_string_maybe_expand (GString * s,
   while (new_alloc < want)
     new_alloc *= 2;
 
-  s->str = g_realloc (s->str, new_alloc);
+  s->str = hx_realloc (s->str, new_alloc);
   s->allocated_len = new_alloc;
 }
 
-GString *
-g_string_sized_new (gsize dfl_size)
+HxString *
+hx_string_sized_new (hx_size dfl_size)
 {
-  GString * s = g_new0 (GString, 1);
+  HxString * s = hx_new0 (HxString, 1);
 
   s->allocated_len = 0;
   s->len = 0;
   s->str = NULL;
-  hx_string_maybe_expand (s, MAX (dfl_size, (gsize) 2));
+  hx_string_maybe_expand (s, MAX (dfl_size, (hx_size) 2));
   s->str[0] = '\0';
 
   return s;
 }
 
-GString *
-g_string_new (const gchar * init)
+HxString *
+hx_string_new (const hx_char * init)
 {
-  GString * s = g_string_sized_new ((init != NULL) ? strlen (init) : 2);
+  HxString * s = hx_string_sized_new ((init != NULL) ? strlen (init) : 2);
 
   if (init != NULL)
-    g_string_append (s, init);
+    hx_string_append (s, init);
 
   return s;
 }
 
-gchar *
-g_string_free (GString * string,
-               gboolean free_segment)
+hx_char *
+hx_string_free (HxString * string,
+               hx_boolean free_segment)
 {
-  gchar * segment;
+  hx_char * segment;
 
   if (string == NULL)
     return NULL;
 
   if (free_segment)
   {
-    g_free (string->str);
+    hx_free (string->str);
     segment = NULL;
   }
   else
@@ -72,14 +72,14 @@ g_string_free (GString * string,
     segment = string->str;
   }
 
-  g_free (string);
+  hx_free (string);
 
   return segment;
 }
 
-GString *
-g_string_truncate (GString * string,
-                   gsize len)
+HxString *
+hx_string_truncate (HxString * string,
+                   hx_size len)
 {
   if (len < string->len)
   {
@@ -89,20 +89,20 @@ g_string_truncate (GString * string,
   return string;
 }
 
-GString *
-g_string_assign (GString * string,
-                 const gchar * rval)
+HxString *
+hx_string_assign (HxString * string,
+                 const hx_char * rval)
 {
-  g_string_truncate (string, 0);
-  return g_string_append (string, rval);
+  hx_string_truncate (string, 0);
+  return hx_string_append (string, rval);
 }
 
-GString *
-g_string_append_len (GString * string,
-                     const gchar * val,
-                     gssize len)
+HxString *
+hx_string_append_len (HxString * string,
+                     const hx_char * val,
+                     hx_ssize len)
 {
-  gsize n = (len < 0) ? strlen (val) : (gsize) len;
+  hx_size n = (len < 0) ? strlen (val) : (hx_size) len;
 
   hx_string_maybe_expand (string, n);
   memcpy (string->str + string->len, val, n);
@@ -112,16 +112,16 @@ g_string_append_len (GString * string,
   return string;
 }
 
-GString *
-g_string_append (GString * string,
-                 const gchar * val)
+HxString *
+hx_string_append (HxString * string,
+                 const hx_char * val)
 {
-  return g_string_append_len (string, val, -1);
+  return hx_string_append_len (string, val, -1);
 }
 
-GString *
-g_string_append_c (GString * string,
-                   gchar c)
+HxString *
+hx_string_append_c (HxString * string,
+                   hx_char c)
 {
   hx_string_maybe_expand (string, 1);
   string->str[string->len++] = c;
@@ -129,11 +129,11 @@ g_string_append_c (GString * string,
   return string;
 }
 
-GString *
-g_string_prepend (GString * string,
-                  const gchar * val)
+HxString *
+hx_string_prepend (HxString * string,
+                  const hx_char * val)
 {
-  gsize n = strlen (val);
+  hx_size n = strlen (val);
 
   hx_string_maybe_expand (string, n);
   memmove (string->str + n, string->str, string->len + 1);
@@ -143,9 +143,9 @@ g_string_prepend (GString * string,
   return string;
 }
 
-GString *
-g_string_append_vprintf (GString * string,
-                         const gchar * format,
+HxString *
+hx_string_append_vprintf (HxString * string,
+                         const hx_char * format,
                          va_list args)
 {
   va_list args2;
@@ -157,23 +157,23 @@ g_string_append_vprintf (GString * string,
 
   if (needed > 0)
   {
-    hx_string_maybe_expand (string, (gsize) needed);
-    vsnprintf (string->str + string->len, (gsize) needed + 1, format, args);
-    string->len += (gsize) needed;
+    hx_string_maybe_expand (string, (hx_size) needed);
+    vsnprintf (string->str + string->len, (hx_size) needed + 1, format, args);
+    string->len += (hx_size) needed;
   }
 
   return string;
 }
 
-GString *
-g_string_append_printf (GString * string,
-                        const gchar * format,
+HxString *
+hx_string_append_printf (HxString * string,
+                        const hx_char * format,
                         ...)
 {
   va_list args;
 
   va_start (args, format);
-  g_string_append_vprintf (string, format, args);
+  hx_string_append_vprintf (string, format, args);
   va_end (args);
 
   return string;
