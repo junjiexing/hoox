@@ -362,7 +362,7 @@ hoox_memory_patch_code_pages (HxPtrArray * sorted_addresses,
   hx_boolean result = TRUE;
   hx_size page_size;
   hx_uint i;
-  hx_uint8 * apply_start, * apply_target_start;
+  hx_uint8 * apply_start = NULL, * apply_target_start = NULL;
   hx_uint apply_num_pages;
   hx_boolean rwx_supported;
 
