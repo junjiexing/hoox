@@ -10,10 +10,11 @@
  *   2. replace — swap the function body entirely for your own, keeping a
  *                pointer to a trampoline that still reaches the original.
  *
- * Build with the accompanying CMakeLists.txt, or directly:
+ * Build with the accompanying CMakeLists.txt, or directly — no feature macros
+ * are needed (static linkage, the system allocator, and the target arch/OS are
+ * all defaults; MSVC, clang and gcc are supported):
  *
- *   clang -DHOOX_STATIC -DHOOX_USE_SYSTEM_ALLOC -DHAVE_I386 -DHAVE_WINDOWS \
- *         hoox.c hook_example.c -lpsapi -o hook_example      (Windows x64)
+ *   clang hoox.c hook_example.c -lpsapi -o hook_example       (Windows x64)
  *
  * Licence: wxWindows Library Licence, Version 3.1
  */

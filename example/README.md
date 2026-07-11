@@ -51,10 +51,12 @@ elsewhere.
 
 ### Or compile directly
 
+No feature macros are needed — static linkage, the system allocator, and the
+target arch/OS are all defaults:
+
 ```sh
-# Windows x64, from this directory (clang/gcc; for MSVC use cl with the same -D flags)
+# Windows x64, from this directory (clang/gcc; MSVC cl works the same way)
 clang -I ../build/amalgam \
-      -DHOOX_STATIC -DHOOX_USE_SYSTEM_ALLOC -DHAVE_I386 -DHAVE_WINDOWS \
       ../build/amalgam/hoox.c hook_example.c -lpsapi -o hook_example
 ```
 
@@ -83,19 +85,20 @@ after revert: compute(5, 6) = 11  (back to normal)
 done.
 ```
 
-## Required compile definitions
+## Compile definitions
 
-When embedding the amalgamation in your own build, define:
+None are required for the common case. hoox defaults to **static linkage** and
+the **system allocator**, and detects the target **architecture and OS** from
+the compiler's built-in macros. On Windows you only link `psapi` (the
+`CMakeLists.txt` here does that for you).
 
-| Define                  | Meaning                                                |
-|-------------------------|--------------------------------------------------------|
-| `HOOX_STATIC`           | Compile the engine straight in (no DLL import/export). |
-| `HOOX_USE_SYSTEM_ALLOC` | Use the system allocator instead of a bundled one.     |
-| `HAVE_I386`             | Select the x86 / x86_64 backend.                       |
-| `HAVE_WINDOWS`          | Windows platform backend (link `psapi`).               |
+Define a macro only to opt out of a default:
 
-The `CMakeLists.txt` here sets these automatically from the detected platform
-and architecture.
+| Define              | Effect                                                     |
+|---------------------|------------------------------------------------------------|
+| `HOOX_SHARED`       | Consume hoox as a Windows DLL (`__declspec(dllimport)`).   |
+| `HOOX_USE_DLMALLOC` | Use a bundled dlmalloc instead of the system allocator (you must supply `dlmalloc.c` on the include path). |
+| `HAVE_I386` etc.    | Force the target arch/OS if auto-detection can't classify it. |
 
 ## Public API used
 

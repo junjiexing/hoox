@@ -105,12 +105,12 @@ if(HOOX_ARCH_FAMILY STREQUAL "x86")
       "${CMAKE_CURRENT_SOURCE_DIR}/../src/core"
       "${CMAKE_CURRENT_SOURCE_DIR}/../src/compat"
       "${CMAKE_CURRENT_SOURCE_DIR}/../src/disasm")
-    target_compile_definitions(test_amalgam PRIVATE
-      HOOX_STATIC HOOX_USE_SYSTEM_ALLOC HAVE_I386)
+    # No HOOX_STATIC / HOOX_USE_SYSTEM_ALLOC / HAVE_* here: this exercises the
+    # amalgam exactly as a real consumer would — static + system allocator are
+    # the defaults, and arch/OS auto-detect from compiler built-ins.
     if(WIN32)
       target_link_libraries(test_amalgam PRIVATE psapi)
-      target_compile_definitions(test_amalgam PRIVATE
-        _CRT_SECURE_NO_WARNINGS HAVE_WINDOWS)
+      target_compile_definitions(test_amalgam PRIVATE _CRT_SECURE_NO_WARNINGS)
     endif()
     add_test(NAME amalgam COMMAND test_amalgam)
   endif()

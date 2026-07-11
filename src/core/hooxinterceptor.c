@@ -1146,7 +1146,7 @@ hoox_interceptor_maybe_unignore_current_thread (HooxInterceptor * self)
 void
 hoox_interceptor_ignore_other_threads (HooxInterceptor * self)
 {
-  self->selected_thread_id = hoox_process_get_current_thread_id ();
+  self->selected_thread_id = (hx_uint) hoox_process_get_current_thread_id ();
 }
 
 /**

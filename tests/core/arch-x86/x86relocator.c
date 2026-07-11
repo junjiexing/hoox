@@ -99,7 +99,7 @@ TESTCASE (call_near_relative)
   hx_assert_cmpint (memcmp (fixture->output + 3, input + 3, 5), !=, 0);
   reloc_distance = *((hx_int32 *) (fixture->output + 4));
   expected_distance =
-      ((hx_ssize) (input + 12)) - ((hx_ssize) (fixture->output + 8));
+      (hx_int32) (((hx_ssize) (input + 12)) - ((hx_ssize) (fixture->output + 8)));
   hx_assert_cmpint (reloc_distance, ==, expected_distance);
 }
 
@@ -228,7 +228,8 @@ TESTCASE (jmp_short_outside_block)
   hx_assert_cmphex (fixture->output[0], ==, 0xe9);
 
   reloc_distance = *((hx_int32 *) (fixture->output + 1));
-  expected_distance = (input_end + 1) - ((hx_ssize) (fixture->output + 5));
+  expected_distance =
+      (hx_int32) ((input_end + 1) - ((hx_ssize) (fixture->output + 5)));
   hx_assert_cmpint (reloc_distance, ==, expected_distance);
 }
 
@@ -250,7 +251,8 @@ TESTCASE (jmp_near_outside_block)
   hx_assert_cmphex (fixture->output[0], ==, input[0]);
 
   reloc_distance = *((hx_int32 *) (fixture->output + 1));
-  expected_distance = (input_end + 1) - ((hx_ssize) (fixture->output + 5));
+  expected_distance =
+      (hx_int32) ((input_end + 1) - ((hx_ssize) (fixture->output + 5)));
   hx_assert_cmpint (reloc_distance, ==, expected_distance);
 }
 
@@ -428,7 +430,7 @@ TESTCASE (jcxz_short_outside_block)
   };
 
   *((hx_int32 *) (expected_output + 5)) =
-      (retn_start - 3) - ((hx_ssize) (fixture->output + 9));
+      (hx_int32) ((retn_start - 3) - ((hx_ssize) (fixture->output + 9)));
 
   SETUP_RELOCATOR_WITH (input);
 

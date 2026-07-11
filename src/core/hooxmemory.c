@@ -24,7 +24,7 @@
 #ifdef HAVE_ANDROID
 # include "hoox/hooxandroid.h"
 #endif
-#ifndef HOOX_USE_SYSTEM_ALLOC
+#ifdef HOOX_USE_DLMALLOC
 # ifdef HAVE_DARWIN
 #  define DARWIN                   1
 # endif
@@ -142,7 +142,7 @@ static hx_boolean hoox_maybe_suspend_thread (const HooxThreadDetails * details,
 
 
 static hx_uint hoox_heap_ref_count = 0;
-#ifndef HOOX_USE_SYSTEM_ALLOC
+#ifdef HOOX_USE_DLMALLOC
 static mspace hoox_mspace_main = NULL;
 static mspace hoox_mspace_internal = NULL;
 #endif
@@ -166,7 +166,7 @@ hoox_internal_heap_ref (void)
 
   _hoox_cloak_init ();
 
-#ifndef HOOX_USE_SYSTEM_ALLOC
+#ifdef HOOX_USE_DLMALLOC
   hoox_mspace_main = create_mspace (0, TRUE);
   hoox_mspace_internal = create_mspace (0, TRUE);
 #endif
@@ -179,7 +179,7 @@ hoox_internal_heap_unref (void)
   if (--hoox_heap_ref_count > 0)
     return;
 
-#ifndef HOOX_USE_SYSTEM_ALLOC
+#ifdef HOOX_USE_DLMALLOC
   destroy_mspace (hoox_mspace_internal);
   hoox_mspace_internal = NULL;
 
@@ -309,7 +309,7 @@ hoox_memory_patch_code (hx_pointer address,
   page_offset = ((hx_uint8 *) address) - start_page;
 
   page_addresses =
-      hx_ptr_array_sized_new (((end_page - start_page) / page_size) + 1);
+      hx_ptr_array_sized_new ((hx_uint) (((end_page - start_page) / page_size) + 1));
 
   hx_ptr_array_add (page_addresses, start_page);
 
@@ -846,7 +846,7 @@ hoox_mprotect (hx_pointer address,
     hx_abort ();
 }
 
-#ifndef HOOX_USE_SYSTEM_ALLOC
+#ifdef HOOX_USE_DLMALLOC
 
 hx_uint
 hoox_peek_private_memory_usage (void)

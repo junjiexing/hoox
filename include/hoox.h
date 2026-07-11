@@ -18,7 +18,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#if !defined (HOOX_STATIC) && defined (_WIN32)
+/* Static linkage is the default. Define HOOX_SHARED to consume hoox as a
+ * Windows DLL (and HOOX_EXPORTS while building that DLL). */
+#if defined (HOOX_SHARED) && defined (_WIN32)
 #  ifdef HOOX_EXPORTS
 #    define HOOX_API __declspec (dllexport)
 #  else

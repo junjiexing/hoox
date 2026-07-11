@@ -15,7 +15,11 @@ resolution, JS bindings, …).
   x86 / x86_64 / ARM / ARM64 / MIPS (coverage staged, on par with Frida).
 - **Amalgamatable** — a script merges the sources into a single `hoox.c` + `hoox.h`
   (SQLite-style); the public `hoox.h` exposes only the API.
-- **Pure C99**, built with **CMake**, on **MSVC / clang / gcc**.
+- **Zero-config to consume** — static linkage, the system allocator, and the
+  target arch/OS are all defaults; drop `hoox.c`/`hoox.h` in and compile, no `-D`
+  flags. Opt into a DLL with `HOOX_SHARED`, or dlmalloc with `HOOX_USE_DLMALLOC`.
+- **Pure C99**, built with **CMake**, on **MSVC / clang / gcc** (the MSVC build
+  is warning-clean under `/W3 /sdl /WX`).
 
 All public and engine symbols use the `hoox_`/`Hoox`/`HOOX_` prefix; the internal
 utility layers (nano-glib, decoder) use `hx_`/`Hx`/`HX_`. No third-party prefix

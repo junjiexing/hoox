@@ -29,7 +29,7 @@ hoox_query_cpu_features (void)
     hx_once_init_leave (&cached_result, features + 1);
   }
 
-  return cached_result - 1;
+  return (HooxCpuFeatures) (cached_result - 1);
 }
 
 static HooxCpuFeatures

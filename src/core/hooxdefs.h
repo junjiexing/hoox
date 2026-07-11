@@ -12,15 +12,47 @@
 #include <hx_disasm.h>
 #include "hxglib.h"
 
+/* ---- target detection ---------------------------------------------------
+ * Prefer an explicit HAVE_<arch> / HAVE_<os> from the build system; otherwise
+ * derive it from the compiler's built-in macros so the amalgamated library
+ * needs no -D flags on common targets. Define the macro yourself only if
+ * auto-detection cannot classify your target. */
+#if !defined (HAVE_I386) && !defined (HAVE_ARM) && \
+    !defined (HAVE_ARM64) && !defined (HAVE_MIPS)
+# if defined (_M_IX86) || defined (__i386__) || \
+     defined (_M_X64) || defined (__x86_64__)
+#  define HAVE_I386
+# elif defined (_M_ARM64) || defined (__aarch64__)
+#  define HAVE_ARM64
+# elif defined (_M_ARM) || defined (__arm__)
+#  define HAVE_ARM
+# elif defined (__mips__)
+#  define HAVE_MIPS
+# endif
+#endif
+
+#if !defined (HAVE_WINDOWS) && !defined (HAVE_DARWIN) && \
+    !defined (HAVE_LINUX) && !defined (HAVE_FREEBSD) && !defined (HAVE_QNX)
+# if defined (_WIN32)
+#  define HAVE_WINDOWS
+# elif defined (__APPLE__)
+#  define HAVE_DARWIN
+# elif defined (__linux__)
+#  define HAVE_LINUX
+# endif
+#endif
+
 #if HX_API_MAJOR >= 6
 # define HX_ARCH_ARM64 HX_ARCH_AARCH64
 #endif
 
-#if !defined (HOOX_STATIC) && defined (HX_OS_WIN32)
+/* Static linkage is the default. Define HOOX_SHARED to build/consume hoox as
+ * a Windows DLL (and HOOX_EXPORTS while building that DLL). */
+#if defined (HOOX_SHARED) && defined (HX_OS_WIN32)
 #  ifdef HOOX_EXPORTS
-#    define HOOX_API __declspec(dllexport)
+#    define HOOX_API __declspec (dllexport)
 #  else
-#    define HOOX_API __declspec(dllimport)
+#    define HOOX_API __declspec (dllimport)
 #  endif
 #else
 #  define HOOX_API

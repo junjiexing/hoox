@@ -206,7 +206,7 @@ hoox_x86_writer_cur (HooxX86Writer * self)
 hx_uint
 hoox_x86_writer_offset (HooxX86Writer * self)
 {
-  return self->code - self->base;
+  return (hx_uint) (self->code - self->base);
 }
 
 static void
@@ -242,7 +242,7 @@ hoox_x86_writer_flush (HooxX86Writer * self)
     if (target_address == NULL)
       goto error;
 
-    distance = (hx_ssize) target_address - (hx_ssize) r->address;
+    distance = (hx_int32) ((hx_ssize) target_address - (hx_ssize) r->address);
 
     switch (r->size)
     {
@@ -551,7 +551,7 @@ hoox_x86_writer_put_argument_list_setup (HooxX86Writer * self,
 
       if (arg->type == HOOX_ARG_ADDRESS)
       {
-        hoox_x86_writer_put_push_u32 (self, arg->value.address);
+        hoox_x86_writer_put_push_u32 (self, (hx_uint32) arg->value.address);
       }
       else
       {
@@ -967,7 +967,7 @@ hoox_x86_writer_put_call_reg_offset_ptr (HooxX86Writer * self,
 
   if (offset_fits_in_i8)
   {
-    hoox_x86_writer_put_s8 (self, offset);
+    hoox_x86_writer_put_s8 (self, (hx_int8) offset);
   }
   else
   {
@@ -1059,7 +1059,7 @@ hoox_x86_writer_put_jmp_address (HooxX86Writer * self,
   if (HOOX_IS_WITHIN_INT8_RANGE (distance))
   {
     self->code[0] = 0xeb;
-    *((hx_int8 *) (self->code + 1)) = distance;
+    *((hx_int8 *) (self->code + 1)) = (hx_int8) distance;
     hoox_x86_writer_commit (self, 2);
   }
   else
@@ -1101,7 +1101,7 @@ hoox_x86_writer_put_short_jmp (HooxX86Writer * self,
     return FALSE;
 
   self->code[0] = 0xeb;
-  *((hx_int8 *) (self->code + 1)) = distance;
+  *((hx_int8 *) (self->code + 1)) = (hx_int8) distance;
   hoox_x86_writer_commit (self, 2);
 
   return TRUE;
@@ -1256,7 +1256,7 @@ hoox_x86_writer_put_jmp_reg_offset_ptr (HooxX86Writer * self,
 
   if (offset_fits_in_i8)
   {
-    hoox_x86_writer_put_s8 (self, offset);
+    hoox_x86_writer_put_s8 (self, (hx_int8) offset);
   }
   else
   {
@@ -1331,7 +1331,7 @@ hoox_x86_writer_put_jcc_short (HooxX86Writer * self,
   distance = (hx_ssize) target - (hx_ssize) (self->pc + 2);
   if (!HOOX_IS_WITHIN_INT8_RANGE (distance))
     return FALSE;
-  *((hx_int8 *) (self->code + 1)) = distance;
+  *((hx_int8 *) (self->code + 1)) = (hx_int8) distance;
   hoox_x86_writer_commit (self, 2);
 
   return TRUE;
@@ -1409,7 +1409,7 @@ hoox_x86_writer_put_add_or_sub_reg_imm (HooxX86Writer * self,
 
   if (immediate_fits_in_i8)
   {
-    hoox_x86_writer_put_s8 (self, imm_value);
+    hoox_x86_writer_put_s8 (self, (hx_int8) imm_value);
   }
   else
   {
@@ -2025,7 +2025,7 @@ hoox_x86_writer_put_mov_reg_offset_ptr_u32 (HooxX86Writer * self,
 
     if (offset_fits_in_i8)
     {
-      hoox_x86_writer_put_u8 (self, dst_offset);
+      hoox_x86_writer_put_u8 (self, (hx_uint8) dst_offset);
     }
     else
     {
@@ -2095,7 +2095,7 @@ hoox_x86_writer_put_mov_reg_offset_ptr_reg (HooxX86Writer * self,
 
     if (offset_fits_in_i8)
     {
-      hoox_x86_writer_put_s8 (self, dst_offset);
+      hoox_x86_writer_put_s8 (self, (hx_int8) dst_offset);
     }
     else
     {
@@ -2154,7 +2154,7 @@ hoox_x86_writer_put_mov_reg_reg_offset_ptr (HooxX86Writer * self,
 
   if (offset_fits_in_i8)
   {
-    hoox_x86_writer_put_s8 (self, src_offset);
+    hoox_x86_writer_put_s8 (self, (hx_int8) src_offset);
   }
   else
   {
@@ -2219,7 +2219,7 @@ hoox_x86_writer_put_mov_reg_base_index_scale_offset_ptr (HooxX86Writer * self,
 
   if (offset_fits_in_i8)
   {
-    hoox_x86_writer_put_s8 (self, offset);
+    hoox_x86_writer_put_s8 (self, (hx_int8) offset);
   }
   else
   {
@@ -2846,7 +2846,7 @@ hoox_x86_writer_put_cmp_reg_offset_ptr_reg (HooxX86Writer * self,
 
   if (offset_fits_in_i8)
   {
-    hoox_x86_writer_put_s8 (self, offset);
+    hoox_x86_writer_put_s8 (self, (hx_int8) offset);
   }
   else
   {

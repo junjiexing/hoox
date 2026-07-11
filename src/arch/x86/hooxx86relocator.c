@@ -222,7 +222,7 @@ hoox_x86_relocator_read_one (HooxX86Relocator * self,
   self->input_cur = code;
   self->input_pc = address;
 
-  return self->input_cur - self->input_start;
+  return (hx_uint) (self->input_cur - self->input_start);
 }
 
 hx_insn *
@@ -510,7 +510,7 @@ hoox_x86_relocator_rewrite_unconditional_branch (HooxX86Relocator * self,
       }
       else
       {
-        hoox_x86_writer_put_push_u32 (cw, ctx->pc);
+        hoox_x86_writer_put_push_u32 (cw, (hx_uint32) ctx->pc);
       }
 
       return TRUE;
@@ -518,7 +518,7 @@ hoox_x86_relocator_rewrite_unconditional_branch (HooxX86Relocator * self,
     else if (hoox_x86_call_try_parse_get_pc_thunk (insn,
         self->output->target_cpu, &pc_reg))
     {
-      hoox_x86_writer_put_mov_reg_u32 (cw, pc_reg, ctx->pc);
+      hoox_x86_writer_put_mov_reg_u32 (cw, pc_reg, (hx_uint32) ctx->pc);
       return TRUE;
     }
   }

@@ -52,7 +52,7 @@ hoox_tls_key_new (void)
 void
 hoox_tls_key_free (HooxTlsKey key)
 {
-  TlsFree (key);
+  TlsFree ((DWORD) key);
 }
 
 void
@@ -211,7 +211,7 @@ hoox_tls_key_get_value (HooxTlsKey key)
 {
   if (key < 64)
   {
-    return (hx_pointer) __readgsqword (0x1480 + key * sizeof (hx_pointer));
+    return (hx_pointer) __readgsqword ((DWORD) (0x1480 + key * sizeof (hx_pointer)));
   }
   else if (key < 1088)
   {
@@ -232,7 +232,7 @@ hoox_tls_key_set_value (HooxTlsKey key,
 {
   if (key < 64)
   {
-    __writegsqword (0x1480 + key * sizeof (hx_pointer), (hx_uint64) value);
+    __writegsqword ((DWORD) (0x1480 + key * sizeof (hx_pointer)), (hx_uint64) value);
   }
   else if (key < 1088)
   {
@@ -246,7 +246,7 @@ hoox_tls_key_set_value (HooxTlsKey key,
     else
     {
       hoox_tls_key_set_tmp_value (key, value);
-      TlsSetValue (key, value);
+      TlsSetValue ((DWORD) key, value);
       hoox_tls_key_del_tmp_value (key);
     }
   }

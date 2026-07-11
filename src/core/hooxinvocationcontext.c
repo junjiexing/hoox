@@ -51,7 +51,7 @@ hoox_invocation_context_get_return_address (HooxInvocationContext * context)
 hx_uint
 hoox_invocation_context_get_thread_id (HooxInvocationContext * context)
 {
-  return context->backend->get_thread_id (context);
+  return (hx_uint) context->backend->get_thread_id (context);
 }
 
 hx_uint

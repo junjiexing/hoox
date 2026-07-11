@@ -42,26 +42,12 @@ add_executable(hook_example
 
 target_include_directories(hook_example PRIVATE "${HOOX_AMALGAM_DIR}")
 
-# hoox is compiled straight into the executable (no shared-lib export dance)
-# and uses the system allocator rather than a bundled dlmalloc.
-target_compile_definitions(hook_example PRIVATE
-  HOOX_STATIC
-  HOOX_USE_SYSTEM_ALLOC)
-
-# --- Architecture family --------------------------------------------------
-# The amalgam selects its writer/relocator via HAVE_I386 (x86 + x86_64).
-# Extend here as more arch backends land in the amalgamation.
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86|X86|i386|i686|AMD64|amd64|x86_64")
-  target_compile_definitions(hook_example PRIVATE HAVE_I386)
-endif()
-
-# --- Platform backend -----------------------------------------------------
+# No hoox feature macros are needed: static linkage and the system allocator
+# are the defaults, and the target arch/OS auto-detect from compiler built-ins.
+# Consumers only link the platform's process API.
 if(WIN32)
-  target_compile_definitions(hook_example PRIVATE HAVE_WINDOWS _CRT_SECURE_NO_WARNINGS)
   target_link_libraries(hook_example PRIVATE psapi)
-elseif(APPLE)
-  target_compile_definitions(hook_example PRIVATE HAVE_DARWIN)
-elseif(UNIX)
-  target_compile_definitions(hook_example PRIVATE HAVE_LINUX)
+  target_compile_definitions(hook_example PRIVATE _CRT_SECURE_NO_WARNINGS)
+elseif(UNIX AND NOT APPLE)
   target_link_libraries(hook_example PRIVATE pthread)
 endif()

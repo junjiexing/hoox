@@ -74,10 +74,10 @@ target_include_directories(hoox
   PUBLIC ${HOOX_PUBLIC_INCLUDE_DIRS}
   PRIVATE ${HOOX_PRIVATE_INCLUDE_DIRS})
 
-# Platform / arch feature macros expected by the extracted hoox code.
-# HOOX_STATIC makes HOOX_API empty (we build a static archive).
-target_compile_definitions(hoox PUBLIC HOOX_STATIC)
-target_compile_definitions(hoox PRIVATE HOOX_USE_SYSTEM_ALLOC)
+# Static linkage and the system allocator are the defaults (no macro needed);
+# HOOX_SHARED/HOOX_USE_DLMALLOC opt into the alternatives. Arch/OS are
+# auto-detected from compiler built-ins, but the build system passes them
+# explicitly here so an -DHOOX_TARGET_ARCH override stays authoritative.
 if(WIN32)
   target_link_libraries(hoox PRIVATE psapi)
   target_compile_definitions(hoox PRIVATE _CRT_SECURE_NO_WARNINGS HAVE_WINDOWS)

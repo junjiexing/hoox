@@ -278,21 +278,21 @@ hoox_code_allocator_try_alloc_batch_near (HooxCodeAllocator * self,
     segment = NULL;
     if (spec != NULL)
     {
-      data = hoox_try_alloc_n_pages_near (size_in_pages, protection, spec);
+      data = hoox_try_alloc_n_pages_near ((hx_uint) size_in_pages, protection, spec);
       if (data == NULL)
         return NULL;
     }
     else
     {
-      data = hoox_alloc_n_pages (size_in_pages, protection);
+      data = hoox_alloc_n_pages ((hx_uint) size_in_pages, protection);
     }
 
-    hoox_query_page_allocation_range (data, size_in_bytes, &range);
+    hoox_query_page_allocation_range (data, (hx_uint) size_in_bytes, &range);
     hoox_cloak_add_range (&range);
 
     pc = data;
     if (remap_supported)
-      data = hoox_memory_try_remap_writable_pages (data, size_in_pages);
+      data = hoox_memory_try_remap_writable_pages (data, (hx_uint) size_in_pages);
   }
   else
   {
@@ -304,7 +304,7 @@ hoox_code_allocator_try_alloc_batch_near (HooxCodeAllocator * self,
   }
 
   pages = hx_slice_alloc (self->pages_metadata_size);
-  pages->ref_count = self->slices_per_batch;
+  pages->ref_count = (hx_int) self->slices_per_batch;
 
   pages->segment = segment;
   pages->data = data;
@@ -313,7 +313,7 @@ hoox_code_allocator_try_alloc_batch_near (HooxCodeAllocator * self,
 
   pages->allocator = self;
 
-  for (i = self->slices_per_batch; i != 0; i--)
+  for (i = (hx_uint) self->slices_per_batch; i != 0; i--)
   {
     hx_uint slice_index = i - 1;
     HooxCodeSliceElement * element = &pages->elements[slice_index];
@@ -323,7 +323,7 @@ hoox_code_allocator_try_alloc_batch_near (HooxCodeAllocator * self,
     slice = &element->slice;
     slice->data = (hx_uint8 *) data + (slice_index * self->slice_size);
     slice->pc = (hx_uint8 *) pc + (slice_index * self->slice_size);
-    slice->size = self->slice_size;
+    slice->size = (hx_uint) self->slice_size;
     slice->ref_count = 1;
 
     link = &element->parent;
@@ -369,7 +369,7 @@ hoox_code_pages_unref (HooxCodePages * self)
       {
         hx_uint size_in_pages;
 
-        size_in_pages = self->size / hoox_query_page_size ();
+        size_in_pages = (hx_uint) (self->size / hoox_query_page_size ());
         hoox_memory_dispose_writable_pages (self->data, size_in_pages);
 
         hoox_free_pages (self->pc);
@@ -379,7 +379,7 @@ hoox_code_pages_unref (HooxCodePages * self)
         hoox_free_pages (self->data);
       }
 
-      hoox_query_page_allocation_range (self->pc, self->size, &range);
+      hoox_query_page_allocation_range (self->pc, (hx_uint) self->size, &range);
       hoox_cloak_remove_range (&range);
     }
 

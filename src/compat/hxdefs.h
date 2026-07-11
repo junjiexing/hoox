@@ -175,7 +175,13 @@ typedef void     (* HxCallback)      (void);
 # define HX_GNUC_WARN_UNUSED_RESULT __attribute__ ((__warn_unused_result__))
 # define HX_GNUC_PRINTF(f, a)      __attribute__ ((__format__ (__printf__, f, a)))
 # define HX_GNUC_NULL_TERMINATED   __attribute__ ((__sentinel__))
-# define HX_GNUC_INTERNAL          __attribute__ ((__visibility__ ("hidden")))
+/* PE/COFF (Windows) has no ELF-style symbol visibility; the attribute is
+ * ignored there and gcc warns about it, so drop it on Windows targets. */
+# if defined (_WIN32)
+#  define HX_GNUC_INTERNAL
+# else
+#  define HX_GNUC_INTERNAL         __attribute__ ((__visibility__ ("hidden")))
+# endif
 # define HX_LIKELY(expr)           (__builtin_expect (!!(expr), 1))
 # define HX_UNLIKELY(expr)         (__builtin_expect (!!(expr), 0))
 # define HX_GNUC_FALLTHROUGH       __attribute__ ((__fallthrough__))
