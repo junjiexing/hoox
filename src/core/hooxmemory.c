@@ -52,7 +52,6 @@
 #endif
 #ifdef HAVE_DARWIN
 # include <mach/mach.h>
-HX_GNUC_INTERNAL hx_boolean hoox_darwin_is_debugger_mapping_enforced (void);
 #endif
 
 typedef struct _HooxPatchCodeContext HooxPatchCodeContext;
@@ -308,30 +307,6 @@ hoox_memory_patch_code_pages (HxPtrArray * sorted_addresses,
   {
     HxArray * plumps;
     HooxPageLump * last;
-
-#ifdef HAVE_DARWIN
-    if (hoox_darwin_is_debugger_mapping_enforced ())
-    {
-      HooxPagePlanBuilder plan;
-      hx_boolean success;
-
-      _hoox_page_plan_builder_init (&plan);
-
-      for (i = 0; i != sorted_addresses->len; i++)
-      {
-        hx_pointer target_page = hx_ptr_array_index (sorted_addresses, i);
-
-        _hoox_page_plan_builder_add_page (&plan, target_page);
-      }
-
-      success = _hoox_page_plan_builder_post (&plan);
-
-      _hoox_page_plan_builder_free (&plan);
-
-      if (!success)
-        return FALSE;
-    }
-#endif
 
     plumps = hx_array_new (FALSE, FALSE, sizeof (HooxPageLump));
     last = NULL;
