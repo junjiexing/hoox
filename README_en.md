@@ -19,7 +19,7 @@ resolution, JS bindings, …).
 - **No capstone dependency** — replaced by a compact in-tree instruction decoder
   (`hx_disasm`, informed by Microsoft Detours' relocation engine).
 - **No third-party runtime dependencies.**
-- **Cross-platform** — Windows / Linux / Android / macOS / iOS / FreeBSD / QNX ×
+- **Cross-platform** — Windows / Linux / Android / macOS / iOS / FreeBSD ×
   x86 / x86_64 / ARM / ARM64 (coverage staged).
 - **Amalgamatable** — a script merges the sources into a single `hoox.c` + `hoox.h`
   (SQLite-style); the public `hoox.h` exposes only the API.
@@ -67,7 +67,6 @@ Legend: ✅ supported (builds & passes the full test suite) · 🧩 extracted
 | **macOS** | ➖ | ✅ | ➖ | ✅ |
 | **iOS / tvOS** | ➖ | ➖ | ➖ | 📋 |
 | **FreeBSD** | ✅ | ✅ | 🧩 | ✅ |
-| **QNX** | 📋 | 📋 | 📋 | 📋 |
 
 Directly usable today: **Windows × (x86 / x86_64 / ARM64)**,
 **Linux × (x86 / x86_64 / ARM / ARM64)**, **macOS × (x86_64 / ARM64)** and

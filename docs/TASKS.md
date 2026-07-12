@@ -276,8 +276,8 @@
 - **T9.2** ARM/Thumb：`hx_disasm_arm.c`（arm+thumb，参考 Detours Thumb-2）、
   `arch-arm/*`（含 `gumarmreg`）、`backend-arm/*`；移植 arm/thumb writer/relocator +
   `interceptor-arm` 测试。验收：全绿。
-- **T9.3** Android（linux backend + `gumandroid.c`）、FreeBSD、QNX backend。
-  验收：各平台构建 + 可用测试通过。
+- **T9.3** Android（linux backend + `gumandroid.c`）、FreeBSD backend。
+  验收：各平台构建 + 可用测试通过。（QNX 已从目标移除：工具链专有、无 CI 可验证。）
 
 ## M10 · 收尾
 

@@ -29,7 +29,7 @@
 #endif
 
 #if !defined (HAVE_WINDOWS) && !defined (HAVE_DARWIN) && \
-    !defined (HAVE_LINUX) && !defined (HAVE_FREEBSD) && !defined (HAVE_QNX)
+    !defined (HAVE_LINUX) && !defined (HAVE_FREEBSD)
 # if defined (_WIN32)
 #  define HAVE_WINDOWS
 # elif defined (__APPLE__)
@@ -167,8 +167,7 @@ enum _HooxOS
   HOOX_OS_TVOS,
   HOOX_OS_XROS,
   HOOX_OS_ANDROID,
-  HOOX_OS_FREEBSD,
-  HOOX_OS_QNX
+  HOOX_OS_FREEBSD
 };
 
 enum _HooxCallingConvention
