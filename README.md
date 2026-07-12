@@ -60,11 +60,11 @@ x86_64**（amd64 FreeBSD VM，clang，含 `-m32` 32 位；ARM/ARM64 共用同一
 | **Android** | 📋 | 📋 | 📋 | 📋 |
 | **macOS** | ➖ | ✅ | ➖ | ✅ |
 | **iOS / tvOS** | ➖ | ➖ | ➖ | 📋 |
-| **FreeBSD** | ✅ | ✅ | 🧩 | 🧩 |
+| **FreeBSD** | ✅ | ✅ | 🧩 | ✅ |
 | **QNX** | 📋 | 📋 | 📋 | 📋 |
 
 可直接使用的组合是 **Windows × (x86 / x86_64 / ARM64)**、**Linux × (x86 / x86_64 / ARM / ARM64)**、
-**macOS × (x86_64 / ARM64)** 与 **FreeBSD × (x86 / x86_64)**。
+**macOS × (x86_64 / ARM64)** 与 **FreeBSD × (x86 / x86_64 / ARM64)**。
 Windows ARM64 在原生 `windows-11-arm` runner 上由 CI 构建并通过完整测试套件（含 interceptor
 行为测试）；它复用同一份 `src/backend/windows`（TLS 在非 x86 上回退到 `TlsGetValue`），并新增
 自研 AArch64 解码器 `src/disasm/hx_disasm_arm64.c` 驱动 `src/arch/arm64` 的 relocator/reader。
@@ -83,8 +83,11 @@ TLS，新增 `src/backend/freebsd`：走 RWX 路径（`mprotect`，无需 `VM_PR
 分配基于 `sysctl KERN_PROC_VMMAP`（而非 `/proc`），线程 id 用 `pthread_getthreadid_np`、挂起/枚举用
 `thr_kill` + `sysctl KERN_PROC`，模块枚举用 `dl_iterate_phdr`。由于无托管 FreeBSD runner，CI 在 ubuntu
 宿主上启动 amd64 FreeBSD VM（`vmactions`）：**x86_64 原生构建 + 跑完整测试套件，x86（32 位）用
-`clang -m32`（freebsd32/lib32）同样跑完整套件**。ARM / ARM64 FreeBSD 共用这份（已验证的）OS backend 与
-在 Linux/macOS ARM 作业中验证过的 arch 层，交叉运行需 VM 缺失的 sysroot，故按构造覆盖而非在 CI 中执行。
+`clang -m32`（freebsd32/lib32）同样跑完整套件**。**ARM64 FreeBSD 亦已实测**：用
+`cross-platform-actions` 在 ubuntu 宿主上启动真实的 **FreeBSD/arm64 15.1 客户机**（QEMU 模拟 aarch64），
+在客户机内原生编译并跑完整套件（含 interceptor 行为套件与 amalgam）——同一条 TCG 路径已在 Linux
+`qemu-arm` 上验证过 hoox 的打补丁能力。ARM（32 位）FreeBSD 共用这份 OS backend + 在 Linux `qemu-arm`
+验证过的 A32/Thumb arch 层（FreeBSD armv7 为 tier-2、无现成 CI 镜像），故按构造覆盖而非在 CI 中执行。
 其它 OS 还需各自的 backend。
 
 > **⚠️ Apple Silicon 已知限制(自宿主):** 在 Apple Silicon(16 KiB 页 + 强制 W^X)上,patch 一页代码时

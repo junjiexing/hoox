@@ -61,8 +61,12 @@ page-plan-builder/调试器映射）。因此 `test_memory`（裸 RWX）与 `int
 `Elf_Addr/Elf_Half/Elf_Phdr`，**非 glibc 的 `ElfW()`**）。CMake 以 `CMAKE_SYSTEM_NAME STREQUAL
 "FreeBSD"` 分派 OS backend（`HAVE_FREEBSD` 由 `__FreeBSD__` 自动推导），以 `HOOX_ARCH_FAMILY` 分派 arch。
 CI 无托管 FreeBSD runner，故用 `vmactions/freebsd-vm` 在 ubuntu 宿主上启动 amd64 FreeBSD VM：x86_64 原生
-跑完整套件，x86（32 位）用 `clang -m32`（freebsd32/lib32）同样跑完整套件；ARM/ARM64 FreeBSD 共用同一
-arch-agnostic backend + 在 Linux/macOS ARM 验证过的 arch 层（VM 无 sysroot 交叉运行，CI 未执行）。
+跑完整套件，x86（32 位）用 `clang -m32`（freebsd32/lib32）同样跑完整套件。**ARM64 FreeBSD 已实测**：
+用 `cross-platform-actions/action@v1.3.0` 在 ubuntu 宿主上启动真实的 **FreeBSD/arm64 15.1 客户机**
+（QEMU 模拟 aarch64，其官方 CI 亦是在 x86-64 宿主上模拟 arm64 客户机；`run:` 输入已 deprecated 但 v1.3.0
+仍可用），客户机内原生编译并跑完整套件（interceptor 行为套件 + amalgam 全绿，~3 分钟）。ARM（32 位）
+FreeBSD 共用同一 backend + 在 Linux `qemu-arm` 验证过的 A32/Thumb arch 层（FreeBSD armv7 tier-2、无现成
+CI 镜像），按构造覆盖、未在 CI 执行。
 **关键坑（FreeBSD 必链 libthr）：** hoox 的 TLS 用 pthread key；FreeBSD 的 pthread 在 `libthr`，
 消费方（含 amalgam）**必须链接 `-pthread`**，否则 `pthread_*` 会解析到 libc 的**空存根**（静默无操作）——
 `pthread_getspecific` 恒返回 NULL，导致 interceptor 线程上下文每次调用都新建，enter/leave 拿到不同调用栈

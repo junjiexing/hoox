@@ -66,12 +66,12 @@ Legend: ✅ supported (builds & passes the full test suite) · 🧩 extracted
 | **Android** | 📋 | 📋 | 📋 | 📋 |
 | **macOS** | ➖ | ✅ | ➖ | ✅ |
 | **iOS / tvOS** | ➖ | ➖ | ➖ | 📋 |
-| **FreeBSD** | ✅ | ✅ | 🧩 | 🧩 |
+| **FreeBSD** | ✅ | ✅ | 🧩 | ✅ |
 | **QNX** | 📋 | 📋 | 📋 | 📋 |
 
 Directly usable today: **Windows × (x86 / x86_64 / ARM64)**,
 **Linux × (x86 / x86_64 / ARM / ARM64)**, **macOS × (x86_64 / ARM64)** and
-**FreeBSD × (x86 / x86_64)**. Windows ARM64 is built and fully
+**FreeBSD × (x86 / x86_64 / ARM64)**. Windows ARM64 is built and fully
 tested on the native `windows-11-arm` runner; it reuses the same
 `src/backend/windows` (TLS falls back to `TlsGetValue` off x86) and adds an
 in-tree AArch64 decoder (`src/disasm/hx_disasm_arm64.c`) that drives the
@@ -100,11 +100,15 @@ no `VM_PROT_COPY` needed), drives page-protection queries and near-allocation of
 `sysctl KERN_PROC`, and enumerates modules with `dl_iterate_phdr`. As there is no
 hosted FreeBSD runner, CI boots an amd64 FreeBSD VM on the ubuntu host
 (`vmactions`): **x86_64 builds and runs the full suite natively, and x86 (32-bit)
-builds and runs the full suite via `clang -m32` (freebsd32/lib32)**. ARM / ARM64
-FreeBSD share this (validated) OS backend plus the arch layers validated on the
-Linux/macOS ARM jobs; cross-running them needs a sysroot the VM lacks, so they are
-covered by construction rather than executed in CI. Other OSes still need their
-own backend.
+builds and runs the full suite via `clang -m32` (freebsd32/lib32)**. **ARM64
+FreeBSD is tested too**: `cross-platform-actions` boots a real **FreeBSD/arm64
+15.1 guest** on the ubuntu host (QEMU emulating aarch64) and compiles + runs the
+full suite natively inside it (interceptor behaviour suite and amalgam included)
+— the same TCG path already exercises hoox's code-patching on the Linux `qemu-arm`
+job. ARM (32-bit) FreeBSD shares this OS backend plus the A32/Thumb arch layer
+validated on the Linux `qemu-arm` job (FreeBSD armv7 is tier-2 with no ready CI
+image), so it is covered by construction rather than executed. Other OSes still
+need their own backend.
 
 > **⚠️ Apple Silicon limitation (self-hosting):** on Apple Silicon (16 KiB pages
 > + enforced W^X), patching a page briefly removes its execute permission. If the
