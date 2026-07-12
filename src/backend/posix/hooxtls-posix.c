@@ -6,6 +6,8 @@
 
 #include "hooxtls.h"
 
+#include "hxmessages.h"
+
 #include <pthread.h>
 
 void
@@ -28,7 +30,12 @@ hoox_tls_key_new (void)
 {
   pthread_key_t key;
 
-  pthread_key_create (&key, NULL);
+  /* Failure (EAGAIN once PTHREAD_KEYS_MAX is hit, or ENOMEM) leaves `key`
+   * indeterminate, and every later get/set on it would be UB. hoox treats
+   * resource-acquisition failure at init as fatal, consistent with its
+   * abort-on-OOM policy. */
+  if (pthread_key_create (&key, NULL) != 0)
+    hx_abort ();
 
   return key;
 }

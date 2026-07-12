@@ -410,7 +410,17 @@ typedef enum {
 #define HOOX_MAX_BACKTRACE_DEPTH       16
 #define HOOX_MAX_WORST_CASE_INFO_SIZE 128
 
-#define HOOX_MAX_LISTENERS_PER_FUNCTION 2
+/*
+ * Maximum number of invocation listeners that may be attached to a single
+ * function. This bounds the per-invocation scratch array
+ * (HooxInvocationStackEntry.listener_invocation_data[N][...]), so attaching
+ * more than this many listeners to one target is refused
+ * (HOOX_ATTACH_TOO_MANY_LISTENERS) rather than overflowing that array.
+ * Override at build time with -DHOOX_MAX_LISTENERS_PER_FUNCTION=N to raise it.
+ */
+#ifndef HOOX_MAX_LISTENERS_PER_FUNCTION
+# define HOOX_MAX_LISTENERS_PER_FUNCTION 2
+#endif
 #define HOOX_MAX_LISTENER_DATA       1024
 
 #define HOOX_MAX_THREAD_RANGES 2

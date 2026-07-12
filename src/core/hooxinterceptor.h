@@ -86,6 +86,7 @@ typedef enum
   HOOX_ATTACH_ALREADY_ATTACHED = -2,
   HOOX_ATTACH_POLICY_VIOLATION = -3,
   HOOX_ATTACH_WRONG_TYPE       = -4,
+  HOOX_ATTACH_TOO_MANY_LISTENERS = -5,
 } HooxAttachReturn;
 
 typedef enum

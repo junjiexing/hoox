@@ -74,15 +74,29 @@ hx_fill_conservative_regs (hx_arm64 * d, uint32_t insn)
   bool is_dp_imm = (op0 & 0xe) == 0x8;             /* 100x */
   bool is_ldst = ((insn >> 27) & 0x1) == 0x1 &&
       ((insn >> 25) & 0x1) == 0x0;                       /* x1x0 */
+  bool is_simd = (op0 & 0x7) == 0x7;               /* x111 SIMD/FP */
+  bool is_sys  = (op0 & 0xe) == 0xa;               /* 101x branch/exc/system */
   uint32_t fields[4];
   unsigned nf = 0, i;
 
-  if (!(is_dp_reg || is_dp_imm || is_ldst))
+  if (!(is_dp_reg || is_dp_imm || is_ldst || is_simd || is_sys))
     return;
 
-  fields[nf++] = insn & 0x1f;              /* Rd / Rt   [4:0]   */
-  fields[nf++] = (insn >> 5) & 0x1f;       /* Rn        [9:5]   */
-  if (is_dp_reg || is_ldst)
+  /*
+   * Rd/Rt [4:0]. Covers the GP destination of a SIMD->GP move (FMOV Xn,Vn /
+   * FCVTZS / SCVTF) and the GP target of a system move (MRS Xt / MSR Xt),
+   * which the earlier classes missed and which the scratch scan must not
+   * mistake for free.
+   */
+  fields[nf++] = insn & 0x1f;
+  /*
+   * Rn [9:5] is a GP field for dp/ldst/SIMD (e.g. INS/DUP Vd,Rn, SCVTF), but
+   * for the system class [9:5] belongs to the system-register encoding, not a
+   * GP register — skip it there to avoid needlessly excluding a free register.
+   */
+  if (!is_sys)
+    fields[nf++] = (insn >> 5) & 0x1f;
+  if (is_dp_reg || is_ldst || is_simd)
     fields[nf++] = (insn >> 16) & 0x1f;    /* Rm        [20:16] */
   if (is_ldst)
     fields[nf++] = (insn >> 10) & 0x1f;    /* Rt2       [14:10] */
@@ -277,6 +291,30 @@ hx_decode_arm64 (const uint8_t * code, uint64_t address, hx_insn * insn)
     {
       insn->id = HX_ARM64_INS_RET;
       strcpy (insn->mnemonic, "ret");
+    }
+    else if (opc == 0x8)
+    {
+      /* BRAA / BRAB (register-modified, arm64e) — terminating branch. */
+      insn->id = HX_ARM64_INS_BRAA;
+      strcpy (insn->mnemonic, "braa");
+    }
+    else if (opc == 0x9)
+    {
+      /*
+       * BLRAA / BLRAB (register-modified, arm64e) — an authenticated *call*
+       * that returns to the next instruction, not a terminating branch. It
+       * must be classified as a BLR-family instruction so the relocator keeps
+       * relocating past it (and emits the resume epilog); otherwise it was
+       * mis-decoded as BR and the trampoline dropped its tail.
+       */
+      insn->id = HX_ARM64_INS_BLRAA;
+      strcpy (insn->mnemonic, "blraa");
+    }
+    else if (opc == 0xa)
+    {
+      /* RETAA / RETAB — terminating return. */
+      insn->id = HX_ARM64_INS_RETAA;
+      strcpy (insn->mnemonic, "retaa");
     }
     else
     {

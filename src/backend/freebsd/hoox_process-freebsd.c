@@ -202,7 +202,9 @@ _hoox_process_enumerate_ranges (HooxPageProtection prot,
   cursor = entries;
   end = entries + size;
 
-  while (cursor != end)
+  /* `<` not `!=`: if a truncated trailing entry's kve_structsize ever summed
+   * past `end`, `cursor != end` would keep iterating and read out of bounds. */
+  while (cursor < end)
   {
     struct kinfo_vmentry * e = (struct kinfo_vmentry *) cursor;
     HooxRangeDetails details;

@@ -405,7 +405,7 @@ typedef struct {
 | `HooxInvocationIgnorability` | `IGNORABLE`、`UNIGNORABLE` | `ignore_*_thread` 是否可以抑制此 hook。 |
 | `HooxRelocationPolicy` | `DEFAULT`、`CHECKED`、`UNCHECKED`、`FORCED` | prologue 重定位校验的严格程度。 |
 | `HooxRedirectWriteResult` | `WRITTEN`、`DECLINED` | 自定义 `HooxWriteRedirectFunc` 的返回。 |
-| `HooxAttachReturn` | `OK(0)`、`WRONG_SIGNATURE(-1)`、`ALREADY_ATTACHED(-2)`、`POLICY_VIOLATION(-3)`、`WRONG_TYPE(-4)` | `attach` 的结果。 |
+| `HooxAttachReturn` | `OK(0)`、`WRONG_SIGNATURE(-1)`、`ALREADY_ATTACHED(-2)`、`POLICY_VIOLATION(-3)`、`WRONG_TYPE(-4)`、`TOO_MANY_LISTENERS(-5)` | `attach` 的结果。`TOO_MANY_LISTENERS` 表示目标已挂满 `HOOX_MAX_LISTENERS_PER_FUNCTION`（默认 2）个监听器；可用 `-DHOOX_MAX_LISTENERS_PER_FUNCTION=N` 提高上限。 |
 | `HooxReplaceReturn` | `OK(0)`、`WRONG_SIGNATURE(-1)`、`ALREADY_REPLACED(-2)`、`POLICY_VIOLATION(-3)`、`WRONG_TYPE(-4)` | `replace`/`replace_fast` 的结果。 |
 
 `HooxPointCut` 为 `HOOX_POINT_ENTER` / `HOOX_POINT_LEAVE`。

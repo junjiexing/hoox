@@ -588,7 +588,7 @@ hoox_thumb_relocator_can_relocate (hx_pointer address,
           break;
         }
         case HX_ARM_INS_POP:
-          eoi = hx_reg_read (capstone, insn, HX_ARM_REG_PC);
+          eoi = hx_reg_read (capstone, &insn[i], HX_ARM_REG_PC);
           break;
         default:
           break;

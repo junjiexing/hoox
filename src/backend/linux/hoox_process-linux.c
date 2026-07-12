@@ -95,22 +95,40 @@ _hoox_proc_maps_iter_next (HooxProcMapsIter * iter,
       iter->write_cursor -= offset;
     }
 
-    do
+    /*
+     * A single read() may return fewer bytes than are available (a short
+     * read); that must not be mistaken for end-of-data. Keep reading until a
+     * complete line is buffered, the buffer fills, or we truly hit EOF/error.
+     */
+    for (;;)
     {
-      res = read (iter->fd, iter->write_cursor,
-          iter->buffer + sizeof (iter->buffer) - 1 - iter->write_cursor);
+      size_t space = (size_t) (iter->buffer + sizeof (iter->buffer) - 1
+          - iter->write_cursor);
+
+      if (space == 0)
+        break;                  /* line longer than the buffer */
+
+      do
+      {
+        res = read (iter->fd, iter->write_cursor, space);
+      }
+      while (res == -1 && errno == EINTR);
+
+      if (res < 0)
+        return FALSE;           /* hard error */
+      if (res == 0)
+        break;                  /* end of file */
+
+      iter->write_cursor += res;
+      iter->write_cursor[0] = '\0';
+
+      next_newline = strchr (iter->read_cursor, '\n');
+      if (next_newline != NULL)
+        break;
     }
-    while (res == -1 && errno == EINTR);
 
-    if (res <= 0)
-      return FALSE;
-
-    iter->write_cursor += res;
-    iter->write_cursor[0] = '\0';
-
-    next_newline = strchr (iter->read_cursor, '\n');
     if (next_newline == NULL)
-      return FALSE;
+      return FALSE;             /* no complete line remains */
   }
 
   *line = iter->read_cursor;

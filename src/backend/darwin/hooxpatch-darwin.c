@@ -88,8 +88,10 @@ hoox_darwin_run_offpage_patch (hx_pointer protect_base,
       HOOX_ARG_ADDRESS, rw);
 
   /* If it failed (e.g. hardened codesigning), the page is still RX — return the
-   * error in x0 (w0) without writing (which would fault) or restoring. */
-  hoox_arm64_writer_put_cbnz_reg_label (&aw, HX_ARM64_REG_X0, "done");
+   * error without writing (which would fault) or restoring. mach_vm_protect
+   * returns a 32-bit kern_return_t in w0; test w0 (not x0, whose high half is
+   * left unspecified by the calling convention). */
+  hoox_arm64_writer_put_cbnz_reg_label (&aw, HX_ARM64_REG_W0, "done");
 
   hoox_arm64_writer_put_ldr_reg_u64 (&aw, HX_ARM64_REG_X9,
       (hx_uint64) (hx_uintptr) dst);
@@ -140,6 +142,16 @@ _hoox_darwin_arm64_patch_pages (HxPtrArray * sorted_addresses,
   hx_uint i = 0;
   hx_boolean ok = TRUE;
 
+  /*
+   * `coalesce` is the caller's hint, but off-page correctness *requires*
+   * coalescing physically-contiguous pages regardless of it: a redirect whose
+   * prologue straddles a page boundary registers both its start and end page,
+   * and the write into the private copy must land in one contiguous buffer, or
+   * it would overrun a per-page allocation and leave the spilled-over tail
+   * unwritten. We therefore always coalesce below.
+   */
+  (void) coalesce;
+
   while (i < sorted_addresses->len)
   {
     hx_pointer lump_start = hx_ptr_array_index (sorted_addresses, i);
@@ -149,22 +161,34 @@ _hoox_darwin_arm64_patch_pages (HxPtrArray * sorted_addresses,
     const hx_uint8 * tp;
     const hx_uint8 * op;
     hx_uint32 * words;
-    hx_uint n_words, w;
+    hx_uint n_words, w, k;
 
-    if (coalesce)
-    {
-      while (i + n_pages < sorted_addresses->len &&
-          hx_ptr_array_index (sorted_addresses, i + n_pages) ==
-          (hx_pointer) ((hx_uint8 *) lump_start +
-              (hx_size) n_pages * page_size))
-        n_pages++;
-    }
+    while (i + n_pages < sorted_addresses->len &&
+        hx_ptr_array_index (sorted_addresses, i + n_pages) ==
+        (hx_pointer) ((hx_uint8 *) lump_start +
+            (hx_size) n_pages * page_size))
+      n_pages++;
 
     lump_size = (hx_size) n_pages * page_size;
 
     temp = hx_malloc (lump_size);
     memcpy (temp, lump_start, lump_size);           /* read the live (RX) code */
-    apply (temp, lump_start, n_pages, apply_data);  /* write redirect into copy */
+
+    /*
+     * apply() is keyed by target page and writes at (source + (func - page)),
+     * so it must be called once per page — never once for the whole run, which
+     * would honour only the first page's updates. Because `temp` spans the
+     * entire contiguous run, a redirect that straddles a page boundary spills
+     * safely into the next page of the same buffer instead of overrunning it.
+     */
+    for (k = 0; k != n_pages; k++)
+    {
+      hx_pointer page = (hx_pointer) ((hx_uint8 *) lump_start +
+          (hx_size) k * page_size);
+      hx_pointer src = (hx_pointer) ((hx_uint8 *) temp +
+          (hx_size) k * page_size);
+      apply (src, page, 1, apply_data);
+    }
 
     /* Diff against the still-original live page to find the changed range. */
     tp = (const hx_uint8 *) temp;
