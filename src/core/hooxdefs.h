@@ -41,6 +41,13 @@
 # endif
 #endif
 
+/* Android is a Linux kernel with bionic libc: it reuses the Linux backend and
+ * additionally defines HAVE_ANDROID for the few Android-specific quirks (e.g.
+ * execute-only code pages on API 29+). */
+#if defined (__ANDROID__) && !defined (HAVE_ANDROID)
+# define HAVE_ANDROID
+#endif
+
 #if HX_API_MAJOR >= 6
 # define HX_ARCH_ARM64 HX_ARCH_AARCH64
 #endif

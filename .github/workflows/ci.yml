@@ -43,10 +43,9 @@ jobs:
           - { name: 'macOS · x86_64 · Clang',         runner: macos-15-intel, supported: true, toolchain: macos-clang }
           - { name: 'macOS · ARM64 · Clang',          runner: macos-15, supported: true, toolchain: macos-clang }
 
+          - { name: 'Android · arm64/arm/x86_64/x86 · NDK', runner: ubuntu-latest, supported: true, toolchain: android-ndk }
+
           # ---- planned: not implemented yet, skipped -----------------------
-          - { name: 'Android · ARM64 · (planned)',    runner: ubuntu-latest, supported: false }
-          - { name: 'Android · ARM · (planned)',      runner: ubuntu-latest, supported: false }
-          - { name: 'Android · x86_64 · (planned)',   runner: ubuntu-latest, supported: false }
           - { name: 'iOS · ARM64 · (planned)',        runner: ubuntu-latest, supported: false }
           - { name: 'tvOS · ARM64 · (planned)',       runner: ubuntu-latest, supported: false }
           - { name: 'FreeBSD · x86_64 + x86 · Clang', runner: ubuntu-latest, supported: true, toolchain: freebsd-vm }
@@ -224,6 +223,38 @@ jobs:
           cmake -B build -DCMAKE_C_COMPILER=clang
           cmake --build build
           ctest --test-dir build --output-on-failure
+
+      # ---- Android (NDK cross-build of all four ABIs; run under qemu-user) --
+      # bionic is a Linux ABI, so a statically-linked test binary runs under
+      # qemu-<arch>-static just like the Linux ARM32 job. One job builds and runs
+      # the full suite for arm64-v8a, armeabi-v7a, x86_64 and x86 (32-bit),
+      # covering all four ABIs on real bionic. The NDK is preinstalled on the
+      # runner ($ANDROID_NDK_LATEST_HOME).
+      - name: Install qemu-user-static
+        if: ${{ matrix.supported && matrix.toolchain == 'android-ndk' }}
+        run: sudo apt-get update && sudo apt-get install -y qemu-user-static
+      - name: Build & test (Android NDK, all ABIs)
+        if: ${{ matrix.supported && matrix.toolchain == 'android-ndk' }}
+        run: |
+          set -e
+          tc="$ANDROID_NDK_LATEST_HOME/build/cmake/android.toolchain.cmake"
+          run_abi () {
+            abi=$1; arch=$2; qemu=$3
+            echo "::group::Android $abi ($arch)"
+            cmake -B "build-$abi" \
+              -DCMAKE_TOOLCHAIN_FILE="$tc" \
+              -DANDROID_ABI="$abi" -DANDROID_PLATFORM=android-24 \
+              -DHOOX_TARGET_ARCH="$arch" \
+              -DCMAKE_EXE_LINKER_FLAGS=-static \
+              -DCMAKE_CROSSCOMPILING_EMULATOR="/usr/bin/$qemu"
+            cmake --build "build-$abi"
+            ctest --test-dir "build-$abi" --output-on-failure
+            echo "::endgroup::"
+          }
+          run_abi arm64-v8a   arm64  qemu-aarch64-static
+          run_abi armeabi-v7a arm    qemu-arm-static
+          run_abi x86_64      x86_64 qemu-x86_64-static
+          run_abi x86         x86    qemu-i386-static
 
   # ==========================================================================
   # On a version tag (vX.Y.Z): generate the single-file amalgamation and attach

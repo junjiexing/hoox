@@ -21,7 +21,7 @@
 #include <string.h>
 
 #ifdef HAVE_ANDROID
-# include "hoox/hooxandroid.h"
+# include "hooxandroid.h"
 #endif
 #ifdef HOOX_USE_DLMALLOC
 # ifdef HAVE_DARWIN
