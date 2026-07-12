@@ -88,8 +88,9 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   set(HOOX_PRIVATE_INCLUDE_DIRS ${HOOX_PRIVATE_INCLUDE_DIRS}
     "${CMAKE_CURRENT_SOURCE_DIR}/backend/posix"
     "${CMAKE_CURRENT_SOURCE_DIR}/backend/linux")
-elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin" OR CMAKE_SYSTEM_NAME STREQUAL "iOS")
-  # iOS (and the iOS simulator) reuse the same Darwin backend as macOS.
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin" OR CMAKE_SYSTEM_NAME STREQUAL "iOS"
+    OR CMAKE_SYSTEM_NAME STREQUAL "tvOS")
+  # iOS / tvOS (and their simulators) reuse the same Darwin backend as macOS.
   list(APPEND HOOX_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/backend/posix/hooxmemory-posix.c"
     "${CMAKE_CURRENT_SOURCE_DIR}/backend/posix/hooxtls-posix.c"
@@ -167,12 +168,15 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   find_package(Threads REQUIRED)
   target_link_libraries(hoox PUBLIC Threads::Threads)
   target_compile_definitions(hoox PRIVATE HAVE_LINUX)
-elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin" OR CMAKE_SYSTEM_NAME STREQUAL "iOS")
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin" OR CMAKE_SYSTEM_NAME STREQUAL "iOS"
+    OR CMAKE_SYSTEM_NAME STREQUAL "tvOS")
   find_package(Threads REQUIRED)
   target_link_libraries(hoox PUBLIC Threads::Threads)
   target_compile_definitions(hoox PRIVATE HAVE_DARWIN)
   if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
     target_compile_definitions(hoox PRIVATE HAVE_IOS)
+  elseif(CMAKE_SYSTEM_NAME STREQUAL "tvOS")
+    target_compile_definitions(hoox PRIVATE HAVE_TVOS)
   endif()
 elseif(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
   find_package(Threads REQUIRED)
