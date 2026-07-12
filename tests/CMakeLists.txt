@@ -179,23 +179,7 @@ if(Python3_FOUND)
     find_package(Threads REQUIRED)
     target_link_libraries(test_amalgam PRIVATE Threads::Threads)
   endif()
-
-  # test_amalgam links the full interceptor suite into one binary and patches
-  # its own code (self-hosting). On Apple arm64 (macOS/iOS/tvOS: 16 KiB pages,
-  # no RWX) the dense single-TU layout reliably places a hook target on a page
-  # shared with live patcher code — a case the in-place W^X path cannot patch
-  # (the documented Apple-arm64 self-hosting limitation; reviewer finding #3).
-  # The off-page patch path for self-hosting *is* exercised there by the split
-  # build's interceptor_smoke. So on Apple arm64 we still BUILD the amalgam (the
-  # single-TU compile is the coverage that matters — it catches symbol
-  # collisions across the merged arch sources), but don't RUN this suite.
-  if(APPLE AND HOOX_ARCH_FAMILY STREQUAL "arm64")
-    message(STATUS
-      "amalgam: build-only on Apple arm64 (self-hosting W^X limitation; "
-      "the off-page path is covered by interceptor_smoke)")
-  else()
-    add_test(NAME amalgam COMMAND test_amalgam)
-  endif()
+  add_test(NAME amalgam COMMAND test_amalgam)
 endif()
 
 # --- arch-x86 writer / relocator tests (M4) — x86-only ----------------------
