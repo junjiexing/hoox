@@ -367,6 +367,94 @@ demo_ignore_thread (HooxInterceptor * interceptor)
   hoox_invocation_listener_unref (probe);
 }
 
+/* ========================================================================= *
+ * Part 8 — read the CPU register context, and probe an arbitrary instruction.
+ *
+ * A listener receives HooxInvocationContext.cpu_context: the register state
+ * live at the hooked instruction. The layout is public (HooxCpuContext), so you
+ * can read (and write) registers directly. And a probe can target ANY
+ * instruction address, not only a function entry — the frida-style inline hook.
+ * ========================================================================= */
+
+/* Straight-line leaf: on arm64 any +4 offset into it is a valid boundary. */
+static int
+straight (int a, int b)
+{
+  int s = a + b;
+  s = s * 3;
+  s = s ^ 0x55;
+  return s;
+}
+
+static void
+dump_context (const char * where, HooxCpuContext * c)
+{
+#if defined (_M_IX86) || defined (__i386__)
+  printf ("  [ctx@%s] eip=%08x esp=%08x eax=%08x ecx=%08x\n",
+      where, c->eip, c->esp, c->eax, c->ecx);
+#elif defined (_M_X64) || defined (__x86_64__)
+  printf ("  [ctx@%s] rip=%llx rsp=%llx rdi=%lld rsi=%lld\n", where,
+      (unsigned long long) c->rip, (unsigned long long) c->rsp,
+      (long long) c->rdi, (long long) c->rsi);
+#elif defined (_M_ARM) || defined (__arm__)
+  printf ("  [ctx@%s] pc=%08x sp=%08x r0=%d r1=%d\n",
+      where, c->pc, c->sp, (int) c->r[0], (int) c->r[1]);
+#else /* arm64 */
+  printf ("  [ctx@%s] pc=%llx sp=%llx x0=%lld x1=%lld\n", where,
+      (unsigned long long) c->pc, (unsigned long long) c->sp,
+      (long long) c->x[0], (long long) c->x[1]);
+#endif
+}
+
+static void
+on_context_enter (HooxInvocationContext * ic, hx_pointer user_data)
+{
+  (void) user_data;
+  dump_context ("entry", ic->cpu_context);   /* registers at the entry */
+}
+
+static void
+on_context_mid (HooxInvocationContext * ic, hx_pointer user_data)
+{
+  (void) user_data;
+  dump_context ("mid  ", ic->cpu_context);    /* registers mid-function */
+}
+
+static void
+demo_cpu_context (HooxInterceptor * interceptor)
+{
+  HooxInvocationListener * at_entry;
+
+  printf ("== 8. cpu context + arbitrary-instruction probe ==\n");
+
+  at_entry = hoox_make_probe_listener (on_context_enter, NULL, NULL);
+  hoox_interceptor_attach (interceptor, (hx_pointer) straight, at_entry, NULL);
+
+  printf ("straight(5, 4) = %d\n", straight (5, 4));
+
+  hoox_interceptor_detach (interceptor, at_entry);
+  hoox_invocation_listener_unref (at_entry);
+
+#if defined (__aarch64__) || defined (_M_ARM64)
+  {
+    /* Probe the 3rd instruction (entry + 8) — a mid-function address. */
+    HooxInvocationListener * at_mid = hoox_make_probe_listener (on_context_mid,
+        NULL, NULL);
+    hx_pointer mid = (hx_pointer) ((hx_uint32 *) (void *) straight + 2);
+
+    hoox_interceptor_attach (interceptor, mid, at_mid, NULL);
+    printf ("straight(5, 4) = %d  (probing a mid-function instruction)\n",
+        straight (5, 4));
+    hoox_interceptor_detach (interceptor, at_mid);
+    hoox_invocation_listener_unref (at_mid);
+  }
+#else
+  printf ("(mid-function probe demonstrated on arm64; this arch has a "
+      "variable-width ISA)\n");
+#endif
+  printf ("\n");
+}
+
 /* ========================================================================= */
 
 int
@@ -387,6 +475,7 @@ main (void)
   demo_replace (interceptor);
   demo_replace_fast (interceptor);
   demo_ignore_thread (interceptor);
+  demo_cpu_context (interceptor);
 
   hoox_interceptor_unref (interceptor);
   hoox_deinit ();

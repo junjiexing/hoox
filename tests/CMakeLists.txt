@@ -45,6 +45,15 @@ target_include_directories(test_interceptor_selfhost PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}/../src/disasm")
 add_test(NAME interceptor_selfhost COMMAND test_interceptor_selfhost)
 
+# --- public CPU register context + arbitrary-address probe ------------------
+# Includes ONLY the public include/ header (not src/core), so it validates the
+# public cpu-context layout a downstream amalgam consumer actually sees.
+add_executable(test_cpu_context core/test_cpu_context.c)
+target_link_libraries(test_cpu_context PRIVATE hoox)
+target_include_directories(test_cpu_context PRIVATE
+  "${CMAKE_CURRENT_SOURCE_DIR}/../include")
+add_test(NAME cpu_context COMMAND test_cpu_context)
+
 # --- interceptor behaviour suite (M6) ---------------------------------------
 add_executable(test_interceptor
   core/test_interceptor.c
