@@ -21,6 +21,13 @@ endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# Collect every built executable (tests + the example) into <build>/bin so a
+# consumer — or CI packaging — can grab just the runnable binaries and their
+# debug symbols (.pdb beside the .exe on MSVC; DWARF embedded elsewhere) without
+# the object files and CMake bookkeeping. The static library is unaffected
+# (it is an ARCHIVE target, not RUNTIME).
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+
 # MSVC: /GF pools identical string literals so equal literals share one
 # address, matching gcc/clang (a couple of tests compare a stored user-data
 # pointer against a string literal for identity). /sdl enables the extra
