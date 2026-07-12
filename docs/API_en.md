@@ -91,6 +91,8 @@ Thin aliases used throughout the API:
 | `hx_boolean` | `int` (0 / non-0) |
 | `hx_pointer` | `void *` |
 | `hx_constpointer` | `const void *` |
+| `hx_uint8` / `hx_uint16` / `hx_uint32` / `hx_uint64` | fixed-width unsigned ints (`uintN_t`) — used by the register context fields |
+| `hx_float` / `hx_double` | `float` / `double` — used by the vector-register views |
 | `HxDestroyNotify` | `void (*)(hx_pointer data)` — a cleanup callback |
 
 ---
@@ -332,8 +334,8 @@ Public fields:
 
 ```c
 struct _HooxInvocationContext {
-  hx_pointer       function;      /* the intercepted function's address */
-  HooxCpuContext * cpu_context;   /* opaque register state (arch-specific) */
+  hx_pointer       function;      /* intercepted function (or hooked insn) address */
+  HooxCpuContext * cpu_context;   /* register state at the hook point (layout public) */
   hx_int           system_error;  /* errno / GetLastError() for this call */
   /* ... private ... */
 };
@@ -379,6 +381,46 @@ hx_pointer hoox_invocation_context_get_replacement_data (HooxInvocationContext *
     to pass state from entry to exit (timings, saved arguments, …).
   - **`get_replacement_data`** — the `HooxReplaceOptions.replacement_data`
     pointer, for functions installed via `replace`.
+
+### CPU context
+
+`context->cpu_context` points at the full register state captured at the hook
+point. Its layout is **public** in `hoox.h` (`HooxCpuContext` expands per target
+architecture to `HooxArm64CpuContext` / `HooxX64CpuContext` /
+`HooxArmCpuContext` / `HooxIA32CpuContext`), so you can read and modify
+registers directly — including, frida-style, at a probe placed on an **arbitrary
+instruction address** rather than a function entry:
+
+```c
+static void on_hit (HooxInvocationContext * ic, hx_pointer u) {
+  HooxCpuContext * c = ic->cpu_context;
+#if defined (__aarch64__)
+  printf ("pc=%llx x0=%llx sp=%llx\n",
+      (unsigned long long) c->pc, (unsigned long long) c->x[0],
+      (unsigned long long) c->sp);
+#endif
+}
+/* attach to an instruction in the middle of a function (arm64 is fixed-width,
+ * so entry+8 is a valid boundary) */
+hoox_interceptor_attach (itc,
+    (hx_pointer) ((hx_uint32 *) (void *) fn + 2),
+    hoox_make_probe_listener (on_hit, NULL, NULL), NULL);
+```
+
+Per-arch fields (as in `hoox.h`): `HooxArm64CpuContext` has
+`pc/sp/nzcv/x[29]/fp/lr/v[32]`; `HooxX64CpuContext` has `rip/r8..r15/rdi/rsi/
+rbp/rsp/rbx/rdx/rcx/rax`; `HooxArmCpuContext` has `pc/sp/cpsr/r8..r12/v[16]/
+r[8]/lr`; `HooxIA32CpuContext` has `eip/edi/esi/ebp/esp/ebx/edx/ecx/eax`.
+Writing back (e.g. changing `x[0]`) takes effect when execution resumes. The
+higher-level `get_nth_argument` / `get_return_value` are convenience wrappers
+over this same context.
+
+> **Arbitrary instruction position:** `attach`'s `target` only has to be a
+> relocatable instruction boundary, not a function entry — the constraints match
+> frida's (the overwritten bytes must be relocatable, and nothing may branch
+> into that range). `hoox_make_probe_listener` (enter-only) is the clean probe
+> primitive for an arbitrary address; a call listener's `on_leave` there means
+> "when the enclosing function returns".
 
 ---
 

@@ -32,6 +32,10 @@ returns to normal:
 6. **replace_fast** — the lighter direct-replacement variant.
 7. **ignore current thread** — `ignore`/`unignore_current_thread` silences a
    hook's listener for the calling thread.
+8. **cpu context + arbitrary-instruction probe** — read the live registers at a
+   hook point through `HooxInvocationContext.cpu_context` (the public
+   `HooxCpuContext` layout), and attach a probe to a *mid-function* instruction
+   address, not just a function entry.
 
 ## Build & run
 
@@ -129,6 +133,6 @@ Define a macro only to opt out of a default:
   `replace_nth_argument`, `get_return_value`, `replace_return_value`,
   `get_return_address`, `get_thread_id`, `get_depth`,
   `get_listener_function_data` / `_thread_data` / `_invocation_data`,
-  `get_replacement_data`
+  `get_replacement_data`, `cpu_context` (the `HooxCpuContext` registers)
 
 See `hoox.h` for the full surface.

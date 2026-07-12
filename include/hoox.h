@@ -43,13 +43,139 @@ typedef int             hx_boolean;
 typedef void *          hx_pointer;
 typedef const void *    hx_constpointer;
 
+typedef uint8_t         hx_uint8;
+typedef uint16_t        hx_uint16;
+typedef uint32_t        hx_uint32;
+typedef uint64_t        hx_uint64;
+typedef float           hx_float;
+typedef double          hx_double;
+
 typedef void (* HxDestroyNotify) (hx_pointer data);
 
 /* Opaque handles: their layout is private to the implementation. */
 typedef struct _HxArray               HooxInvocationStack;
-typedef struct _HooxCpuContext        HooxCpuContext;
 typedef struct _HooxInvocationBackend HooxInvocationBackend;
 typedef struct _HooxInterceptor       HooxInterceptor;
+
+/* ======================================================================== *
+ * CPU register context.
+ *
+ * The register state captured at a hook point, reachable from a listener via
+ * HooxInvocationContext.cpu_context. The active layout is selected by the
+ * target architecture from the same compiler builtins the library uses, so a
+ * consumer that only includes this header can read (and modify) the registers
+ * live at the hooked instruction — including for a probe placed at an arbitrary
+ * instruction address, not just a function entry.
+ *
+ * These definitions MUST stay byte-for-byte in sync with the internal ones in
+ * src/core/hooxdefs.h; the interceptor hands back a pointer to that same
+ * storage.
+ * ======================================================================== */
+
+typedef struct _HooxIA32CpuContext  HooxIA32CpuContext;
+typedef struct _HooxX64CpuContext   HooxX64CpuContext;
+typedef struct _HooxArmCpuContext   HooxArmCpuContext;
+typedef union  _HooxArmVectorReg    HooxArmVectorReg;
+typedef struct _HooxArm64CpuContext HooxArm64CpuContext;
+typedef union  _HooxArm64VectorReg  HooxArm64VectorReg;
+
+struct _HooxIA32CpuContext
+{
+  hx_uint32 eip;
+
+  hx_uint32 edi;
+  hx_uint32 esi;
+  hx_uint32 ebp;
+  hx_uint32 esp;
+  hx_uint32 ebx;
+  hx_uint32 edx;
+  hx_uint32 ecx;
+  hx_uint32 eax;
+};
+
+struct _HooxX64CpuContext
+{
+  hx_uint64 rip;
+
+  hx_uint64 r15;
+  hx_uint64 r14;
+  hx_uint64 r13;
+  hx_uint64 r12;
+  hx_uint64 r11;
+  hx_uint64 r10;
+  hx_uint64 r9;
+  hx_uint64 r8;
+
+  hx_uint64 rdi;
+  hx_uint64 rsi;
+  hx_uint64 rbp;
+  hx_uint64 rsp;
+  hx_uint64 rbx;
+  hx_uint64 rdx;
+  hx_uint64 rcx;
+  hx_uint64 rax;
+};
+
+union _HooxArmVectorReg
+{
+  hx_uint8 q[16];
+  hx_double d[2];
+  hx_float s[4];
+};
+
+struct _HooxArmCpuContext
+{
+  hx_uint32 pc;
+  hx_uint32 sp;
+  hx_uint32 cpsr;
+
+  hx_uint32 r8;
+  hx_uint32 r9;
+  hx_uint32 r10;
+  hx_uint32 r11;
+  hx_uint32 r12;
+
+  HooxArmVectorReg v[16];
+
+  hx_uint32 _padding;
+
+  hx_uint32 r[8];
+  hx_uint32 lr;
+};
+
+union _HooxArm64VectorReg
+{
+  hx_uint8 q[16];
+  hx_double d;
+  hx_float s;
+  hx_uint16 h;
+  hx_uint8 b;
+};
+
+struct _HooxArm64CpuContext
+{
+  hx_uint64 pc;
+  hx_uint64 sp;
+  hx_uint64 nzcv;
+
+  hx_uint64 x[29];
+  hx_uint64 fp;
+  hx_uint64 lr;
+
+  HooxArm64VectorReg v[32];
+};
+
+#if defined (_M_IX86) || defined (__i386__)
+typedef HooxIA32CpuContext HooxCpuContext;
+#elif defined (_M_X64) || defined (__x86_64__)
+typedef HooxX64CpuContext HooxCpuContext;
+#elif defined (_M_ARM) || defined (__arm__)
+typedef HooxArmCpuContext HooxCpuContext;
+#elif defined (_M_ARM64) || defined (__aarch64__)
+typedef HooxArm64CpuContext HooxCpuContext;
+#else
+# error Unsupported architecture.
+#endif
 
 /* ======================================================================== *
  * Invocation context — passed to a listener's on_enter / on_leave.
