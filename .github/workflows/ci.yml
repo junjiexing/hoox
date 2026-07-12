@@ -49,7 +49,7 @@ jobs:
           - { name: 'Android · x86_64 · (planned)',   runner: ubuntu-latest, supported: false }
           - { name: 'iOS · ARM64 · (planned)',        runner: ubuntu-latest, supported: false }
           - { name: 'tvOS · ARM64 · (planned)',       runner: ubuntu-latest, supported: false }
-          - { name: 'FreeBSD · x86_64 · (planned)',   runner: ubuntu-latest, supported: false }
+          - { name: 'FreeBSD · x86_64 + x86 · Clang', runner: ubuntu-latest, supported: true, toolchain: freebsd-vm }
           - { name: 'QNX · ARM64 · (planned)',        runner: ubuntu-latest, supported: false }
           # Windows-on-ARM is ARM64-only; 32-bit ARM is not a supported Windows
           # target (no hosted runner, deprecated by Microsoft), so it is N/A.
@@ -172,6 +172,35 @@ jobs:
             "-DCMAKE_CROSSCOMPILING_EMULATOR=/usr/bin/qemu-arm-static;-L;/usr/arm-linux-gnueabihf"
           cmake --build build
           ctest --test-dir build --output-on-failure
+
+      # ---- FreeBSD (amd64 VM: native x86_64 + i386 via lib32/freebsd32) --
+      # No hosted FreeBSD runner exists, so boot a FreeBSD VM on the ubuntu
+      # host (vmactions). The VM is amd64: x86_64 builds+tests natively, and
+      # x86 (32-bit) builds+tests via clang -m32 against the base lib32
+      # (freebsd32 compat). arm / arm64 FreeBSD share this exact OS backend
+      # (validated here) plus the arch layers validated on the Linux/macOS
+      # ARM jobs — cross-running them needs a sysroot the VM lacks, so they
+      # are covered by construction rather than executed here.
+      - name: Build & test (FreeBSD x86_64 + x86, clang)
+        if: ${{ matrix.supported && matrix.toolchain == 'freebsd-vm' }}
+        uses: vmactions/freebsd-vm@v1
+        with:
+          usesh: true
+          prepare: |
+            pkg install -y cmake python3
+          run: |
+            set -e
+            echo "::group::FreeBSD x86_64 (native)"
+            cmake -B build -DCMAKE_C_COMPILER=clang
+            cmake --build build
+            ctest --test-dir build --output-on-failure
+            echo "::endgroup::"
+            echo "::group::FreeBSD x86 (32-bit, clang -m32 / freebsd32)"
+            cmake -B build32 -DCMAKE_C_COMPILER=clang \
+              -DCMAKE_C_FLAGS=-m32 -DCMAKE_EXE_LINKER_FLAGS=-m32
+            cmake --build build32
+            ctest --test-dir build32 --output-on-failure
+            echo "::endgroup::"
 
   # ==========================================================================
   # On a version tag (vX.Y.Z): generate the single-file amalgamation and attach

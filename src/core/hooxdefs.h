@@ -36,6 +36,8 @@
 #  define HAVE_DARWIN
 # elif defined (__linux__)
 #  define HAVE_LINUX
+# elif defined (__FreeBSD__)
+#  define HAVE_FREEBSD
 # endif
 #endif
 
