@@ -48,6 +48,8 @@
 #include "hxarray.h"
 #include "hxmem.h"
 
+#include <stdio.h>  /* HOOXPATCH_DEBUG */
+
 /* A redirect is at most 16 bytes; cap generously and fall back otherwise. */
 #define HOOX_OFFPAGE_MAX_WORDS 64
 
@@ -203,8 +205,20 @@ _hoox_darwin_arm64_patch_pages (HxPtrArray * sorted_addresses,
     for (w = 0; w != n_words; w++)
       memcpy (&words[w], tp + first + (hx_size) w * 4, sizeof (hx_uint32));
 
+    fprintf (stderr, "[hooxpatch] lump=%p n_pages=%u first=%lu n_words=%u dst=%p\n",
+        lump_start, n_pages, (unsigned long) first, n_words,
+        (void *) (op + first));
+    for (w = 0; w != n_words && w != 8; w++)
+    {
+      hx_uint32 orig;
+      memcpy (&orig, op + first + (hx_size) w * 4, sizeof (hx_uint32));
+      fprintf (stderr, "[hooxpatch]   word[%u] new=0x%08x orig=0x%08x\n",
+          w, words[w], orig);
+    }
+
     ok = hoox_darwin_run_offpage_patch (lump_start, lump_size,
         (hx_pointer) (op + first), words, n_words);
+    fprintf (stderr, "[hooxpatch] run_offpage_patch -> %d\n", (int) ok);
 
     hx_free (words);
     hx_free (temp);
