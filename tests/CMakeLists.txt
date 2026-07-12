@@ -197,24 +197,27 @@ if(Python3_FOUND)
     add_test(NAME amalgam COMMAND test_amalgam)
   endif()
 
-  # Build the amalgamation example (hook_example) in-tree so every CI job
-  # archives a compiled example alongside the tests. It consumes the generated
-  # single-file library exactly as a downstream user would — the amalgam's
-  # public hoox.h from HOOX_AMALGAM_DIR. Built (not run) as part of `all`.
-  # Skipped only under real MSVC cl: the example is a demo not written to pass
-  # the tree's /W3 /sdl /WX, and its own CMakeLists targets clang/gcc — the
-  # Windows clang & MinGW-gcc jobs still archive a Windows example binary.
-  if(NOT CMAKE_C_COMPILER_ID STREQUAL "MSVC")
-    add_executable(hook_example
-      "${CMAKE_CURRENT_SOURCE_DIR}/../example/hook_example.c"
-      "${HOOX_AMALGAM_C}")
-    target_include_directories(hook_example PRIVATE "${HOOX_AMALGAM_DIR}")
-    if(WIN32)
-      target_link_libraries(hook_example PRIVATE psapi)
-    else()
-      find_package(Threads REQUIRED)
-      target_link_libraries(hook_example PRIVATE Threads::Threads)
-    endif()
+  # Build the amalgamation example (hook_example) in-tree on every job so each
+  # artifact carries a compiled example alongside the tests. It consumes the
+  # generated single-file library exactly as a downstream user would — the
+  # amalgam's public hoox.h from HOOX_AMALGAM_DIR. Built (not run) as part of
+  # `all`.
+  add_executable(hook_example
+    "${CMAKE_CURRENT_SOURCE_DIR}/../example/hook_example.c"
+    "${HOOX_AMALGAM_C}")
+  target_include_directories(hook_example PRIVATE "${HOOX_AMALGAM_DIR}")
+  if(WIN32)
+    target_link_libraries(hook_example PRIVATE psapi)
+  else()
+    find_package(Threads REQUIRED)
+    target_link_libraries(hook_example PRIVATE Threads::Threads)
+  endif()
+  if(MSVC)
+    # The example is a demo, not written to satisfy the tree's strict
+    # /W3 /sdl /WX; don't fail its build on warnings, and silence the CRT
+    # "deprecated" (C4996) notices for printf-family calls.
+    target_compile_options(hook_example PRIVATE /WX- /wd4996)
+    target_compile_definitions(hook_example PRIVATE _CRT_SECURE_NO_WARNINGS)
   endif()
 endif()
 
