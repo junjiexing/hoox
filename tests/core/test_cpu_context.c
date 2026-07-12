@@ -101,8 +101,17 @@ main (void)
   r = target (5, 4);
   CHECK (r == (((5 + 4) * 3) ^ 0x55));
   CHECK (entry_hits == 1);
-  /* pc read from cpu_context must be the hooked instruction (the entry). */
-  CHECK (entry_ip == (uintptr_t) (void *) target);
+  /* pc read from cpu_context must be the hooked instruction (the entry). On
+   * 32-bit ARM a Thumb function pointer carries the Thumb bit (LSB) set, while
+   * the pc register holds the aligned address — strip it there for the compare
+   * (x86 code addresses may legitimately be odd, so only do this on ARM). */
+  {
+    uintptr_t want = (uintptr_t) (void *) target;
+#if defined (_M_ARM) || defined (__arm__)
+    want &= ~(uintptr_t) 1;
+#endif
+    CHECK (entry_ip == want);
+  }
   /* arguments recovered from the same context. */
   CHECK (entry_arg0 == 5 && entry_arg1 == 4);
 
