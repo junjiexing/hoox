@@ -57,7 +57,9 @@ ctest suite under `qemu-user`). **iOS (ARM64) is wired up**: the device SDK
 (`iphoneos`) cross-compiles and the iOS simulator (`iphonesimulator`) runs the
 full suite green; **real-device iOS has not been tested yet** (codesign
 enforcement + arm64e ptrauth need a jailbroken device — validated locally, see
-below). Horizontal roll-out to other platforms is next.
+below). **tvOS (ARM64) is wired up identically** (`appletvos` build + tvOS
+simulator run; real device likewise untested). Horizontal roll-out to other
+platforms is next.
 
 ## Platform support
 
@@ -72,15 +74,15 @@ Legend: ✅ supported (builds & passes the full test suite) · 🧩 extracted
 | **Android** | ✅ | ✅ | ✅ | ✅ |
 | **macOS** | ➖ | ✅ | ➖ | ✅ |
 | **iOS** | ➖ | ➖ | ➖ | ✅ † |
-| **tvOS** | ➖ | ➖ | ➖ | 📋 |
+| **tvOS** | ➖ | ➖ | ➖ | ✅ † |
 | **FreeBSD** | ✅ | ✅ | 🧩 | ✅ |
 
-† iOS ARM64: device-SDK cross-compile + iOS simulator run, green. **Real device (codesign enforcement + arm64e ptrauth on a jailbroken device) has not been tested yet** — to be validated locally.
+† iOS / tvOS ARM64: device-SDK cross-compile + simulator run, green. **Real device (codesign enforcement + arm64e ptrauth on a jailbroken device) has not been tested yet** — to be validated locally.
 
 Directly usable today: **Windows × (x86 / x86_64 / ARM64)**,
 **Linux × (x86 / x86_64 / ARM / ARM64)**, **macOS × (x86_64 / ARM64)**,
 **FreeBSD × (x86 / x86_64 / ARM64)**, **Android × (x86 / x86_64 / ARM / ARM64)**
-and **iOS × ARM64** (simulator-run + device-SDK build).
+and **iOS / tvOS × ARM64** (simulator-run + device-SDK build).
 Windows ARM64 is built and fully
 tested on the native `windows-11-arm` runner; it reuses the same
 `src/backend/windows` (TLS falls back to `TlsGetValue` off x86) and adds an
@@ -138,8 +140,12 @@ needs signing/a device) + **simulator (`iphonesimulator`) full suite via
 mirrors macOS arm64: `test_memory` / `interceptor_smoke` self-skip, the interceptor
 suite runs). **⚠️ Real-device iOS has not been tested yet**: on-device codesign
 enforcement + arm64e ptrauth can only be verified on hardware and need a
-jailbroken device — this is validated locally and is out of scope for CI. Other
-OSes still need their own backend.
+jailbroken device — this is validated locally and is out of scope for CI.
+**tvOS (ARM64)** is structurally identical to iOS (same darwin backend + arch,
+`HAVE_TVOS`), just the `appletvos` / `appletvsimulator` SDKs and an Apple TV
+simulator; CI likewise builds the device SDK and runs the full suite in the tvOS
+simulator, and real-device tvOS is not covered. Other OSes still need their own
+backend.
 
 > **⚠️ Apple Silicon limitation (self-hosting):** on Apple Silicon (16 KiB pages
 > + enforced W^X), patching a page briefly removes its execute permission. If the

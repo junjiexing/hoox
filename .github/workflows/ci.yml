@@ -45,13 +45,13 @@ jobs:
 
           - { name: 'Android · arm64/arm/x86_64/x86 · NDK', runner: ubuntu-latest, supported: true, toolchain: android-ndk }
           - { name: 'iOS · ARM64 · sim-run + device-build', runner: macos-15, supported: true, toolchain: ios }
+          - { name: 'tvOS · ARM64 · sim-run + device-build', runner: macos-15, supported: true, toolchain: tvos }
 
           # ---- planned: not implemented yet, skipped -----------------------
-          # NOTE: iOS above is device-SDK-compiled + simulator-tested only. Real
-          # on-device iOS (code-signing enforcement + arm64e ptrauth) is NOT
-          # tested in CI — it needs a jailbroken device and will be validated
-          # locally, out of scope here.
-          - { name: 'tvOS · ARM64 · (planned)',       runner: ubuntu-latest, supported: false }
+          # NOTE: iOS/tvOS above are device-SDK-compiled + simulator-tested only.
+          # Real on-device Apple-mobile (code-signing enforcement + arm64e
+          # ptrauth) is NOT tested in CI — it needs a jailbroken device and will
+          # be validated locally, out of scope here.
           - { name: 'FreeBSD · x86_64 + x86 · Clang', runner: ubuntu-latest, supported: true, toolchain: freebsd-vm }
           - { name: 'FreeBSD · ARM64 · Clang',        runner: ubuntu-latest, supported: true, toolchain: freebsd-arm64 }
           # Windows-on-ARM is ARM64-only; 32-bit ARM is not a supported Windows
@@ -300,6 +300,40 @@ jobs:
             "-DCMAKE_CROSSCOMPILING_EMULATOR=xcrun;simctl;spawn;$udid"
           cmake --build build-ios-sim
           ctest --test-dir build-ios-sim --output-on-failure
+
+      # ---- tvOS ARM64 (device-triple build + tvOS simulator run) -----------
+      # Identical shape to iOS (shared Darwin backend + arm64 arch, HAVE_TVOS),
+      # just the tvOS SDKs (appletvos / appletvsimulator) and an Apple TV sim.
+      # Real on-device tvOS is likewise not covered in CI.
+      - name: Build (tvOS device SDK, arm64 — compile only)
+        if: ${{ matrix.supported && matrix.toolchain == 'tvos' }}
+        run: |
+          set -e
+          cmake -B build-tvos-device \
+            -DCMAKE_SYSTEM_NAME=tvOS \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DCMAKE_OSX_SYSROOT=appletvos \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 \
+            -DHOOX_TARGET_ARCH=arm64
+          cmake --build build-tvos-device
+      - name: Build & test (tvOS simulator, arm64)
+        if: ${{ matrix.supported && matrix.toolchain == 'tvos' }}
+        run: |
+          set -e
+          # Pick a pre-created, available Apple TV simulator (valid pairing).
+          udid=$(xcrun simctl list devices available -j | python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; c=[x['udid'] for rt,l in d.items() if 'tvOS' in rt for x in l if x.get('isAvailable') and 'TV' in x['name']]; print(c[0] if c else '')")
+          test -n "$udid"
+          echo "simulator udid: $udid"
+          xcrun simctl bootstatus "$udid" -b
+          cmake -B build-tvos-sim \
+            -DCMAKE_SYSTEM_NAME=tvOS \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DCMAKE_OSX_SYSROOT=appletvsimulator \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 \
+            -DHOOX_TARGET_ARCH=arm64 \
+            "-DCMAKE_CROSSCOMPILING_EMULATOR=xcrun;simctl;spawn;$udid"
+          cmake --build build-tvos-sim
+          ctest --test-dir build-tvos-sim --output-on-failure
 
   # ==========================================================================
   # On a version tag (vX.Y.Z): generate the single-file amalgamation and attach
