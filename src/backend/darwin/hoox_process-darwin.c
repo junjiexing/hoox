@@ -23,7 +23,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <mach/mach.h>
-#include <mach/mach_vm.h>
+#include "hooxdarwin.h"
 #include <mach-o/dyld.h>
 #include <mach-o/loader.h>
 

@@ -28,7 +28,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <mach/mach.h>
-#include <mach/mach_vm.h>
+#include "hooxdarwin.h"
 #include <mach-o/loader.h>
 #include <math.h>
 #include <stdio.h>

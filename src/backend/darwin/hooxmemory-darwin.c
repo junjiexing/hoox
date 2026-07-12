@@ -17,7 +17,7 @@
 #include "hooxmemory-priv.h"
 
 #include <mach/mach.h>
-#include <mach/mach_vm.h>
+#include "hooxdarwin.h"
 #include <sys/mman.h>
 #include <unistd.h>
 
