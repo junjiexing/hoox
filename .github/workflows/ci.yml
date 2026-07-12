@@ -54,9 +54,6 @@ jobs:
           # be validated locally, out of scope here.
           - { name: 'FreeBSD · x86_64 + x86 · Clang', runner: ubuntu-latest, supported: true, toolchain: freebsd-vm }
           - { name: 'FreeBSD · ARM64 · Clang',        runner: ubuntu-latest, supported: true, toolchain: freebsd-arm64 }
-          # Windows-on-ARM is ARM64-only; 32-bit ARM is not a supported Windows
-          # target (no hosted runner, deprecated by Microsoft), so it is N/A.
-          - { name: 'Windows · ARM (32-bit) · (n/a)',  runner: ubuntu-latest, supported: false }
 
     steps:
       - name: Skip (not implemented yet)
