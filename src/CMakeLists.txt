@@ -112,6 +112,19 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
   set(HOOX_PRIVATE_INCLUDE_DIRS ${HOOX_PRIVATE_INCLUDE_DIRS}
     "${CMAKE_CURRENT_SOURCE_DIR}/backend/posix"
     "${CMAKE_CURRENT_SOURCE_DIR}/backend/freebsd")
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Android")
+  # Android is a Linux kernel + bionic: reuse the POSIX + Linux backend and add
+  # only the tiny Android-specific piece (API level for execute-only code pages).
+  list(APPEND HOOX_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/backend/posix/hooxmemory-posix.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/backend/posix/hooxtls-posix.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/backend/linux/hooxmemory-linux.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/backend/linux/hoox_process-linux.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/backend/android/hooxandroid.c")
+  set(HOOX_PRIVATE_INCLUDE_DIRS ${HOOX_PRIVATE_INCLUDE_DIRS}
+    "${CMAKE_CURRENT_SOURCE_DIR}/backend/posix"
+    "${CMAKE_CURRENT_SOURCE_DIR}/backend/linux"
+    "${CMAKE_CURRENT_SOURCE_DIR}/backend/android")
 endif()
 
 if(HOOX_ARCH_FAMILY STREQUAL "x86")
@@ -154,6 +167,12 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
   find_package(Threads REQUIRED)
   target_link_libraries(hoox PUBLIC Threads::Threads)
   target_compile_definitions(hoox PRIVATE HAVE_FREEBSD)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Android")
+  # bionic folds pthread into libc, so Threads::Threads is effectively a no-op,
+  # but we link it for consistency. Android is Linux + the Android quirks.
+  find_package(Threads REQUIRED)
+  target_link_libraries(hoox PUBLIC Threads::Threads)
+  target_compile_definitions(hoox PRIVATE HAVE_LINUX HAVE_ANDROID)
 endif()
 if(HOOX_ARCH_FAMILY STREQUAL "x86")
   target_compile_definitions(hoox PRIVATE HAVE_I386)
