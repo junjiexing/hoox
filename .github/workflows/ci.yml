@@ -44,9 +44,13 @@ jobs:
           - { name: 'macOS · ARM64 · Clang',          runner: macos-15, supported: true, toolchain: macos-clang }
 
           - { name: 'Android · arm64/arm/x86_64/x86 · NDK', runner: ubuntu-latest, supported: true, toolchain: android-ndk }
+          - { name: 'iOS · ARM64 · sim-run + device-build', runner: macos-15, supported: true, toolchain: ios }
 
           # ---- planned: not implemented yet, skipped -----------------------
-          - { name: 'iOS · ARM64 · (planned)',        runner: ubuntu-latest, supported: false }
+          # Real on-device iOS (code-signing enforcement + arm64e ptrauth) needs a
+          # jailbroken device on a self-hosted runner, or a Corellium subscription
+          # (secrets). Left as a hook; the sim run above mirrors macOS arm64.
+          - { name: 'iOS · ARM64 · device (real, planned)', runner: ubuntu-latest, supported: false }
           - { name: 'tvOS · ARM64 · (planned)',       runner: ubuntu-latest, supported: false }
           - { name: 'FreeBSD · x86_64 + x86 · Clang', runner: ubuntu-latest, supported: true, toolchain: freebsd-vm }
           - { name: 'FreeBSD · ARM64 · Clang',        runner: ubuntu-latest, supported: true, toolchain: freebsd-arm64 }
@@ -255,6 +259,45 @@ jobs:
           run_abi armeabi-v7a arm    qemu-arm-static
           run_abi x86_64      x86_64 qemu-x86_64-static
           run_abi x86         x86    qemu-i386-static
+
+      # ---- iOS ARM64 (device-triple build + iOS simulator run) -------------
+      # iOS reuses the Darwin backend + arm64 arch. Two checks on an Apple
+      # Silicon runner: (1) build for the real device SDK (iphoneos) — compiles
+      # the HAVE_IOS code paths; not run (needs signing/a device). (2) build for
+      # the simulator SDK and run the full suite under `simctl spawn`. The
+      # simulator runs on the macOS kernel, so its W^X behaviour mirrors macOS
+      # arm64: test_memory + interceptor_smoke self-skip, the interceptor suite
+      # runs. Real on-device validation (codesign enforcement + arm64e ptrauth)
+      # is left as a hook — see the planned device entry above.
+      - name: Build (iOS device SDK, arm64 — compile only)
+        if: ${{ matrix.supported && matrix.toolchain == 'ios' }}
+        run: |
+          set -e
+          cmake -B build-ios-device \
+            -DCMAKE_SYSTEM_NAME=iOS \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DCMAKE_OSX_SYSROOT=iphoneos \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 \
+            -DHOOX_TARGET_ARCH=arm64
+          cmake --build build-ios-device
+      - name: Build & test (iOS simulator, arm64)
+        if: ${{ matrix.supported && matrix.toolchain == 'ios' }}
+        run: |
+          set -e
+          # Boot an available iOS simulator (newest runtime, an iPhone type).
+          rt=$(xcrun simctl list runtimes -j | python3 -c "import json,sys; r=[x['identifier'] for x in json.load(sys.stdin)['runtimes'] if x['isAvailable'] and 'iOS' in x['name']]; print(r[-1])")
+          dt=$(xcrun simctl list devicetypes -j | python3 -c "import json,sys; d=[x['identifier'] for x in json.load(sys.stdin)['devicetypes'] if 'iPhone' in x['name']]; print(d[-1])")
+          udid=$(xcrun simctl create hoox-sim "$dt" "$rt")
+          xcrun simctl boot "$udid"
+          cmake -B build-ios-sim \
+            -DCMAKE_SYSTEM_NAME=iOS \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DCMAKE_OSX_SYSROOT=iphonesimulator \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 \
+            -DHOOX_TARGET_ARCH=arm64 \
+            "-DCMAKE_CROSSCOMPILING_EMULATOR=xcrun;simctl;spawn;$udid"
+          cmake --build build-ios-sim
+          ctest --test-dir build-ios-sim --output-on-failure
 
   # ==========================================================================
   # On a version tag (vX.Y.Z): generate the single-file amalgamation and attach
