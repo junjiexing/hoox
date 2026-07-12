@@ -111,11 +111,15 @@ arm64 相同的 `mprotect` + `VM_PROT_COPY` 打补丁路径。CI(Apple Silicon r
 真机尚未测试**:设备端签名强制 + arm64e ptrauth 只有在真机上才能验证,需越狱设备(后续本地验证,不在 CI
 范围内)。其它 OS 还需各自的 backend。
 
-> **⚠️ Apple Silicon 已知限制(自宿主):** 在 Apple Silicon(16 KiB 页 + 强制 W^X)上,patch 一页代码时
-> 该页会短暂失去执行权限。若被 hook 的函数与 hoox **自身的 patch 代码**恰好落在同一个 16 KiB 页,补丁过程
-> 会崩溃。这只在"把 hoox 静态链接进目标、并 hook 同一二进制内、且恰好同页的函数"时发生;hook 其它模块/库
-> 不受影响。hoox 会在 attach/replace 时**检测到这种碰撞并返回错误(`HOOX_ATTACH_POLICY_VIOLATION` /
-> 对应的 replace 错误码),而不是崩溃**。彻底消除需要"经独立映射打补丁"机制(计划中)。
+> **Apple Silicon 自宿主同页问题(已根治,非硬化环境):** 在 Apple Silicon(16 KiB 页 + 强制 W^X)上,
+> in-place patch 一页代码时该页会短暂失去执行权限;若被 hook 的函数与 hoox **自身的 patch 代码**恰好落在
+> 同一个 16 KiB 页(把 hoox 静态链接进目标、hook 同一二进制内的同页函数),补丁过程会自崩。**现已根治**:
+> 检测到同页碰撞时,hoox **从一块自有的独立可执行页(off-page stub)** 执行"翻权限→写→复权限"序列
+> (`src/backend/darwin/hooxpatch-darwin.c`),执行中的补丁代码不在目标页上,故目标页短暂丢 X 也不会自崩。
+> interceptor 的自宿主 smoke(`interceptor_smoke`)现已在 macOS arm64 / iOS·tvOS 模拟器上实测通过。
+> **仍有一处限制**:**硬化代码签名的正式设备**(App Store 分发的 iOS/tvOS)上,连 `VM_PROT_COPY` 写签名
+> `__TEXT` 都会被内核拒绝——任何纯进程内库(hoox、乃至无外部 agent 的 frida)都无法在那里打补丁;此时
+> hoox 干净地返回错误而非崩溃。真机(越狱/带 entitlement)由作者本地验证。
 
 ## 文档
 

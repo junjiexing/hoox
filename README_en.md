@@ -147,15 +147,19 @@ simulator; CI likewise builds the device SDK and runs the full suite in the tvOS
 simulator, and real-device tvOS is not covered. Other OSes still need their own
 backend.
 
-> **⚠️ Apple Silicon limitation (self-hosting):** on Apple Silicon (16 KiB pages
-> + enforced W^X), patching a page briefly removes its execute permission. If the
-> hooked function shares its 16 KiB page with hoox's *own* patch-time code, the
-> patch faults. This only happens when hoox is statically linked into the same
-> binary as the target and the two land on the same page; hooking other modules/
-> libraries is unaffected. hoox **detects this collision at attach/replace time
-> and returns an error (`HOOX_ATTACH_POLICY_VIOLATION` / the matching replace
-> code) instead of crashing**. Removing it entirely needs a patch-through-a-
-> separate-mapping mechanism (planned).
+> **Apple Silicon self-hosting same-page (root-fixed, non-hardened):** on Apple
+> Silicon (16 KiB pages + enforced W^X), an in-place patch briefly removes execute
+> from the target page; if the hooked function shares its 16 KiB page with hoox's
+> *own* patch-time code (hoox statically linked into the target, hooking a same-page
+> function in that binary), the patch used to self-fault. **This is now fixed**: on
+> a same-page collision hoox runs the flip→write→restore sequence from its **own
+> independent executable page (an off-page stub)** — see `src/backend/darwin/hooxpatch-darwin.c` —
+> so the executing patch code is never on the target page. The self-hosting smoke
+> (`interceptor_smoke`) now passes on macOS arm64 and the iOS/tvOS simulators.
+> **One limit remains:** on **hardened, stock devices** (App Store iOS/tvOS) the
+> kernel denies even `VM_PROT_COPY` on signed `__TEXT`, so no in-process library
+> (hoox, or frida without an external agent) can patch there — hoox returns a clean
+> error rather than crashing. Real jailbroken/entitled devices are validated locally.
 
 ## Documentation
 
