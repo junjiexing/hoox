@@ -457,6 +457,21 @@ cleanup:
           HOOX_THREAD_FLAGS_NONE);
     }
 
+#if defined (HAVE_DARWIN) && defined (HAVE_ARM64)
+    /*
+     * Apple arm64 has no RWX: patching in place drops execute from the target
+     * page during the write, which self-faults when hoox's own patch code
+     * shares that 16 KiB page. Write from an off-page stub instead (other
+     * threads are already suspended above).
+     */
+    if (!rwx_supported)
+    {
+      result = _hoox_darwin_arm64_patch_pages (sorted_addresses, coalesce,
+          apply, apply_data, page_size);
+      goto resume_threads;
+    }
+#endif
+
     for (i = 0; i != sorted_addresses->len; i++)
     {
       hx_pointer target_page = hx_ptr_array_index (sorted_addresses, i);

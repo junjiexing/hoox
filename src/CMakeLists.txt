@@ -96,6 +96,12 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin" OR CMAKE_SYSTEM_NAME STREQUAL "iOS"
     "${CMAKE_CURRENT_SOURCE_DIR}/backend/posix/hooxtls-posix.c"
     "${CMAKE_CURRENT_SOURCE_DIR}/backend/darwin/hooxmemory-darwin.c"
     "${CMAKE_CURRENT_SOURCE_DIR}/backend/darwin/hoox_process-darwin.c")
+  # Apple arm64: off-page code patcher (root-fixes the self-hosting same-page
+  # W^X collision). Darwin x86_64 is RWX so it doesn't need it.
+  if(HOOX_ARCH_FAMILY STREQUAL "arm64")
+    list(APPEND HOOX_SOURCES
+      "${CMAKE_CURRENT_SOURCE_DIR}/backend/darwin/hooxpatch-darwin.c")
+  endif()
   # macOS needs the real code segment (RX + ad-hoc code signing + vm_remap),
   # not the non-Darwin stub, so W^X targets (esp. Apple Silicon) can be patched.
   # iOS keeps the generic stub: on modern iOS (>= 15.6.1) the darwin code

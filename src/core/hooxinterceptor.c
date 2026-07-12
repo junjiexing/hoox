@@ -1324,39 +1324,6 @@ fallback:
  * unaffected. Removing the limitation needs the write-through-separate-mapping
  * mechanism (see docs) — until then this converts a silent crash into an error.
  */
-static hx_boolean
-hoox_interceptor_target_unsafe_to_patch (hx_constpointer target)
-{
-#if defined (HAVE_DARWIN) && defined (HAVE_ARM64)
-  const hx_pointer anchors[] = {
-    (hx_pointer) hoox_memory_patch_code_pages,
-    (hx_pointer) hoox_apply_updates,
-    (hx_pointer) hx_hash_table_lookup,
-  };
-  hx_size page_size, target_page;
-  hx_uint i;
-
-  /* No hazard if patching keeps the page executable. */
-  if (hoox_query_is_rwx_supported () || hoox_memory_can_remap_writable () ||
-      hoox_code_segment_is_supported ())
-    return FALSE;
-
-  page_size = hoox_query_page_size ();
-  target_page = HX_POINTER_TO_SIZE (target) & ~(page_size - 1);
-
-  for (i = 0; i != HX_N_ELEMENTS (anchors); i++)
-  {
-    if ((HX_POINTER_TO_SIZE (anchors[i]) & ~(page_size - 1)) == target_page)
-      return TRUE;
-  }
-
-  return FALSE;
-#else
-  (void) target;
-  return FALSE;
-#endif
-}
-
 static HooxFunctionContext *
 hoox_interceptor_instrument (HooxInterceptor * self,
                             HooxInterceptorType type,
@@ -1384,11 +1351,6 @@ hoox_interceptor_instrument (HooxInterceptor * self,
     return ctx;
   }
 
-  if (hoox_interceptor_target_unsafe_to_patch (function_address))
-  {
-    *error = HOOX_INSTRUMENTATION_ERROR_POLICY_VIOLATION;
-    return NULL;
-  }
 
   if (self->backend == NULL)
   {
