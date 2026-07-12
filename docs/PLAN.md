@@ -371,15 +371,27 @@ hoox/
 
 ### 6.2 Apple Silicon 自宿主同页（W^X）问题——已根治
 
-Apple arm64（16 KiB 页 + 强制 W^X）上，in-place patch 一页代码时该页会短暂失去执行权限；若被 hook 的
-函数与 hoox **自身的 patch 代码**落在同一 16 KiB 页（把 hoox 静态链接进目标、hook 同一二进制内的同页
-函数），补丁过程会自崩。**根治方案**（`src/backend/darwin/hooxpatch-darwin.c`）：检测到同页碰撞时，用
-`HooxArm64Writer` 在 hoox **自有的独立可执行页**上生成一小段桩，桩里 `mach_vm_protect(RW|COPY)` → 写入
-diff 出的连续变更字 → `mach_vm_protect(RX)`；执行中的补丁指令在桩页上而非目标页，故目标页短暂丢 X 不再
-自崩。分离页（常规情形）仍走原 in-place 路径，零回归。`interceptor_smoke` 已在 macOS arm64 / iOS·tvOS
-模拟器实测通过。（frida 的 `vm_remap` 可写别名在纯进程内不可行：写签名 `__TEXT` 会 COW 到别名副本，需
-frida 外部 agent 的 page-plan。）**仍存限制**：硬化签名的正式设备连 `VM_PROT_COPY` 都被内核拒，纯进程内
-无解（frida 亦需外部 agent），此时 hoox 干净返回错误而非崩溃。
+Apple arm64（16 KiB 页 + 强制 W^X）上，in-place patch 一页代码时该页会短暂失去执行权限；若在该页可写
+的窗口里执行的任何 hoox 代码落在**同一 16 KiB 页**（把 hoox 静态链接进目标、hook 同一二进制内的同页
+函数），补丁线程取下一条指令即自崩。**根治方案**（`src/backend/darwin/hooxpatch-darwin.c`）：Apple arm64
+非-RWX 一律走 **off-page 桩**——用 `HooxArm64Writer` 在 hoox **自有的独立可执行页**上生成一小段桩，桩里
+`mach_vm_protect(RW|COPY)` → `memcpy(base, 已打补丁的整页私有副本, size)` → `mach_vm_protect(RX)`；丢 X
+窗口里执行的指令只在桩页（外加 shared cache 里的 `mach_vm_protect`/`memcpy`），与目标页布局**无关**，故
+结构性正确。用 `memcpy` 写回整页（而非逐字）使桩固定几条指令、无变更字数上限，同时天然覆盖多种情形：
+小 redirect、一次事务里同页多个 redirect、跨页 redirect、以及**首次整页写**（如物化刚分配的 RW thunk 页）。
+
+**为何弃用旧的"锚点启发式"**：早先版本默认走 in-place，只在目标页命中 3 个硬编码锚点函数
+（`hoox_memory_patch_code_pages`/`apply`/`hx_hash_table_lookup`）时才切 off-page。但 in-place 的可写窗口里
+实际还会执行 `_hoox_interceptor_backend_get_function_address` 与 activate/deactivate trampoline 写入器等
+**非锚点**函数——它们被链接器放在与锚点**不同的页**（本机 + iPhone 6s/iOS 15.8.2 真机实测均如此），故目标
+落在这些页上时会走 in-place 而自崩、启发式**检测不到**。已构造回归用例 `test_interceptor_selfhost`
+（hook 一个落在该"非锚点窗口页"上的 hoox 内部函数）：旧启发式下 SIGBUS，现全绿。off-page 现为无条件
+路径，`amalgam` 自宿主套件因此也从"仅编译"升级为在 Apple arm64 **实跑**。真机验证：**iPhone 6s（A9,
+arm64,非 arm64e）/ iOS 15.8.2 / Dopamine 越狱**上 interceptor 全套 + amalgam + selfhost 回归全绿。
+可选宏 `HOOX_DARWIN_INPLACE_PATCH` 回退到旧 in-place 路径（更快但有布局假设，仅当无被 hook 函数与 hoox
+自身代码同页时才安全）。（frida 的 `vm_remap` 可写别名在纯进程内不可行：写签名 `__TEXT` 会 COW 到别名
+副本，需 frida 外部 agent 的 page-plan。）**仍存限制**：硬化签名的正式设备连 `VM_PROT_COPY` 都被内核拒，
+纯进程内无解（frida 亦需外部 agent），桩里 protect 被拒即干净失败、不写不崩。
 
 ---
 

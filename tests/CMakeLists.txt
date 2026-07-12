@@ -36,6 +36,15 @@ target_include_directories(test_interceptor_smoke PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}/../src/disasm")
 add_test(NAME interceptor_smoke COMMAND test_interceptor_smoke)
 
+# --- self-hosting W^X collision regression (Apple arm64) --------------------
+add_executable(test_interceptor_selfhost core/test_interceptor_selfhost.c)
+target_link_libraries(test_interceptor_selfhost PRIVATE hoox)
+target_include_directories(test_interceptor_selfhost PRIVATE
+  "${CMAKE_CURRENT_SOURCE_DIR}/../src/core"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../src/compat"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../src/disasm")
+add_test(NAME interceptor_selfhost COMMAND test_interceptor_selfhost)
+
 # --- interceptor behaviour suite (M6) ---------------------------------------
 add_executable(test_interceptor
   core/test_interceptor.c
@@ -181,21 +190,13 @@ if(Python3_FOUND)
   endif()
 
   # test_amalgam links the full interceptor suite into one binary and patches
-  # its own code (self-hosting). On Apple arm64 (macOS/iOS/tvOS: 16 KiB pages,
-  # no RWX) the dense single-TU layout reliably places a hook target on a page
-  # shared with live patcher code — a case the in-place W^X path cannot patch
-  # (the documented Apple-arm64 self-hosting limitation; reviewer finding #3).
-  # The off-page patch path for self-hosting *is* exercised there by the split
-  # build's interceptor_smoke. So on Apple arm64 we still BUILD the amalgam (the
-  # single-TU compile is the coverage that matters — it catches symbol
-  # collisions across the merged arch sources), but don't RUN this suite.
-  if(APPLE AND HOOX_ARCH_FAMILY STREQUAL "arm64")
-    message(STATUS
-      "amalgam: build-only on Apple arm64 (self-hosting W^X limitation; "
-      "the off-page path is covered by interceptor_smoke)")
-  else()
-    add_test(NAME amalgam COMMAND test_amalgam)
-  endif()
+  # its own code (self-hosting): the dense single-TU layout reliably places hook
+  # targets on pages shared with live patcher code. On Apple arm64 (16 KiB
+  # pages, no RWX) this used to self-fault, so the suite was build-only there.
+  # hoox now patches Apple arm64 unconditionally through the off-page stub
+  # (backend/darwin/hooxpatch-darwin.c), which is correct regardless of layout,
+  # so the amalgam self-hosting suite runs everywhere.
+  add_test(NAME amalgam COMMAND test_amalgam)
 
   # Build the amalgamation example (hook_example) in-tree on every job so each
   # artifact carries a compiled example alongside the tests. It consumes the
