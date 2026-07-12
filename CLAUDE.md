@@ -73,7 +73,18 @@ CI 镜像），按构造覆盖、未在 CI 执行。
 → on-leave 空栈崩溃。glibc 已把 pthread 并入 libc，Linux 无此问题；`test_amalgam`（直接编译 `hoox.c`、
 不链接 `hoox` 目标）因此在 `tests/CMakeLists.txt` 显式链接 `Threads::Threads`。
 
-下一步：iOS/Android/其它平台。
+**Android x86 / x86_64 / arm / arm64 已打通（NDK 交叉编译 + qemu-user，实测全绿）：** Android 是 Linux
+内核 + bionic libc,故**整份复用 `backend/posix` + `backend/linux`**,只新增极小的 `backend/android/hooxandroid.c`
+（`hoox_android_get_api_level()` 用 `__system_property_get` 读 `ro.build.version.sdk`）——供 `hoox_ensure_code_readable`
+在 API 29+ 上给可执行代码页补 READ（execute-only 缓解）。`hooxdefs.h` 由 `__ANDROID__` 自动推导 `HAVE_ANDROID`
+（同时 `__linux__` → `HAVE_LINUX`）。CMake 以 `CMAKE_SYSTEM_NAME STREQUAL "Android"` 分派(posix+linux+android,
+定义 `HAVE_LINUX HAVE_ANDROID`)。CI 用预装的 NDK(`$ANDROID_NDK_LATEST_HOME`)交叉编译四个 ABI,`-static`
+静态链接后——因 bionic 即 Linux ABI——像 Linux ARM32 那样在 `qemu-<arch>-static` 下跑完整 ctest(x86/x86_64
+各 10 项、arm/arm64 各 7 项全绿)。**关键坑:** Android-only 的 `hoox_ensure_code_readable` 用了 GLib 风格命名锁
+`HX_LOCK_DEFINE_STATIC`/`HX_LOCK`/`HX_UNLOCK`——这条路径此前从未编译过,故这些宏当时缺失,已在 `hxthread.h`
+用 `HxMutex`(可零初始化 + 首次加锁惰性初始化)补上。
+
+下一步：iOS/其它平台。
 
 > 命名已完成一次性重构：**所有 `gum`/`cs`/glib 前缀均已清除**（见 D2）。仓库不再以
 > 与上游 diff 对拍为目标——以行为一致 + 测试通过为准。

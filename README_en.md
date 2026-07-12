@@ -50,8 +50,10 @@ gcc/clang; ARM64 built and fully tested on the native `ubuntu-24.04-arm` CI; ARM
 the full ctest suite under `qemu-arm`. **macOS now covers x86_64 and ARM64**
 (native `macos-15-intel` and Apple Silicon `macos-15` CI, AppleClang; interceptor
 behaviour suite green on both). **FreeBSD now covers x86 / x86_64** (an amd64
-FreeBSD VM, clang, including 32-bit via `-m32`; ARM/ARM64 share the same backend,
-see below). Horizontal roll-out to other platforms is next.
+FreeBSD VM, clang, including 32-bit via `-m32`) **and ARM64** (a `cross-platform-actions`
+FreeBSD/arm64 guest). **Android now covers all four ABIs** (NDK cross-build of
+arm64-v8a / armeabi-v7a / x86_64 / x86, statically linked and run through the full
+ctest suite under `qemu-user`). Horizontal roll-out to other platforms is next.
 
 ## Platform support
 
@@ -63,14 +65,15 @@ Legend: ✅ supported (builds & passes the full test suite) · 🧩 extracted
 |---|:-:|:-:|:-:|:-:|
 | **Windows** | ✅ | ✅ | ➖ | ✅ |
 | **Linux** | ✅ | ✅ | ✅ | ✅ |
-| **Android** | 📋 | 📋 | 📋 | 📋 |
+| **Android** | ✅ | ✅ | ✅ | ✅ |
 | **macOS** | ➖ | ✅ | ➖ | ✅ |
 | **iOS / tvOS** | ➖ | ➖ | ➖ | 📋 |
 | **FreeBSD** | ✅ | ✅ | 🧩 | ✅ |
 
 Directly usable today: **Windows × (x86 / x86_64 / ARM64)**,
-**Linux × (x86 / x86_64 / ARM / ARM64)**, **macOS × (x86_64 / ARM64)** and
-**FreeBSD × (x86 / x86_64 / ARM64)**. Windows ARM64 is built and fully
+**Linux × (x86 / x86_64 / ARM / ARM64)**, **macOS × (x86_64 / ARM64)**,
+**FreeBSD × (x86 / x86_64 / ARM64)** and **Android × (x86 / x86_64 / ARM / ARM64)**.
+Windows ARM64 is built and fully
 tested on the native `windows-11-arm` runner; it reuses the same
 `src/backend/windows` (TLS falls back to `TlsGetValue` off x86) and adds an
 in-tree AArch64 decoder (`src/disasm/hx_disasm_arm64.c`) that drives the
@@ -106,8 +109,15 @@ full suite natively inside it (interceptor behaviour suite and amalgam included)
 — the same TCG path already exercises hoox's code-patching on the Linux `qemu-arm`
 job. ARM (32-bit) FreeBSD shares this OS backend plus the A32/Thumb arch layer
 validated on the Linux `qemu-arm` job (FreeBSD armv7 is tier-2 with no ready CI
-image), so it is covered by construction rather than executed. Other OSes still
-need their own backend.
+image), so it is covered by construction rather than executed. **Android** is a
+Linux kernel with bionic libc, so it reuses `src/backend/posix` + `src/backend/linux`
+wholesale and adds only a tiny `src/backend/android` (`hoox_android_get_api_level` —
+on API 29+ executable code pages may be unreadable, so the engine adds READ before
+the decoder reads them). CI cross-builds all four ABIs with the NDK (statically
+linked); since bionic is a Linux ABI, the static test binaries run under
+`qemu-<arch>-static` just like the Linux ARM32 job — arm64-v8a / armeabi-v7a /
+x86_64 / x86 all run the full ctest suite green. Other OSes still need their own
+backend.
 
 > **⚠️ Apple Silicon limitation (self-hosting):** on Apple Silicon (16 KiB pages
 > + enforced W^X), patching a page briefly removes its execute permission. If the
