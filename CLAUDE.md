@@ -190,6 +190,6 @@ dlmalloc、以及全部非目标架构的 writer/relocator。
 
 ## 平台/架构（最终目标，分阶段）
 
-Windows / Linux / Android / macOS / iOS / tvOS / FreeBSD / QNX × x86 / x86_64 / ARM / ARM64。
+Windows / Linux / Android / macOS / iOS / tvOS / FreeBSD × x86 / x86_64 / ARM / ARM64。
 W^X/代码签名差异隔离在 backend 层：Windows/Linux/非越狱走 RWX；Apple 平台单独实现
-`hooxcodesegment-darwin`。详见 `docs/PLAN.md` §6。（**MIPS 已从目标中移除**。）
+`hooxcodesegment-darwin`。详见 `docs/PLAN.md` §6。（**MIPS、QNX 已从目标中移除**。）

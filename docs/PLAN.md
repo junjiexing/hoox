@@ -22,8 +22,8 @@
 1. **只保留 hook 必需功能**，其余（Stalker 动态追踪、Backtracer、CFG、
    符号解析、模块枚举、内存扫描、DarwinGrafter、异常/守护页 hook 等）全部去掉。
 2. **保留 Frida inline hook 的核心平台/架构支持**：OS（Windows / Linux / Android /
-   macOS / iOS / tvOS / FreeBSD / QNX）× 架构（x86 / x86_64 / ARM / ARM64），
-   **按 §6 矩阵分阶段覆盖**（MIPS 不在支持目标内）。并**保留 frida 中 hook 相关的测试**用于验证。
+   macOS / iOS / tvOS / FreeBSD）× 架构（x86 / x86_64 / ARM / ARM64），
+   **按 §6 矩阵分阶段覆盖**（MIPS、QNX 不在支持目标内）。并**保留 frida 中 hook 相关的测试**用于验证。
 3. **尽可能移除第三方库**，尤其是 GLib —— 用仓库内自研的极简纯 C 兼容层
    （下称 **nano-glib / `hx_*`**）替代。无法移除的（如反汇编器
    **capstone**）则下载源码、提取并裁剪到最小。
@@ -279,7 +279,7 @@ hoox/
 │  ├─ backend/
 │  │  ├─ x86/     gumcpucontext-x86.c  guminterceptor-x86.c
 │  │  ├─ windows/ gummemory-windows.c  gumtls-windows.c  hoox_process-windows.c
-│  │  ├─ linux/   darwin/ freebsd/ qnx/ posix/   # 后续里程碑
+│  │  ├─ linux/   darwin/ freebsd/ posix/   # 后续里程碑
 │  └─ facade/
 │     └─ hoox.c               # hoox_* → gum_* 的公共 facade 实现
 ├─ tests/
@@ -313,7 +313,7 @@ hoox/
 | **M6** | 拦截器测试（Win x64） | 靶函数就位 + 移植 `interceptor.c` 全部用例在 Windows x64 全绿（骨架已在 M1.5 完成） |
 | **M7** | 单文件合并 | `amalgamate.py` 产出 `hoox.c`/`hoox.h`；用合并产物重跑 M6 测试全绿 |
 | **M8** | 横向平台铺开 | Linux x64 → macOS(x64/arm64，含真实 codesegment/dlopen 测试) → 各自测试全绿 |
-| **M9** | 横向架构铺开 | ARM64 → ARM/Thumb backend+arch+测试；Android/FreeBSD/QNX backend |
+| **M9** | 横向架构铺开 | ARM64 → ARM/Thumb backend+arch+测试；Android/FreeBSD backend |
 | **M10** | 收尾 | 全平台 CI 矩阵、文档、示例、发布物（含 amalgamation）；许可证合规复核 |
 
 各里程碑的细粒度任务见 [`TASKS.md`](./TASKS.md)。
@@ -330,11 +330,12 @@ hoox/
 | macOS | ✓ | ✓ | – | ✓ | **真实** codesegment；越狱集成不移植 |
 | iOS/tvOS | – | – | – | ✓ | 代码签名 / ptrauth |
 | FreeBSD | ✓ | ✓ | ✓ | ✓ | posix backend |
-| QNX | ✓ | ✓ | ✓ | ✓ | posix + qnx backend |
 
 > 注：barebone（无 OS）后端、dbghelp、libunwind/libdwarf 后端与 hook 无关,不移植。
 > **MIPS 已从支持目标中移除**（frida 的 mips relocator 本身即残缺——仅实现 `MIPS_INS_B`,
 > `J` 及所有条件分支为 `g_assert_not_reached()`——故不纳入 hoox）。
+> **QNX 已从支持目标中移除**：其工具链（qcc / QNX SDP）为专有且需许可证,无托管 CI runner
+> 可编译/运行,无法满足"每次改动必须编译通过再提交"的验证要求,故不纳入 hoox。
 
 ---
 

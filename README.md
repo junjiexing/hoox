@@ -18,7 +18,7 @@ JS 绑定等）。
 - **无 capstone 依赖** —— 用一个紧凑的自研指令解码器替代
   （`hx_disasm`，参考 Microsoft Detours 的重定位引擎）。
 - **无任何第三方运行时依赖。**
-- **跨平台** —— Windows / Linux / Android / macOS / iOS / FreeBSD / QNX ×
+- **跨平台** —— Windows / Linux / Android / macOS / iOS / FreeBSD ×
   x86 / x86_64 / ARM / ARM64（分阶段覆盖）。
 - **可合并为单文件** —— 一个脚本把所有源码合并成单一的 `hoox.c` + `hoox.h`
   （SQLite 风格）；公共头 `hoox.h` 只暴露 API。
@@ -61,7 +61,6 @@ x86_64**（amd64 FreeBSD VM，clang，含 `-m32` 32 位；ARM/ARM64 共用同一
 | **macOS** | ➖ | ✅ | ➖ | ✅ |
 | **iOS / tvOS** | ➖ | ➖ | ➖ | 📋 |
 | **FreeBSD** | ✅ | ✅ | 🧩 | ✅ |
-| **QNX** | 📋 | 📋 | 📋 | 📋 |
 
 可直接使用的组合是 **Windows × (x86 / x86_64 / ARM64)**、**Linux × (x86 / x86_64 / ARM / ARM64)**、
 **macOS × (x86_64 / ARM64)** 与 **FreeBSD × (x86 / x86_64 / ARM64)**。
