@@ -74,7 +74,7 @@ jobs:
         if: ${{ matrix.supported && matrix.toolchain == 'msvc' }}
         shell: pwsh
         run: |
-          cmake -B build -G "Visual Studio 17 2022" -A ${{ matrix.arch }}
+          cmake -B build -A ${{ matrix.arch }}
           cmake --build build --config Debug
           ctest --test-dir build -C Debug --output-on-failure
 
@@ -371,7 +371,7 @@ jobs:
       - name: Generate hoox.c / hoox.h
         shell: pwsh
         run: |
-          cmake -B build -G "Visual Studio 17 2022" -A x64
+          cmake -B build -A x64
           cmake --build build --target amalgam
 
       - name: Assemble package
