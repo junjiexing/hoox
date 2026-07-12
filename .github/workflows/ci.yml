@@ -210,19 +210,21 @@ jobs:
       # aarch64 FreeBSD guest — slower than KVM, but genuine arm64 execution
       # (the same TCG path already exercises hoox's code-patching on Linux
       # qemu-arm). This upgrades arm64 FreeBSD from "by construction" to tested.
-      - name: Build & test (FreeBSD ARM64, clang)
+      - name: Boot FreeBSD ARM64 VM
         if: ${{ matrix.supported && matrix.toolchain == 'freebsd-arm64' }}
         uses: cross-platform-actions/action@v1.3.0
         with:
           operating_system: freebsd
           architecture: arm64
           version: '15.1'
-          shell: bash
-          run: |
-            sudo pkg install -y cmake python3
-            cmake -B build -DCMAKE_C_COMPILER=clang
-            cmake --build build
-            ctest --test-dir build --output-on-failure
+      - name: Build & test (FreeBSD ARM64, clang)
+        if: ${{ matrix.supported && matrix.toolchain == 'freebsd-arm64' }}
+        shell: cpa.sh {0}
+        run: |
+          sudo pkg install -y cmake python3
+          cmake -B build -DCMAKE_C_COMPILER=clang
+          cmake --build build
+          ctest --test-dir build --output-on-failure
 
   # ==========================================================================
   # On a version tag (vX.Y.Z): generate the single-file amalgamation and attach
