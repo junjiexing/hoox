@@ -48,6 +48,19 @@
 # define HAVE_ANDROID
 #endif
 
+/* iOS / tvOS share the Darwin backend with macOS; distinguish them for the few
+ * Apple-mobile-specific paths (code segment, ptrauth target-OS). Both the
+ * device and the simulator define TARGET_OS_IOS. */
+#if defined (__APPLE__)
+# include <TargetConditionals.h>
+# if defined (TARGET_OS_IOS) && TARGET_OS_IOS && !defined (HAVE_IOS)
+#  define HAVE_IOS
+# endif
+# if defined (TARGET_OS_TV) && TARGET_OS_TV && !defined (HAVE_TVOS)
+#  define HAVE_TVOS
+# endif
+#endif
+
 #if HX_API_MAJOR >= 6
 # define HX_ARCH_ARM64 HX_ARCH_AARCH64
 #endif

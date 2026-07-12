@@ -84,7 +84,24 @@ CI 镜像），按构造覆盖、未在 CI 执行。
 `HX_LOCK_DEFINE_STATIC`/`HX_LOCK`/`HX_UNLOCK`——这条路径此前从未编译过,故这些宏当时缺失,已在 `hxthread.h`
 用 `HxMutex`(可零初始化 + 首次加锁惰性初始化)补上。
 
-下一步：iOS/其它平台。
+**iOS ARM64 已接入（设备 SDK 交叉编译 + iOS 模拟器实跑,实测全绿）：** iOS 复用 `src/backend/darwin` +
+`arch/arm64`,仅 `HAVE_IOS` 分支不同。`hooxdefs.h` 用 `<TargetConditionals.h>` 的 `TARGET_OS_IOS` 推导
+`HAVE_IOS`(设备与模拟器都置位);CMake 以 `CMAKE_SYSTEM_NAME STREQUAL "iOS"` 复用 Darwin backend 并定义
+`HAVE_DARWIN HAVE_IOS`。**关键坑两处:**(1) 公开 iOS SDK 用 `#error` 封了 `<mach/mach_vm.h>`,但
+`mach_vm_*` 符号在 libsystem 里存在——像 frida 那样只在 `TARGET_OS_OSX` 上 include SDK 头、其余自行声明
+用到的 `mach_vm_protect/region/remap`(新增 `backend/darwin/hooxdarwin.h`,三个 darwin 源改 include 它)。
+(2) `hooxcodesegment-darwin.c` 的 `#if HAVE_IOS` 块是老越狱内核的 Substrate/Corellium 签名"realize"路径,
+夹带一堆从未编译过、未移植的 glib/frida 符号(`g_once_init_*`/`g_file_test`/`substrated_mark`/
+`_gum_register_destructor`/`hoox_process_is_debugger_attached`);现代 iOS(xnu≥8020.142,即 iOS≥15.6.1)
+`is_supported` 恒 FALSE、且属 hoox 不提供的越狱集成(同 DarwinGrafter),故 **iOS 改用通用 stub
+code-segment**(CMake 里 code-segment 的 darwin 替换只对 macOS 生效),走与 macOS arm64 相同的
+`mprotect`+`VM_PROT_COPY` 路径。CI 在 Apple Silicon runner 上:设备 SDK(`iphoneos`)只编译不运行 +
+模拟器(`iphonesimulator`)用 `simctl spawn`(取现成可用的 iPhone 模拟器,避免 `simctl create` 的
+device/runtime 配对不兼容 403)跑完整套件;模拟器跑在 macOS 内核上,W^X 行为等同 macOS arm64
+(`test_memory`/`interceptor_smoke` 自跳过)。**⚠️ iOS 真机尚未测试:** 设备端签名强制 + arm64e ptrauth 只有
+真机能验,需越狱设备——由作者后续本地验证,不在 CI 范围内(CI 矩阵未保留真机占位项)。
+
+下一步：其它平台（真机 iOS 由作者本地验证）。
 
 > 命名已完成一次性重构：**所有 `gum`/`cs`/glib 前缀均已清除**（见 D2）。仓库不再以
 > 与上游 diff 对拍为目标——以行为一致 + 测试通过为准。
