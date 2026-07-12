@@ -46,14 +46,22 @@ WRITE 时加 `VM_PROT_COPY`**（生成可写私有副本，绕过 W^X；`mprotec
 mprotect 成 RW（会掉 X）时，若 hoox 自己的补丁代码在同页会自崩；`vm_remap` 可写别名也不行（写签名 `__TEXT`
 会 COW 到别名副本，原映射看不到；frida 靠外部 agent 的 page-plan 才行，纯进程内做不到）。`test_memory`（裸
 RWX）在 Apple Silicon 仍跳过（无 RWX，与本问题无关）。**自宿主同页问题已根治（`src/backend/darwin/hooxpatch-darwin.c`）：**
-检测到目标页与补丁关键锚点（`hoox_memory_patch_code_pages` / `apply` / `hx_hash_table_lookup`）同页时，改用
-**off-page stub**——用 `HooxArm64Writer` 生成一小段自有可执行页上的桩，桩里 `mach_vm_protect(RW|COPY)`→写差量
-（只写 diff 出的连续变更字。桩返回 `kern_return_t`，protect 被拒时干净失败不静默）→`mach_vm_protect(RX)`；
-因执行中的补丁指令在桩页上、不在目标页上，目标页短暂丢 X 不再自崩。分离页（常规）仍走原 in-place 路径，零回归。
-`interceptor_smoke`（自宿主）已在 macOS arm64 / iOS·tvOS 模拟器实测通过（不再跳过）。**易错点：** `hoox_alloc_n_pages`
-返回的指针前有一页隐藏头页，释放必须用 `hoox_free_pages()`，不能 `hoox_memory_free(ptr,size)`。**仍存限制：**
-硬化签名的正式设备上连 `VM_PROT_COPY` 写签名 `__TEXT` 都被拒，纯进程内无解（frida 亦需外部 agent），此时干净返回
-错误。真机（越狱/entitlement）由作者本地验证。`arch/arm64` interceptor
+Apple arm64 非-RWX **无条件**走 **off-page stub**——用 `HooxArm64Writer` 在 hoox 自有可执行页上生成一小段桩，
+桩里 `mach_vm_protect(RW|COPY)`→`memcpy(base, 已打补丁的整页私有副本, size)`→`mach_vm_protect(RX)`
+（桩返回 `kern_return_t`，protect 被拒时干净失败不静默）；丢 X 窗口里执行的指令只在桩页（外加 shared cache
+的 `mach_vm_protect`/`memcpy`），与目标页布局**无关**故结构性正确。用 `memcpy` 写整页而非逐字，桩固定几条指令、
+无变更字数上限，天然覆盖小 redirect / 同页多 redirect / 跨页 redirect / **首次整页写**（物化刚分配的 RW thunk 页
+——这正是"写整页 vs 逐字"的关键：thunk 页从零页写满，逐字会撑爆字数上限而静默失败）。**弃用旧的锚点启发式**
+（曾只在目标页命中 `hoox_memory_patch_code_pages`/`apply`/`hx_hash_table_lookup` 3 个锚点时才切 off-page）：
+in-place 窗口实际还执行 `_hoox_interceptor_backend_get_function_address` + activate/deactivate trampoline 写入器
+等**非锚点**函数，链接器把它们放在与锚点**不同的页**，故目标落其上会 in-place 自崩而检测不到——回归用例
+`test_interceptor_selfhost` 复现（旧启发式 SIGBUS，现全绿），`amalgam` 自宿主套件也从"仅编译"升级为 Apple arm64
+**实跑**。**真机实测**：iPhone 6s（A9/arm64，非 arm64e）/ iOS 15.8.2 / Dopamine 越狱上 interceptor 全套 +
+amalgam + selfhost 全绿。可选宏 `HOOX_DARWIN_INPLACE_PATCH` 回退旧 in-place 路径（更快但有布局假设）。**易错点：**
+`hoox_alloc_n_pages` 返回的指针前有一页隐藏头页，释放必须用 `hoox_free_pages()`，不能 `hoox_memory_free(ptr,size)`。
+**易错点（真机部署）：** 覆盖同名二进制会命中 AMFI 的 cdhash 缓存导致启动即 SIGKILL（非代码 bug）——换新文件名或重启。
+**仍存限制：** 硬化签名的正式设备上连 `VM_PROT_COPY` 写签名 `__TEXT` 都被拒，纯进程内无解（frida 亦需外部 agent），
+此时干净返回错误。`arch/arm64` interceptor
 的 DarwinGrafter（Mach-O import 挂钩，hoox 不提供）用 `HOOX_HAVE_DARWIN_GRAFTER`（永不定义）门控掉。
 另提供 `hooxcodesegment-darwin.c`（老内核用；新内核 `is_supported` 返回 FALSE）。
 
