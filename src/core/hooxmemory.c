@@ -457,6 +457,45 @@ cleanup:
           HOOX_THREAD_FLAGS_NONE);
     }
 
+#if defined (HAVE_DARWIN) && defined (HAVE_ARM64)
+    /*
+     * Apple arm64 has no RWX: the in-place path below drops execute from the
+     * target page during the write, which self-faults only if hoox's own patch
+     * code shares that 16 KiB page (self-hosting). Detect that collision — the
+     * target page matching a patch-critical anchor that runs while the page is
+     * writable — and, only then, write from an off-page stub instead. The
+     * common separate-page case keeps the proven in-place path unchanged.
+     */
+    if (!rwx_supported)
+    {
+      const hx_pointer anchors[] = {
+        (hx_pointer) hoox_memory_patch_code_pages,
+        (hx_pointer) apply,
+        (hx_pointer) hx_hash_table_lookup,
+      };
+      hx_boolean collides = FALSE;
+      hx_uint a;
+
+      for (i = 0; i != sorted_addresses->len && !collides; i++)
+      {
+        hx_size tp = HX_POINTER_TO_SIZE (hx_ptr_array_index (sorted_addresses, i))
+            & ~(page_size - 1);
+        for (a = 0; a != HX_N_ELEMENTS (anchors); a++)
+        {
+          if ((HX_POINTER_TO_SIZE (anchors[a]) & ~(page_size - 1)) == tp)
+            collides = TRUE;
+        }
+      }
+
+      if (collides)
+      {
+        result = _hoox_darwin_arm64_patch_pages (sorted_addresses, coalesce,
+            apply, apply_data, page_size);
+        goto resume_threads;
+      }
+    }
+#endif
+
     for (i = 0; i != sorted_addresses->len; i++)
     {
       hx_pointer target_page = hx_ptr_array_index (sorted_addresses, i);
