@@ -91,6 +91,8 @@ Windows 上需链接 `psapi`。
 | `hx_boolean` | `int`（0 / 非 0） |
 | `hx_pointer` | `void *` |
 | `hx_constpointer` | `const void *` |
+| `hx_uint8` / `hx_uint16` / `hx_uint32` / `hx_uint64` | 定宽无符号整数（`uintN_t`）——用于寄存器上下文字段 |
+| `hx_float` / `hx_double` | `float` / `double`——用于向量寄存器视图 |
 | `HxDestroyNotify` | `void (*)(hx_pointer data)` —— 清理回调 |
 
 ---
@@ -315,8 +317,8 @@ void hoox_invocation_listener_init (HooxInvocationListener * self,
 
 ```c
 struct _HooxInvocationContext {
-  hx_pointer       function;      /* 被拦截函数的地址 */
-  HooxCpuContext * cpu_context;   /* 不透明的寄存器状态（与架构相关） */
+  hx_pointer       function;      /* 被拦截函数（或被挂钩指令）的地址 */
+  HooxCpuContext * cpu_context;   /* 挂钩点的寄存器状态（见下，布局公开） */
   hx_int           system_error;  /* 本次调用的 errno / GetLastError() */
   /* ... 私有 ... */
 };
@@ -361,6 +363,41 @@ hx_pointer hoox_invocation_context_get_replacement_data (HooxInvocationContext *
     传到离开（计时、保存的参数等）。
   - **`get_replacement_data`** —— 通过 `replace` 安装的函数所对应的
     `HooxReplaceOptions.replacement_data` 指针。
+
+### 寄存器上下文 CPU context
+
+`context->cpu_context` 指向挂钩点处捕获的完整寄存器状态。其布局在公共头
+`hoox.h` 中**公开**（`HooxCpuContext` 按目标架构展开为
+`HooxArm64CpuContext` / `HooxX64CpuContext` / `HooxArmCpuContext` /
+`HooxIA32CpuContext`），因此可以直接读取、修改寄存器——包括 frida 那样把 probe
+挂在**任意指令地址**（不限函数入口）后打印该处的寄存器：
+
+```c
+static void on_hit (HooxInvocationContext * ic, hx_pointer u) {
+  HooxCpuContext * c = ic->cpu_context;
+#if defined (__aarch64__)
+  printf ("pc=%llx x0=%llx sp=%llx\n",
+      (unsigned long long) c->pc, (unsigned long long) c->x[0],
+      (unsigned long long) c->sp);
+#endif
+}
+/* 把探针挂在函数中间的某条指令上（arm64 定长指令，entry+8 即一条边界） */
+hoox_interceptor_attach (itc,
+    (hx_pointer) ((hx_uint32 *) (void *) fn + 2),
+    hoox_make_probe_listener (on_hit, NULL, NULL), NULL);
+```
+
+各架构的字段（与 `hoox.h` 一致）：`HooxArm64CpuContext` 有
+`pc/sp/nzcv/x[29]/fp/lr/v[32]`；`HooxX64CpuContext` 有 `rip/r8..r15/rdi/rsi/
+rbp/rsp/rbx/rdx/rcx/rax`；`HooxArmCpuContext` 有 `pc/sp/cpsr/r8..r12/v[16]/
+r[8]/lr`；`HooxIA32CpuContext` 有 `eip/edi/esi/ebp/esp/ebx/edx/ecx/eax`。写回
+（如改 `x[0]`）会在恢复执行时生效。高层的 `get_nth_argument` /
+`get_return_value` 也是读写这块上下文的便捷封装。
+
+> **任意指令位置挂钩**：`attach` 的 `target` 只需是一个可重定位的指令边界，
+> 不必是函数入口——约束与 frida 相同（被覆盖的字节可重定位、且没有其他分支跳入
+> 该区间）。`hoox_make_probe_listener`（只有 `on_enter`）是任意位置探针的干净原语；
+> 若用带 `on_leave` 的 call listener，其“离开”语义是“所在函数返回时”。
 
 ---
 
