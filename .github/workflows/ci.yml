@@ -43,7 +43,8 @@ jobs:
           - { name: 'macOS · x86_64 · Clang',         runner: macos-15-intel, supported: true, toolchain: macos-clang }
           - { name: 'macOS · ARM64 · Clang',          runner: macos-15, supported: true, toolchain: macos-clang }
 
-          - { name: 'Android · arm64/arm/x86_64/x86 · NDK', runner: ubuntu-latest, supported: true, toolchain: android-ndk }
+          # Name avoids '/' — it becomes an upload-artifact name, which forbids slashes.
+          - { name: 'Android · arm64+arm+x86_64+x86 · NDK', runner: ubuntu-latest, supported: true, toolchain: android-ndk }
           - { name: 'iOS · ARM64 · sim-run + device-build', runner: macos-15, supported: true, toolchain: ios }
           - { name: 'tvOS · ARM64 · sim-run + device-build', runner: macos-15, supported: true, toolchain: tvos }
 
