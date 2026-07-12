@@ -426,7 +426,7 @@ Enums:
 | `HooxInvocationIgnorability` | `IGNORABLE`, `UNIGNORABLE` | Whether `ignore_*_thread` may suppress this hook. |
 | `HooxRelocationPolicy` | `DEFAULT`, `CHECKED`, `UNCHECKED`, `FORCED` | How strictly prologue relocation is validated. |
 | `HooxRedirectWriteResult` | `WRITTEN`, `DECLINED` | Return of a custom `HooxWriteRedirectFunc`. |
-| `HooxAttachReturn` | `OK(0)`, `WRONG_SIGNATURE(-1)`, `ALREADY_ATTACHED(-2)`, `POLICY_VIOLATION(-3)`, `WRONG_TYPE(-4)` | Result of `attach`. |
+| `HooxAttachReturn` | `OK(0)`, `WRONG_SIGNATURE(-1)`, `ALREADY_ATTACHED(-2)`, `POLICY_VIOLATION(-3)`, `WRONG_TYPE(-4)`, `TOO_MANY_LISTENERS(-5)` | Result of `attach`. `TOO_MANY_LISTENERS` means the target already has `HOOX_MAX_LISTENERS_PER_FUNCTION` (default 2) listeners; raise it with `-DHOOX_MAX_LISTENERS_PER_FUNCTION=N`. |
 | `HooxReplaceReturn` | `OK(0)`, `WRONG_SIGNATURE(-1)`, `ALREADY_REPLACED(-2)`, `POLICY_VIOLATION(-3)`, `WRONG_TYPE(-4)` | Result of `replace`/`replace_fast`. |
 
 `HooxPointCut` is `HOOX_POINT_ENTER` / `HOOX_POINT_LEAVE`.

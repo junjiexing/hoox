@@ -12,9 +12,9 @@
 
 #define HOOX_MAX_INPUT_INSN_COUNT (100)
 
-typedef struct _HooxCodeGenCtx HooxCodeGenCtx;
+typedef struct _HooxThumbCodeGenCtx HooxThumbCodeGenCtx;
 
-struct _HooxCodeGenCtx
+struct _HooxThumbCodeGenCtx
 {
   const hx_insn * insn;
   hx_arm * detail;
@@ -28,29 +28,29 @@ static void hoox_thumb_relocator_write_instruction (HooxThumbRelocator * self,
     const hx_insn * insn);
 static void hoox_stalker_relocator_write_it_branches (HooxThumbRelocator * self);
 
-static hx_boolean hoox_arm_branch_is_unconditional (const hx_insn * insn);
-static hx_boolean hoox_reg_dest_is_pc (const hx_insn * insn);
-static hx_boolean hoox_reg_list_contains_pc (const hx_insn * insn,
+static hx_boolean hoox_thumb_branch_is_unconditional (const hx_insn * insn);
+static hx_boolean hoox_thumb_reg_dest_is_pc (const hx_insn * insn);
+static hx_boolean hoox_thumb_reg_list_contains_pc (const hx_insn * insn,
     hx_uint8 start_index);
 
 static hx_boolean hoox_thumb_relocator_rewrite_ldr (HooxThumbRelocator * self,
-    HooxCodeGenCtx * ctx);
+    HooxThumbCodeGenCtx * ctx);
 static hx_boolean hoox_thumb_relocator_rewrite_vldr (HooxThumbRelocator * self,
-    HooxCodeGenCtx * ctx);
+    HooxThumbCodeGenCtx * ctx);
 static hx_boolean hoox_thumb_relocator_rewrite_adr (HooxThumbRelocator * self,
-    HooxCodeGenCtx * ctx);
+    HooxThumbCodeGenCtx * ctx);
 static hx_boolean hoox_thumb_relocator_rewrite_add (HooxThumbRelocator * self,
-    HooxCodeGenCtx * ctx);
+    HooxThumbCodeGenCtx * ctx);
 static hx_boolean hoox_thumb_relocator_rewrite_b (HooxThumbRelocator * self,
-    hx_mode target_mode, HooxCodeGenCtx * ctx);
+    hx_mode target_mode, HooxThumbCodeGenCtx * ctx);
 static hx_boolean hoox_thumb_relocator_rewrite_b_cond (HooxThumbRelocator * self,
-    HooxCodeGenCtx * ctx);
+    HooxThumbCodeGenCtx * ctx);
 static hx_boolean hoox_thumb_relocator_rewrite_bl (HooxThumbRelocator * self,
-    hx_mode target_mode, HooxCodeGenCtx * ctx);
+    hx_mode target_mode, HooxThumbCodeGenCtx * ctx);
 static hx_boolean hoox_thumb_relocator_rewrite_cbz (HooxThumbRelocator * self,
-    HooxCodeGenCtx * ctx);
+    HooxThumbCodeGenCtx * ctx);
 static hx_boolean hoox_thumb_relocator_rewrite_it_block_start (
-    HooxThumbRelocator * self, HooxCodeGenCtx * ctx);
+    HooxThumbRelocator * self, HooxThumbCodeGenCtx * ctx);
 static void hoox_thumb_relocator_rewrite_it_block_else (HooxThumbRelocator * self,
     HooxITBlock * block);
 static void hoox_thumb_relocator_rewrite_it_block_end (HooxThumbRelocator * self,
@@ -224,7 +224,7 @@ hoox_thumb_relocator_read_one (HooxThumbRelocator * self,
       case HX_ARM_INS_B:
       case HX_ARM_INS_BX:
         self->eob = TRUE;
-        self->eoi = hoox_arm_branch_is_unconditional (insn);
+        self->eoi = hoox_thumb_branch_is_unconditional (insn);
         break;
       case HX_ARM_INS_CBZ:
       case HX_ARM_INS_CBNZ:
@@ -235,13 +235,13 @@ hoox_thumb_relocator_read_one (HooxThumbRelocator * self,
         break;
       case HX_ARM_INS_MOV:
       case HX_ARM_INS_LDR:
-        self->eob = self->eoi = hoox_reg_dest_is_pc (insn);
+        self->eob = self->eoi = hoox_thumb_reg_dest_is_pc (insn);
         break;
       case HX_ARM_INS_POP:
-        self->eob = self->eoi = hoox_reg_list_contains_pc (insn, 0);
+        self->eob = self->eoi = hoox_thumb_reg_list_contains_pc (insn, 0);
         break;
       case HX_ARM_INS_LDM:
-        self->eob = self->eoi = hoox_reg_list_contains_pc (insn, 1);
+        self->eob = self->eoi = hoox_thumb_reg_list_contains_pc (insn, 1);
         break;
       case HX_ARM_INS_IT:
       {
@@ -296,11 +296,11 @@ hoox_thumb_relocator_is_eob_instruction (const hx_insn * instruction)
     case HX_ARM_INS_TBH:
       return TRUE;
     case HX_ARM_INS_LDR:
-      return hoox_reg_dest_is_pc (instruction);
+      return hoox_thumb_reg_dest_is_pc (instruction);
     case HX_ARM_INS_POP:
-      return hoox_reg_list_contains_pc (instruction, 0);
+      return hoox_thumb_reg_list_contains_pc (instruction, 0);
     case HX_ARM_INS_LDM:
-      return hoox_reg_list_contains_pc (instruction, 1);
+      return hoox_thumb_reg_list_contains_pc (instruction, 1);
     default:
       return FALSE;
   }
@@ -387,7 +387,7 @@ static void
 hoox_thumb_relocator_write_instruction (HooxThumbRelocator * self,
                                        const hx_insn * insn)
 {
-  HooxCodeGenCtx ctx;
+  HooxThumbCodeGenCtx ctx;
   hx_boolean rewritten = FALSE;
 
   ctx.insn = insn;
@@ -410,7 +410,7 @@ hoox_thumb_relocator_write_instruction (HooxThumbRelocator * self,
       rewritten = hoox_thumb_relocator_rewrite_add (self, &ctx);
       break;
     case HX_ARM_INS_B:
-      if (self->it_block.active || hoox_arm_branch_is_unconditional (ctx.insn))
+      if (self->it_block.active || hoox_thumb_branch_is_unconditional (ctx.insn))
         rewritten = hoox_thumb_relocator_rewrite_b (self, HX_MODE_THUMB, &ctx);
       else
         rewritten = hoox_thumb_relocator_rewrite_b_cond (self, &ctx);
@@ -588,7 +588,7 @@ hoox_thumb_relocator_can_relocate (hx_pointer address,
           break;
         }
         case HX_ARM_INS_POP:
-          eoi = hx_reg_read (capstone, insn, HX_ARM_REG_PC);
+          eoi = hx_reg_read (capstone, &insn[i], HX_ARM_REG_PC);
           break;
         default:
           break;
@@ -639,7 +639,7 @@ hoox_thumb_relocator_relocate (hx_pointer from,
 }
 
 static hx_boolean
-hoox_arm_branch_is_unconditional (const hx_insn * insn)
+hoox_thumb_branch_is_unconditional (const hx_insn * insn)
 {
   switch (insn->detail->arm.cc)
   {
@@ -652,13 +652,13 @@ hoox_arm_branch_is_unconditional (const hx_insn * insn)
 }
 
 static hx_boolean
-hoox_reg_dest_is_pc (const hx_insn * insn)
+hoox_thumb_reg_dest_is_pc (const hx_insn * insn)
 {
   return insn->detail->arm.operands[0].reg == HX_ARM_REG_PC;
 }
 
 static hx_boolean
-hoox_reg_list_contains_pc (const hx_insn * insn,
+hoox_thumb_reg_list_contains_pc (const hx_insn * insn,
                           hx_uint8 start_index)
 {
   hx_uint8 i;
@@ -674,7 +674,7 @@ hoox_reg_list_contains_pc (const hx_insn * insn,
 
 static hx_boolean
 hoox_thumb_relocator_rewrite_ldr (HooxThumbRelocator * self,
-                                 HooxCodeGenCtx * ctx)
+                                 HooxThumbCodeGenCtx * ctx)
 {
   const hx_arm_op * dst = &ctx->detail->operands[0];
   const hx_arm_op * src = &ctx->detail->operands[1];
@@ -725,7 +725,7 @@ hoox_thumb_relocator_rewrite_ldr (HooxThumbRelocator * self,
 
 static hx_boolean
 hoox_thumb_relocator_rewrite_vldr (HooxThumbRelocator * self,
-                                  HooxCodeGenCtx * ctx)
+                                  HooxThumbCodeGenCtx * ctx)
 {
   const hx_arm_op * dst = &ctx->detail->operands[0];
   const hx_arm_op * src = &ctx->detail->operands[1];
@@ -750,7 +750,7 @@ hoox_thumb_relocator_rewrite_vldr (HooxThumbRelocator * self,
 
 static hx_boolean
 hoox_thumb_relocator_rewrite_adr (HooxThumbRelocator * self,
-                                 HooxCodeGenCtx * ctx)
+                                 HooxThumbCodeGenCtx * ctx)
 {
   const hx_arm_op * dst = &ctx->detail->operands[0];
   const hx_arm_op * offset = &ctx->detail->operands[1];
@@ -771,7 +771,7 @@ hoox_thumb_relocator_rewrite_adr (HooxThumbRelocator * self,
 
 static hx_boolean
 hoox_thumb_relocator_rewrite_add (HooxThumbRelocator * self,
-                                 HooxCodeGenCtx * ctx)
+                                 HooxThumbCodeGenCtx * ctx)
 {
   const hx_arm_op * dst = &ctx->detail->operands[0];
   const hx_arm_op * src = &ctx->detail->operands[1];
@@ -802,7 +802,7 @@ hoox_thumb_relocator_rewrite_add (HooxThumbRelocator * self,
 static hx_boolean
 hoox_thumb_relocator_rewrite_b (HooxThumbRelocator * self,
                                hx_mode target_mode,
-                               HooxCodeGenCtx * ctx)
+                               HooxThumbCodeGenCtx * ctx)
 {
   const hx_arm_op * target = &ctx->detail->operands[0];
 
@@ -822,7 +822,7 @@ hoox_thumb_relocator_rewrite_b (HooxThumbRelocator * self,
 
 static hx_boolean
 hoox_thumb_relocator_rewrite_b_cond (HooxThumbRelocator * self,
-                                    HooxCodeGenCtx * ctx)
+                                    HooxThumbCodeGenCtx * ctx)
 {
   const hx_arm_op * target = &ctx->detail->operands[0];
   hx_size unique_id = HX_POINTER_TO_SIZE (ctx->output->code) << 1;
@@ -852,7 +852,7 @@ hoox_thumb_relocator_rewrite_b_cond (HooxThumbRelocator * self,
 static hx_boolean
 hoox_thumb_relocator_rewrite_bl (HooxThumbRelocator * self,
                                 hx_mode target_mode,
-                                HooxCodeGenCtx * ctx)
+                                HooxThumbCodeGenCtx * ctx)
 {
   const hx_arm_op * target = &ctx->detail->operands[0];
 
@@ -871,7 +871,7 @@ hoox_thumb_relocator_rewrite_bl (HooxThumbRelocator * self,
 
 static hx_boolean
 hoox_thumb_relocator_rewrite_cbz (HooxThumbRelocator * self,
-                                 HooxCodeGenCtx * ctx)
+                                 HooxThumbCodeGenCtx * ctx)
 {
   const hx_arm_op * source = &ctx->detail->operands[0];
   const hx_arm_op * target = &ctx->detail->operands[1];
@@ -901,7 +901,7 @@ hoox_thumb_relocator_rewrite_cbz (HooxThumbRelocator * self,
 
 static hx_boolean
 hoox_thumb_relocator_rewrite_it_block_start (HooxThumbRelocator * self,
-                                            HooxCodeGenCtx * ctx)
+                                            HooxThumbCodeGenCtx * ctx)
 {
   HooxITBlock * block = &self->it_block;
   const hx_insn * insn = ctx->insn;

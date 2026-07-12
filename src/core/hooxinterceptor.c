@@ -192,6 +192,8 @@ static void hoox_function_context_remove_listener (
 static void listener_entry_free (ListenerEntry * entry);
 static hx_boolean hoox_function_context_has_listener (
     HooxFunctionContext * function_ctx, HooxInvocationListener * listener);
+static hx_uint hoox_function_context_count_listeners (
+    HooxFunctionContext * function_ctx);
 static ListenerEntry ** hoox_function_context_find_listener (
     HooxFunctionContext * function_ctx, HooxInvocationListener * listener);
 static ListenerEntry ** hoox_function_context_find_taken_listener_slot (
@@ -545,6 +547,10 @@ hoox_interceptor_attach (HooxInterceptor * self,
   if (hoox_function_context_has_listener (function_ctx, listener))
     goto already_attached;
 
+  if (hoox_function_context_count_listeners (function_ctx) >=
+      HOOX_MAX_LISTENERS_PER_FUNCTION)
+    goto too_many_listeners;
+
   hoox_function_context_add_listener (function_ctx, listener,
       options->listener_function_data,
       options->ignorability == HOOX_INVOCATION_UNIGNORABLE);
@@ -572,6 +578,11 @@ instrumentation_error:
 already_attached:
   {
     result = HOOX_ATTACH_ALREADY_ATTACHED;
+    goto beach;
+  }
+too_many_listeners:
+  {
+    result = HOOX_ATTACH_TOO_MANY_LISTENERS;
     goto beach;
   }
 beach:
@@ -1821,6 +1832,30 @@ hoox_function_context_has_listener (HooxFunctionContext * function_ctx,
                                    HooxInvocationListener * listener)
 {
   return hoox_function_context_find_listener (function_ctx, listener) != NULL;
+}
+
+/*
+ * Count the live (non-NULL) listener entries. add_listener compacts holes on
+ * every insert, so the array after an insert holds count + 1 entries; a detach
+ * only NULLs a slot in place. The attach path uses this to keep the entry
+ * count within HOOX_MAX_LISTENERS_PER_FUNCTION, which bounds the fixed
+ * per-invocation listener_invocation_data[] array.
+ */
+static hx_uint
+hoox_function_context_count_listeners (HooxFunctionContext * function_ctx)
+{
+  HxPtrArray * listener_entries;
+  hx_uint i, count = 0;
+
+  listener_entries =
+      (HxPtrArray *) hx_atomic_pointer_get (&function_ctx->listener_entries);
+  for (i = 0; i != listener_entries->len; i++)
+  {
+    if (hx_ptr_array_index (listener_entries, i) != NULL)
+      count++;
+  }
+
+  return count;
 }
 
 static ListenerEntry **

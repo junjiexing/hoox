@@ -189,7 +189,12 @@ hx_private_index (HxPrivate * key)
   if (stored == 0)
   {
     DWORD index = FlsAlloc (hx_private_fls_cb);
-    hx_pointer desired = (hx_pointer) (hx_size) (index + 1);
+    hx_pointer desired;
+
+    if (index == FLS_OUT_OF_INDEXES)
+      hx_abort ();
+
+    desired = (hx_pointer) (hx_size) (index + 1);
 
     if (hx_atomic_pointer_compare_and_exchange (&key->impl, NULL, desired))
     {
@@ -374,7 +379,8 @@ hx_private_key (HxPrivate * key)
   if (pk == NULL)
   {
     pk = hx_new0 (HxPrivateKey, 1);
-    pthread_key_create (&pk->key, key->notify);
+    if (pthread_key_create (&pk->key, key->notify) != 0)
+      hx_abort ();
     if (!hx_atomic_pointer_compare_and_exchange (&key->impl, NULL, pk))
     {
       pthread_key_delete (pk->key);

@@ -75,11 +75,30 @@ hx_atomic_int_compare_and_exchange (volatile hx_int * atomic,
 
 # include <intrin.h>
 
+/*
+ * Ordering for the plain load/store atomics.
+ *
+ * On x86/x64 the hardware is TSO: loads are acquire and stores are release for
+ * free, so a compiler-only fence (_ReadWriteBarrier) is sufficient. On ARM64
+ * (a shipped, CI-tested MSVC target) the memory model is weakly ordered and a
+ * compiler fence emits no hardware barrier — the lock-free listener-entry COW
+ * publish (hoox_atomic_pointer_set) and the spinlock release (hx_atomic_int_set)
+ * would then be observable out of order. Emit a real data-memory barrier there:
+ * after the load (acquire) and around the store (release + seq-cst tail).
+ * Aligned 32-bit / pointer accesses are already single-copy atomic on ARM64, so
+ * only ordering, not tearing, needs handling.
+ */
+# if defined (_M_ARM64)
+#  define HX_ATOMIC_FENCE() __dmb (_ARM64_BARRIER_ISH)
+# else
+#  define HX_ATOMIC_FENCE() _ReadWriteBarrier ()
+# endif
+
 static inline hx_int
 hx_atomic_int_get (const volatile hx_int * atomic)
 {
   hx_int v = *atomic;
-  _ReadWriteBarrier ();
+  HX_ATOMIC_FENCE ();
   return v;
 }
 
@@ -87,9 +106,9 @@ static inline void
 hx_atomic_int_set (volatile hx_int * atomic,
                   hx_int newval)
 {
-  _ReadWriteBarrier ();
+  HX_ATOMIC_FENCE ();
   *atomic = newval;
-  _ReadWriteBarrier ();
+  HX_ATOMIC_FENCE ();
 }
 
 static inline void
@@ -124,7 +143,7 @@ static inline hx_pointer
 hx_atomic_pointer_get (void * const volatile * atomic)
 {
   hx_pointer v = (hx_pointer) *atomic;
-  _ReadWriteBarrier ();
+  HX_ATOMIC_FENCE ();
   return v;
 }
 
@@ -132,9 +151,9 @@ static inline void
 hx_atomic_pointer_set (void * volatile * atomic,
                        hx_pointer newval)
 {
-  _ReadWriteBarrier ();
+  HX_ATOMIC_FENCE ();
   *atomic = newval;
-  _ReadWriteBarrier ();
+  HX_ATOMIC_FENCE ();
 }
 
 static inline hx_boolean
@@ -152,6 +171,8 @@ hx_atomic_pointer_cas (void * volatile * atomic,
 # define hx_atomic_pointer_compare_and_exchange(atomic, oldval, newval) \
     hx_atomic_pointer_cas ((void * volatile *) (atomic), \
         (hx_pointer) (oldval), (hx_pointer) (newval))
+
+# undef HX_ATOMIC_FENCE
 
 #endif
 

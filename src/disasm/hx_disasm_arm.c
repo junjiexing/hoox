@@ -118,7 +118,7 @@ hx_decode_arm (const uint8_t * code, uint64_t address, hx_insn * insn)
   if (((w >> 25) & 0x7) == 0x5)
   {
     uint32_t imm24 = w & 0x00ffffff;
-    int32_t off = sign_extend (imm24, 24) << 2;
+    int32_t off = (int32_t) ((uint32_t) sign_extend (imm24, 24) << 2);
 
     if (cond == 0xf)
     {
@@ -368,6 +368,15 @@ hx_decode_thumb (const uint8_t * code, uint64_t address, hx_insn * insn)
         d->op_count = 1;
         return;
       }
+      /*
+       * cond == 0b111x is NOT a conditional branch: this slot is the Thumb-2
+       * hint/barrier/system space (NOP.W, YIELD/WFE/WFI/SEV, DMB/DSB/ISB,
+       * CLREX, MSR/MRS, ...). None of it is PC-relative, so return here and let
+       * it be copied verbatim rather than falling through to the looser BL/BLX
+       * matcher below, which (bit14 untested) would misread it as a BLX to a
+       * garbage target and corrupt the trampoline.
+       */
+      return;
     }
 
     /* B (T4 unconditional, 32-bit) */
@@ -551,7 +560,7 @@ hx_decode_thumb (const uint8_t * code, uint64_t address, hx_insn * insn)
   if ((h0 & 0xf800) == 0xe000)
   {
     uint32_t imm11 = h0 & 0x7ff;
-    int32_t off = sign_extend (imm11, 11) << 1;
+    int32_t off = (int32_t) ((uint32_t) sign_extend (imm11, 11) << 1);
     insn->id = HX_ARM_INS_B;
     strcpy (insn->mnemonic, "b");
     d->cc = HX_ARM_CC_INVALID;
@@ -578,7 +587,7 @@ hx_decode_thumb (const uint8_t * code, uint64_t address, hx_insn * insn)
     }
     {
       uint32_t imm8 = h0 & 0xff;
-      int32_t off = sign_extend (imm8, 8) << 1;
+      int32_t off = (int32_t) ((uint32_t) sign_extend (imm8, 8) << 1);
       insn->id = HX_ARM_INS_B;
       strcpy (insn->mnemonic, "b");
       d->cc = (hx_arm_cc) (cond + 1);
