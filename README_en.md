@@ -40,26 +40,11 @@ utility layers (nano-glib, decoder) use `hx_`/`Hx`/`HX_`. No third-party prefix
 
 ## Status
 
-The Windows vertical slice is complete and green on **x86 and x64** across
-**MSVC 19.x, clang and gcc (MinGW)**: extraction → build → hooks firing → full
-test suite → single-file amalgamation → example. **Windows ARM64 works too**
-(native `windows-11-arm` CI, MSVC; the interceptor behaviour suite and all other
-tests pass). **Linux now covers x86 / x86_64 / ARM / ARM64**: x86 and x86_64 on
-gcc/clang; ARM64 built and fully tested on the native `ubuntu-24.04-arm` CI; ARM
-(32-bit, A32 + Thumb) cross-compiled (`gcc-arm-linux-gnueabihf`) and run through
-the full ctest suite under `qemu-arm`. **macOS now covers x86_64 and ARM64**
-(native `macos-15-intel` and Apple Silicon `macos-15` CI, AppleClang; interceptor
-behaviour suite green on both). **FreeBSD now covers x86 / x86_64** (an amd64
-FreeBSD VM, clang, including 32-bit via `-m32`) **and ARM64** (a `cross-platform-actions`
-FreeBSD/arm64 guest). **Android now covers all four ABIs** (NDK cross-build of
-arm64-v8a / armeabi-v7a / x86_64 / x86, statically linked and run through the full
-ctest suite under `qemu-user`). **iOS (ARM64) is wired up**: the device SDK
-(`iphoneos`) cross-compiles and the iOS simulator (`iphonesimulator`) runs the
-full suite green; **real-device iOS has not been tested yet** (codesign
-enforcement + arm64e ptrauth need a jailbroken device — validated locally, see
-below). **tvOS (ARM64) is wired up identically** (`appletvos` build + tvOS
-simulator run; real device likewise untested). Horizontal roll-out to other
-platforms is next.
+**Windows / Linux / Android / macOS / iOS / tvOS / FreeBSD** are all working and
+CI-tested (toolchains: MSVC / clang / gcc / MinGW / AppleClang / NDK; full chain
+extraction → build → hooks firing → test suite → amalgamation → example). See the
+coverage matrix below. iOS·tvOS are device-SDK cross-compiled + simulator-run;
+**real devices are not yet tested**. 
 
 ## Platform support
 
@@ -78,88 +63,6 @@ Legend: ✅ supported (builds & passes the full test suite) · 🧩 extracted
 | **FreeBSD** | ✅ | ✅ | 🧩 | ✅ |
 
 † iOS / tvOS ARM64: device-SDK cross-compile + simulator run, green. **Real device (codesign enforcement + arm64e ptrauth on a jailbroken device) has not been tested yet** — to be validated locally.
-
-Directly usable today: **Windows × (x86 / x86_64 / ARM64)**,
-**Linux × (x86 / x86_64 / ARM / ARM64)**, **macOS × (x86_64 / ARM64)**,
-**FreeBSD × (x86 / x86_64 / ARM64)**, **Android × (x86 / x86_64 / ARM / ARM64)**
-and **iOS / tvOS × ARM64** (simulator-run + device-SDK build).
-Windows ARM64 is built and fully
-tested on the native `windows-11-arm` runner; it reuses the same
-`src/backend/windows` (TLS falls back to `TlsGetValue` off x86) and adds an
-in-tree AArch64 decoder (`src/disasm/hx_disasm_arm64.c`) that drives the
-`src/arch/arm64` relocator/reader. 32-bit ARM on Windows is N/A — Windows on ARM
-is ARM64-only. The Linux backend (`src/backend/posix` + `src/backend/linux`)
-takes the RWX path, drives page protection / near-allocation off
-`/proc/self/maps`, uses pthread keys for TLS, and enumerates/suspends threads
-via `/proc` + `tgkill`; the one arch-agnostic backend covers all four
-architectures. x86_64 builds directly; x86 adds `-DCMAKE_C_FLAGS="-m32"` (needs
-`gcc-multilib`); ARM64 uses the native `ubuntu-24.04-arm` runner; ARM (32-bit)
-cross-compiles with `gcc-arm-linux-gnueabihf` and runs its tests under
-`qemu-arm`. 32-bit ARM uses an in-tree A32+Thumb decoder
-(`src/disasm/hx_disasm_arm.c`) driving `src/arch/arm`. **macOS** reuses the
-x86/arm64 decoders and arch, the POSIX allocator + pthread TLS, and adds
-`src/backend/darwin` (mach VM query/enumerate, dyld module enumeration). The key
-detail is that patching code-signed `__TEXT` pages requires `mach_vm_protect`
-with `VM_PROT_COPY` (a private, writable-then-executable copy — sidestepping
-W^X). x86_64 is verified on `macos-15-intel` and ARM64 on the Apple Silicon
-`macos-15` runner; the interceptor behaviour suite is green on both. (An in-tree
-Darwin code segment, `hooxcodesegment-darwin.c`, is also provided for older
-kernels.) **FreeBSD** reuses the x86/arm64 decoders and arch, the POSIX allocator
-+ pthread TLS, and adds `src/backend/freebsd`: it takes the RWX path (`mprotect`,
-no `VM_PROT_COPY` needed), drives page-protection queries and near-allocation off
-`sysctl KERN_PROC_VMMAP` (not `/proc`), gets the thread id via
-`pthread_getthreadid_np`, suspends/enumerates threads with `thr_kill` +
-`sysctl KERN_PROC`, and enumerates modules with `dl_iterate_phdr`. As there is no
-hosted FreeBSD runner, CI boots an amd64 FreeBSD VM on the ubuntu host
-(`vmactions`): **x86_64 builds and runs the full suite natively, and x86 (32-bit)
-builds and runs the full suite via `clang -m32` (freebsd32/lib32)**. **ARM64
-FreeBSD is tested too**: `cross-platform-actions` boots a real **FreeBSD/arm64
-15.1 guest** on the ubuntu host (QEMU emulating aarch64) and compiles + runs the
-full suite natively inside it (interceptor behaviour suite and amalgam included)
-— the same TCG path already exercises hoox's code-patching on the Linux `qemu-arm`
-job. ARM (32-bit) FreeBSD shares this OS backend plus the A32/Thumb arch layer
-validated on the Linux `qemu-arm` job (FreeBSD armv7 is tier-2 with no ready CI
-image), so it is covered by construction rather than executed. **Android** is a
-Linux kernel with bionic libc, so it reuses `src/backend/posix` + `src/backend/linux`
-wholesale and adds only a tiny `src/backend/android` (`hoox_android_get_api_level` —
-on API 29+ executable code pages may be unreadable, so the engine adds READ before
-the decoder reads them). CI cross-builds all four ABIs with the NDK (statically
-linked); since bionic is a Linux ABI, the static test binaries run under
-`qemu-<arch>-static` just like the Linux ARM32 job — arm64-v8a / armeabi-v7a /
-x86_64 / x86 all run the full ctest suite green. **iOS (ARM64)** reuses
-`src/backend/darwin` + `arch/arm64` (only the `HAVE_IOS` branches differ). Since
-the public iOS SDK `#error`-gates `<mach/mach_vm.h>`, hoox declares the `mach_vm_*`
-it uses itself (see `hooxdarwin.h`), like frida. The darwin code segment's
-`HAVE_IOS` path is the old-jailbreak Substrate/Corellium signing mechanism
-(`is_supported()` is FALSE on modern iOS, and it is the jailbreak integration hoox
-does not provide — cf. DarwinGrafter), so iOS uses the generic stub code segment
-and is patched via the same `mprotect` + `VM_PROT_COPY` path as macOS arm64. CI
-(Apple Silicon runner): **device SDK (`iphoneos`) cross-compile** (build-only —
-needs signing/a device) + **simulator (`iphonesimulator`) full suite via
-`simctl spawn`** (the simulator runs on the macOS kernel, so its W^X behaviour
-mirrors macOS arm64: `test_memory` / `interceptor_smoke` self-skip, the interceptor
-suite runs). **⚠️ Real-device iOS has not been tested yet**: on-device codesign
-enforcement + arm64e ptrauth can only be verified on hardware and need a
-jailbroken device — this is validated locally and is out of scope for CI.
-**tvOS (ARM64)** is structurally identical to iOS (same darwin backend + arch,
-`HAVE_TVOS`), just the `appletvos` / `appletvsimulator` SDKs and an Apple TV
-simulator; CI likewise builds the device SDK and runs the full suite in the tvOS
-simulator, and real-device tvOS is not covered. Other OSes still need their own
-backend.
-
-> **Apple Silicon self-hosting same-page (root-fixed, non-hardened):** on Apple
-> Silicon (16 KiB pages + enforced W^X), an in-place patch briefly removes execute
-> from the target page; if the hooked function shares its 16 KiB page with hoox's
-> *own* patch-time code (hoox statically linked into the target, hooking a same-page
-> function in that binary), the patch used to self-fault. **This is now fixed**: on
-> a same-page collision hoox runs the flip→write→restore sequence from its **own
-> independent executable page (an off-page stub)** — see `src/backend/darwin/hooxpatch-darwin.c` —
-> so the executing patch code is never on the target page. The self-hosting smoke
-> (`interceptor_smoke`) now passes on macOS arm64 and the iOS/tvOS simulators.
-> **One limit remains:** on **hardened, stock devices** (App Store iOS/tvOS) the
-> kernel denies even `VM_PROT_COPY` on signed `__TEXT`, so no in-process library
-> (hoox, or frida without an external agent) can patch there — hoox returns a clean
-> error rather than crashing. Real jailbroken/entitled devices are validated locally.
 
 ## Documentation
 

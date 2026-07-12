@@ -337,6 +337,50 @@ hoox/
 > **QNX 已从支持目标中移除**：其工具链（qcc / QNX SDP）为专有且需许可证,无托管 CI runner
 > 可编译/运行,无法满足"每次改动必须编译通过再提交"的验证要求,故不纳入 hoox。
 
+### 6.1 各平台 backend 实现纪要（现状，均已 CI 实测）
+
+- **Windows**（x86 / x86_64 / ARM64；MSVC / clang / gcc(MinGW)）：`src/backend/windows`，
+  RWX 页路径，near 分配用 `VirtualAlloc` 双向探测，TLS 非 x86 上回退 `TlsGetValue`。ARM64 由
+  原生 `windows-11-arm` runner 验证；32 位 ARM 不适用（Windows-on-ARM 仅 ARM64）。
+- **Linux**（x86 / x86_64 / ARM / ARM64；gcc / clang）：`src/backend/posix` + `src/backend/linux`，
+  RWX 路径，页保护/near 分配基于 `/proc/self/maps`，pthread TLS，线程枚举/挂起用 `/proc` + `tgkill`。
+  同一份 arch-agnostic backend 覆盖四种架构：x86_64 直接构建，x86 加 `-m32`（`gcc-multilib`），ARM64 用
+  原生 `ubuntu-24.04-arm`，ARM（A32+Thumb）交叉编译后在 `qemu-arm` 下跑测试。
+- **Android**（arm64-v8a / armeabi-v7a / x86_64 / x86；NDK）：Linux 内核 + bionic，整份复用
+  `backend/posix` + `backend/linux`，仅新增极小的 `backend/android`（`hoox_android_get_api_level`——
+  API 29+ 上可执行代码页可能不可读，解码前需先加 READ）。CI 用 NDK 交叉编译四个 ABI（静态链接），因
+  bionic 即 Linux ABI，静态测试程序可像 Linux ARM32 那样在 `qemu-<arch>-static` 下跑完整 ctest。
+  **必链 `-pthread`**（bionic 的 pthread 在 `libthr`，否则符号解析到 libc 空存根，TLS 静默失效）。
+- **macOS**（x86_64 / ARM64；AppleClang）：复用 x86/arm64 解码器与 arch、`backend/posix`（mmap +
+  pthread TLS），新增 `backend/darwin`（`mach_vm_region` 查页保护、mach 线程 + dyld 模块枚举）。**关键：
+  patch 签名 `__TEXT` 需 `mach_vm_protect` + `VM_PROT_COPY`**（生成可写私有副本绕过 W^X；`mprotect(2)`
+  会被拒）。x86_64 走 RWX 路径；ARM64 走 COPY 路径。另有自研 Darwin code-segment（老内核用，新内核
+  `is_supported` 返回 FALSE）。CI：`macos-15-intel` / Apple Silicon `macos-15`。
+- **iOS / tvOS**（ARM64；AppleClang）：复用 `backend/darwin` + `arch/arm64`，仅 `HAVE_IOS`/`HAVE_TVOS`
+  分支不同。公开 SDK `#error` 封了 `<mach/mach_vm.h>`，故像 frida 那样自行声明用到的 `mach_vm_*`
+  （`backend/darwin/hooxdarwin.h`）；darwin code-segment 的 iOS 路径是老越狱签名机制（hoox 不提供，同
+  DarwinGrafter），故 iOS/tvOS 用通用 stub code-segment，走与 macOS arm64 相同的 `VM_PROT_COPY` 路径。
+  CI（Apple Silicon runner）：设备 SDK（`iphoneos`/`appletvos`）交叉编译（仅编译，需签名/真机才能运行）
+  + 模拟器（`iphonesimulator`/`appletvsimulator`）`simctl spawn` 跑完整套件。**真机（设备端签名强制 +
+  arm64e ptrauth）尚未测试**——需越狱设备，由作者本地验证，不在 CI 内。
+- **FreeBSD**（x86 / x86_64 / ARM64；clang）：复用 `backend/posix`，新增 `backend/freebsd`，RWX 路径
+  （`mprotect`，无需 `VM_PROT_COPY`）；页保护/near 分配用 `sysctl KERN_PROC_VMMAP`（非 `/proc`），线程 id
+  用 `pthread_getthreadid_np`，挂起/枚举用 `thr_kill` + `sysctl KERN_PROC`，模块枚举用 `dl_iterate_phdr`。
+  CI 无托管 runner，故用 `vmactions` 起 amd64 FreeBSD VM（x86_64 原生 + x86 用 `clang -m32`），ARM64 用
+  `cross-platform-actions` 的 FreeBSD/arm64 客户机实跑；ARM（32 位）按构造覆盖（tier-2，无现成 CI 镜像）。
+
+### 6.2 Apple Silicon 自宿主同页（W^X）问题——已根治
+
+Apple arm64（16 KiB 页 + 强制 W^X）上，in-place patch 一页代码时该页会短暂失去执行权限；若被 hook 的
+函数与 hoox **自身的 patch 代码**落在同一 16 KiB 页（把 hoox 静态链接进目标、hook 同一二进制内的同页
+函数），补丁过程会自崩。**根治方案**（`src/backend/darwin/hooxpatch-darwin.c`）：检测到同页碰撞时，用
+`HooxArm64Writer` 在 hoox **自有的独立可执行页**上生成一小段桩，桩里 `mach_vm_protect(RW|COPY)` → 写入
+diff 出的连续变更字 → `mach_vm_protect(RX)`；执行中的补丁指令在桩页上而非目标页，故目标页短暂丢 X 不再
+自崩。分离页（常规情形）仍走原 in-place 路径，零回归。`interceptor_smoke` 已在 macOS arm64 / iOS·tvOS
+模拟器实测通过。（frida 的 `vm_remap` 可写别名在纯进程内不可行：写签名 `__TEXT` 会 COW 到别名副本，需
+frida 外部 agent 的 page-plan。）**仍存限制**：硬化签名的正式设备连 `VM_PROT_COPY` 都被内核拒，纯进程内
+无解（frida 亦需外部 agent），此时 hoox 干净返回错误而非崩溃。
+
 ---
 
 ## 7. 第三方与许可证合规
