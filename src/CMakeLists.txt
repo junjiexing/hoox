@@ -97,10 +97,17 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin" OR CMAKE_SYSTEM_NAME STREQUAL "iOS")
     "${CMAKE_CURRENT_SOURCE_DIR}/backend/darwin/hoox_process-darwin.c")
   # macOS needs the real code segment (RX + ad-hoc code signing + vm_remap),
   # not the non-Darwin stub, so W^X targets (esp. Apple Silicon) can be patched.
-  list(REMOVE_ITEM HOOX_SOURCES
-    "${CMAKE_CURRENT_SOURCE_DIR}/core/hooxcodesegment.c")
-  list(APPEND HOOX_SOURCES
-    "${CMAKE_CURRENT_SOURCE_DIR}/backend/darwin/hooxcodesegment-darwin.c")
+  # iOS keeps the generic stub: on modern iOS (>= 15.6.1) the darwin code
+  # segment is unsupported anyway, and its only iOS-specific value is the
+  # Substrate/Corellium jailbreak signing path, which hoox does not provide
+  # (like the DarwinGrafter). iOS is patched via the mprotect + VM_PROT_COPY
+  # path in the shared darwin memory backend, exactly as macOS arm64.
+  if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    list(REMOVE_ITEM HOOX_SOURCES
+      "${CMAKE_CURRENT_SOURCE_DIR}/core/hooxcodesegment.c")
+    list(APPEND HOOX_SOURCES
+      "${CMAKE_CURRENT_SOURCE_DIR}/backend/darwin/hooxcodesegment-darwin.c")
+  endif()
   set(HOOX_PRIVATE_INCLUDE_DIRS ${HOOX_PRIVATE_INCLUDE_DIRS}
     "${CMAKE_CURRENT_SOURCE_DIR}/backend/posix"
     "${CMAKE_CURRENT_SOURCE_DIR}/backend/darwin")
