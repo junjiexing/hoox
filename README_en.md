@@ -55,8 +55,9 @@ FreeBSD/arm64 guest). **Android now covers all four ABIs** (NDK cross-build of
 arm64-v8a / armeabi-v7a / x86_64 / x86, statically linked and run through the full
 ctest suite under `qemu-user`). **iOS (ARM64) is wired up**: the device SDK
 (`iphoneos`) cross-compiles and the iOS simulator (`iphonesimulator`) runs the
-full suite green; on-device validation (codesign enforcement + arm64e ptrauth)
-is deferred (see below). Horizontal roll-out to other platforms is next.
+full suite green; **real-device iOS has not been tested yet** (codesign
+enforcement + arm64e ptrauth need a jailbroken device — validated locally, see
+below). Horizontal roll-out to other platforms is next.
 
 ## Platform support
 
@@ -70,9 +71,11 @@ Legend: ✅ supported (builds & passes the full test suite) · 🧩 extracted
 | **Linux** | ✅ | ✅ | ✅ | ✅ |
 | **Android** | ✅ | ✅ | ✅ | ✅ |
 | **macOS** | ➖ | ✅ | ➖ | ✅ |
-| **iOS** | ➖ | ➖ | ➖ | ✅ |
+| **iOS** | ➖ | ➖ | ➖ | ✅ † |
 | **tvOS** | ➖ | ➖ | ➖ | 📋 |
 | **FreeBSD** | ✅ | ✅ | 🧩 | ✅ |
+
+† iOS ARM64: device-SDK cross-compile + iOS simulator run, green. **Real device (codesign enforcement + arm64e ptrauth on a jailbroken device) has not been tested yet** — to be validated locally.
 
 Directly usable today: **Windows × (x86 / x86_64 / ARM64)**,
 **Linux × (x86 / x86_64 / ARM / ARM64)**, **macOS × (x86_64 / ARM64)**,
@@ -133,10 +136,10 @@ and is patched via the same `mprotect` + `VM_PROT_COPY` path as macOS arm64. CI
 needs signing/a device) + **simulator (`iphonesimulator`) full suite via
 `simctl spawn`** (the simulator runs on the macOS kernel, so its W^X behaviour
 mirrors macOS arm64: `test_memory` / `interceptor_smoke` self-skip, the interceptor
-suite runs). **On-device validation (codesign enforcement + arm64e ptrauth) is
-deferred**: it needs a jailbroken self-hosted runner or a Corellium subscription —
-a planned, skipped matrix entry is kept as the hook. Other OSes still need their
-own backend.
+suite runs). **⚠️ Real-device iOS has not been tested yet**: on-device codesign
+enforcement + arm64e ptrauth can only be verified on hardware and need a
+jailbroken device — this is validated locally and is out of scope for CI. Other
+OSes still need their own backend.
 
 > **⚠️ Apple Silicon limitation (self-hosting):** on Apple Silicon (16 KiB pages
 > + enforced W^X), patching a page briefly removes its execute permission. If the

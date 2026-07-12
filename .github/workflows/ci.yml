@@ -47,10 +47,10 @@ jobs:
           - { name: 'iOS · ARM64 · sim-run + device-build', runner: macos-15, supported: true, toolchain: ios }
 
           # ---- planned: not implemented yet, skipped -----------------------
-          # Real on-device iOS (code-signing enforcement + arm64e ptrauth) needs a
-          # jailbroken device on a self-hosted runner, or a Corellium subscription
-          # (secrets). Left as a hook; the sim run above mirrors macOS arm64.
-          - { name: 'iOS · ARM64 · device (real, planned)', runner: ubuntu-latest, supported: false }
+          # NOTE: iOS above is device-SDK-compiled + simulator-tested only. Real
+          # on-device iOS (code-signing enforcement + arm64e ptrauth) is NOT
+          # tested in CI — it needs a jailbroken device and will be validated
+          # locally, out of scope here.
           - { name: 'tvOS · ARM64 · (planned)',       runner: ubuntu-latest, supported: false }
           - { name: 'FreeBSD · x86_64 + x86 · Clang', runner: ubuntu-latest, supported: true, toolchain: freebsd-vm }
           - { name: 'FreeBSD · ARM64 · Clang',        runner: ubuntu-latest, supported: true, toolchain: freebsd-arm64 }
@@ -268,7 +268,8 @@ jobs:
       # simulator runs on the macOS kernel, so its W^X behaviour mirrors macOS
       # arm64: test_memory + interceptor_smoke self-skip, the interceptor suite
       # runs. Real on-device validation (codesign enforcement + arm64e ptrauth)
-      # is left as a hook — see the planned device entry above.
+      # is NOT covered here — it needs a jailbroken device and is validated
+      # locally, out of scope for CI.
       - name: Build (iOS device SDK, arm64 — compile only)
         if: ${{ matrix.supported && matrix.toolchain == 'ios' }}
         run: |
