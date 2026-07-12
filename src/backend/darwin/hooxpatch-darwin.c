@@ -120,7 +120,7 @@ hoox_darwin_run_offpage_patch (hx_pointer protect_base,
 
   if (!hoox_try_mprotect (stub, page_size, HOOX_PAGE_RX))
   {
-    hoox_memory_free (stub, page_size);
+    hoox_free_pages (stub);
     return FALSE;
   }
   hoox_clear_cache (stub, page_size);
@@ -128,7 +128,7 @@ hoox_darwin_run_offpage_patch (hx_pointer protect_base,
   fn = (int (*) (void)) stub;
   kr = fn ();
 
-  hoox_memory_free (stub, page_size);
+  hoox_free_pages (stub);
   return kr == 0;
 }
 
