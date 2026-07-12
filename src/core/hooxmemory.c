@@ -460,24 +460,39 @@ cleanup:
 #if defined (HAVE_DARWIN) && defined (HAVE_ARM64)
     /*
      * Apple arm64 has no RWX: the in-place path below drops execute from the
-     * target page during the write, so it self-faults whenever any code that
-     * runs inside that window happens to share the target's 16 KiB page
-     * (self-hosting). Whether that happens is decided entirely by the linker's
-     * layout — dense single-TU builds (the amalgamation) hit it readily — and
-     * it cannot be detected reliably by enumerating "patch-critical" functions,
-     * since some of them are static or macro-inlined and thus have no address
-     * to compare against. So on Apple arm64 we always write from an off-page
-     * stub: its executing instructions live on a hoox-owned page that is never
-     * a patch target, so the target page losing execute can never fault the
-     * running patcher, regardless of layout. (Other threads are suspended by
-     * the caller.) The stub returns a clean error if the OS denies the write
-     * (hardened codesigning), which the in-place path could not do either.
+     * target page during the write, which self-faults only if hoox's own patch
+     * code shares that 16 KiB page (self-hosting). Detect that collision — the
+     * target page matching a patch-critical anchor that runs while the page is
+     * writable — and, only then, write from an off-page stub instead. The
+     * common separate-page case keeps the proven in-place path unchanged.
      */
     if (!rwx_supported)
     {
-      result = _hoox_darwin_arm64_patch_pages (sorted_addresses, coalesce,
-          apply, apply_data, page_size);
-      goto resume_threads;
+      const hx_pointer anchors[] = {
+        (hx_pointer) hoox_memory_patch_code_pages,
+        (hx_pointer) apply,
+        (hx_pointer) hx_hash_table_lookup,
+      };
+      hx_boolean collides = FALSE;
+      hx_uint a;
+
+      for (i = 0; i != sorted_addresses->len && !collides; i++)
+      {
+        hx_size tp = HX_POINTER_TO_SIZE (hx_ptr_array_index (sorted_addresses, i))
+            & ~(page_size - 1);
+        for (a = 0; a != HX_N_ELEMENTS (anchors); a++)
+        {
+          if ((HX_POINTER_TO_SIZE (anchors[a]) & ~(page_size - 1)) == tp)
+            collides = TRUE;
+        }
+      }
+
+      if (collides)
+      {
+        result = _hoox_darwin_arm64_patch_pages (sorted_addresses, coalesce,
+            apply, apply_data, page_size);
+        goto resume_threads;
+      }
     }
 #endif
 

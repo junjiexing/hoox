@@ -46,13 +46,11 @@ WRITE 时加 `VM_PROT_COPY`**（生成可写私有副本，绕过 W^X；`mprotec
 mprotect 成 RW（会掉 X）时，若 hoox 自己的补丁代码在同页会自崩；`vm_remap` 可写别名也不行（写签名 `__TEXT`
 会 COW 到别名副本，原映射看不到；frida 靠外部 agent 的 page-plan 才行，纯进程内做不到）。`test_memory`（裸
 RWX）在 Apple Silicon 仍跳过（无 RWX，与本问题无关）。**自宿主同页问题已根治（`src/backend/darwin/hooxpatch-darwin.c`）：**
-Apple arm64（`!rwx_supported`）**一律走 off-page stub**——用 `HooxArm64Writer` 在自有可执行页上生成一小段桩，桩里
-`mach_vm_protect(RW|COPY)`→写差量（只写 diff 出的连续变更字。桩返回 `kern_return_t`，protect 被拒时干净失败不静默）
-→`mach_vm_protect(RX)`；因执行中的补丁指令在桩页上、不在目标页上，目标页短暂丢 X 不再自崩，与目标页布局无关。
-（早先只在"目标页与某几个锚点函数同页"时才走 off-page，但同页与否由链接器布局决定、无法靠枚举关键函数可靠检测——
-密集单 TU 的 amalgam 必然踩中、且部分关键函数是 static/宏内联无地址可比——故改为一律 off-page。）多页时按物理相邻
-合并成连续缓冲、逐页 `apply`，正确处理跨页 prologue。`interceptor_smoke`（自宿主）与 amalgam 全套件已在
-macOS arm64 / iOS·tvOS 模拟器实测通过（不再跳过）。**易错点：** `hoox_alloc_n_pages`
+检测到目标页与补丁关键锚点（`hoox_memory_patch_code_pages` / `apply` / `hx_hash_table_lookup`）同页时，改用
+**off-page stub**——用 `HooxArm64Writer` 生成一小段自有可执行页上的桩，桩里 `mach_vm_protect(RW|COPY)`→写差量
+（只写 diff 出的连续变更字。桩返回 `kern_return_t`，protect 被拒时干净失败不静默）→`mach_vm_protect(RX)`；
+因执行中的补丁指令在桩页上、不在目标页上，目标页短暂丢 X 不再自崩。分离页（常规）仍走原 in-place 路径，零回归。
+`interceptor_smoke`（自宿主）已在 macOS arm64 / iOS·tvOS 模拟器实测通过（不再跳过）。**易错点：** `hoox_alloc_n_pages`
 返回的指针前有一页隐藏头页，释放必须用 `hoox_free_pages()`，不能 `hoox_memory_free(ptr,size)`。**仍存限制：**
 硬化签名的正式设备上连 `VM_PROT_COPY` 写签名 `__TEXT` 都被拒，纯进程内无解（frida 亦需外部 agent），此时干净返回
 错误。真机（越狱/entitlement）由作者本地验证。`arch/arm64` interceptor
