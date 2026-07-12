@@ -103,7 +103,7 @@ jobs:
           $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
           Import-Module "$vs\Common7\Tools\Microsoft.VisualStudio.DevShell.dll"
           Enter-VsDevShell -VsInstallPath "$vs" -DevCmdArguments '-arch=x64 -host_arch=x64' -SkipAutomaticLocation
-          cmake -B build -G Ninja -DCMAKE_C_COMPILER=clang
+          cmake -B build -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_BUILD_TYPE=Debug
           cmake --build build
           ctest --test-dir build --output-on-failure
 
@@ -122,7 +122,7 @@ jobs:
         if: ${{ matrix.supported && matrix.toolchain == 'gcc' }}
         shell: msys2 {0}
         run: |
-          cmake -B build -G Ninja -DCMAKE_C_COMPILER=gcc
+          cmake -B build -G Ninja -DCMAKE_C_COMPILER=gcc -DCMAKE_BUILD_TYPE=Debug
           cmake --build build
           ctest --test-dir build --output-on-failure
 
@@ -134,7 +134,7 @@ jobs:
         if: ${{ matrix.supported && (matrix.toolchain == 'linux-gcc' || matrix.toolchain == 'linux-clang') }}
         run: |
           cc=${{ matrix.toolchain == 'linux-clang' && 'clang' || 'gcc' }}
-          cmake -B build -DCMAKE_C_COMPILER=$cc
+          cmake -B build -DCMAKE_C_COMPILER=$cc -DCMAKE_BUILD_TYPE=Debug
           cmake --build build
           ctest --test-dir build --output-on-failure
 
@@ -145,7 +145,7 @@ jobs:
       - name: Build & test (Linux x86, gcc -m32)
         if: ${{ matrix.supported && matrix.toolchain == 'linux-gcc32' }}
         run: |
-          cmake -B build -DCMAKE_C_COMPILER=gcc \
+          cmake -B build -DCMAKE_C_COMPILER=gcc -DCMAKE_BUILD_TYPE=Debug \
             -DCMAKE_C_FLAGS=-m32 -DCMAKE_EXE_LINKER_FLAGS=-m32
           cmake --build build
           ctest --test-dir build --output-on-failure
@@ -154,7 +154,7 @@ jobs:
       - name: Build & test (macOS clang)
         if: ${{ matrix.supported && matrix.toolchain == 'macos-clang' }}
         run: |
-          cmake -B build -DCMAKE_C_COMPILER=clang
+          cmake -B build -DCMAKE_C_COMPILER=clang -DCMAKE_BUILD_TYPE=Debug
           cmake --build build
           ctest --test-dir build --output-on-failure
 
@@ -165,7 +165,7 @@ jobs:
       - name: Build & test (Linux ARM32, cross + qemu)
         if: ${{ matrix.supported && matrix.toolchain == 'linux-arm32' }}
         run: |
-          cmake -B build \
+          cmake -B build -DCMAKE_BUILD_TYPE=Debug \
             -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=arm \
             -DCMAKE_C_COMPILER=arm-linux-gnueabihf-gcc \
             -DHOOX_TARGET_ARCH=arm \
@@ -191,12 +191,12 @@ jobs:
           run: |
             set -e
             echo "::group::FreeBSD x86_64 (native)"
-            cmake -B build -DCMAKE_C_COMPILER=clang
+            cmake -B build -DCMAKE_C_COMPILER=clang -DCMAKE_BUILD_TYPE=Debug
             cmake --build build
             ctest --test-dir build --output-on-failure
             echo "::endgroup::"
             echo "::group::FreeBSD x86 (32-bit, clang -m32 / freebsd32)"
-            cmake -B build32 -DCMAKE_C_COMPILER=clang \
+            cmake -B build32 -DCMAKE_C_COMPILER=clang -DCMAKE_BUILD_TYPE=Debug \
               -DCMAKE_C_FLAGS=-m32 -DCMAKE_EXE_LINKER_FLAGS=-m32
             cmake --build build32
             ctest --test-dir build32 --output-on-failure
@@ -221,7 +221,7 @@ jobs:
         shell: cpa.sh {0}
         run: |
           sudo pkg install -y cmake python3
-          cmake -B build -DCMAKE_C_COMPILER=clang
+          cmake -B build -DCMAKE_C_COMPILER=clang -DCMAKE_BUILD_TYPE=Debug
           cmake --build build
           ctest --test-dir build --output-on-failure
 
@@ -242,7 +242,7 @@ jobs:
           run_abi () {
             abi=$1; arch=$2; qemu=$3
             echo "::group::Android $abi ($arch)"
-            cmake -B "build-$abi" \
+            cmake -B "build-$abi" -DCMAKE_BUILD_TYPE=Debug \
               -DCMAKE_TOOLCHAIN_FILE="$tc" \
               -DANDROID_ABI="$abi" -DANDROID_PLATFORM=android-24 \
               -DHOOX_TARGET_ARCH="$arch" \
@@ -271,7 +271,7 @@ jobs:
         if: ${{ matrix.supported && matrix.toolchain == 'ios' }}
         run: |
           set -e
-          cmake -B build-ios-device \
+          cmake -B build-ios-device -DCMAKE_BUILD_TYPE=Debug \
             -DCMAKE_SYSTEM_NAME=iOS \
             -DCMAKE_OSX_ARCHITECTURES=arm64 \
             -DCMAKE_OSX_SYSROOT=iphoneos \
@@ -288,7 +288,7 @@ jobs:
           test -n "$udid"
           echo "simulator udid: $udid"
           xcrun simctl bootstatus "$udid" -b
-          cmake -B build-ios-sim \
+          cmake -B build-ios-sim -DCMAKE_BUILD_TYPE=Debug \
             -DCMAKE_SYSTEM_NAME=iOS \
             -DCMAKE_OSX_ARCHITECTURES=arm64 \
             -DCMAKE_OSX_SYSROOT=iphonesimulator \
@@ -306,7 +306,7 @@ jobs:
         if: ${{ matrix.supported && matrix.toolchain == 'tvos' }}
         run: |
           set -e
-          cmake -B build-tvos-device \
+          cmake -B build-tvos-device -DCMAKE_BUILD_TYPE=Debug \
             -DCMAKE_SYSTEM_NAME=tvOS \
             -DCMAKE_OSX_ARCHITECTURES=arm64 \
             -DCMAKE_OSX_SYSROOT=appletvos \
@@ -322,7 +322,7 @@ jobs:
           test -n "$udid"
           echo "simulator udid: $udid"
           xcrun simctl bootstatus "$udid" -b
-          cmake -B build-tvos-sim \
+          cmake -B build-tvos-sim -DCMAKE_BUILD_TYPE=Debug \
             -DCMAKE_SYSTEM_NAME=tvOS \
             -DCMAKE_OSX_ARCHITECTURES=arm64 \
             -DCMAKE_OSX_SYSROOT=appletvsimulator \
@@ -332,14 +332,33 @@ jobs:
           cmake --build build-tvos-sim
           ctest --test-dir build-tvos-sim --output-on-failure
 
+      # ---- package this job's build output for download (Actions Artifacts) --
+      # Every run (tagged or not) publishes each supported job's compiled tests +
+      # example (hook_example) + debug symbols (.pdb on MSVC, DWARF embedded in
+      # the binaries elsewhere) + the generated amalgam, retained for the GitHub
+      # maximum (90 days; capped by the repo's retention setting). Uploading the
+      # whole build tree guarantees everything needed to run the binaries is
+      # present. success() || failure() so a failed run still yields artifacts
+      # for debugging; if-no-files-found: warn guards the VM jobs (FreeBSD) in
+      # case the build tree does not rsync back to the host.
+      - name: Package build artifacts
+        if: ${{ matrix.supported && (success() || failure()) }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ matrix.name }}
+          path: build*/**
+          retention-days: 90
+          if-no-files-found: warn
+
   # ==========================================================================
-  # On a version tag (vX.Y.Z): generate the single-file amalgamation and attach
-  # it to the GitHub Release as a zip. Generated on Windows so the Windows
-  # backend sources are included (the only currently-supported platform).
+  # Amalgamation package. Generated on Windows so the Windows backend sources
+  # are included. Uploaded as a downloadable artifact on EVERY run; on a version
+  # tag (vX.Y.Z) it is ALSO attached to the GitHub Release — and the Release
+  # carries ONLY this amalgam hoox.c/.h zip, nothing else (the per-job build
+  # artifacts above stay in the run's Artifacts panel, never on the Release).
   # ==========================================================================
-  release-amalgamation:
+  amalgamation:
     name: Package amalgamation
-    if: startsWith(github.ref, 'refs/tags/v')
     needs: build
     runs-on: windows-latest
     steps:
@@ -357,12 +376,25 @@ jobs:
       - name: Assemble package
         shell: pwsh
         run: |
-          $dir = "hoox-${{ github.ref_name }}-amalgamation"
-          New-Item -ItemType Directory -Force -Path $dir | Out-Null
-          Copy-Item build/amalgam/hoox.c, build/amalgam/hoox.h, COPYING, NOTICE $dir
-          Compress-Archive -Path "$dir/*" -DestinationPath "$dir.zip" -Force
+          New-Item -ItemType Directory -Force -Path hoox-amalgamation | Out-Null
+          Copy-Item build/amalgam/hoox.c, build/amalgam/hoox.h, COPYING, NOTICE hoox-amalgamation
+          Compress-Archive -Path "hoox-amalgamation/*" -DestinationPath hoox-amalgamation.zip -Force
 
-      - name: Upload to release
+      # Downloadable on every run, in the run's Artifacts panel.
+      - name: Upload amalgamation artifact (every run)
+        uses: actions/upload-artifact@v4
+        with:
+          name: amalgamation
+          path: hoox-amalgamation.zip
+          retention-days: 90
+
+      # On a tag only: name it after the tag and attach it to the Release.
+      - name: Name package for release (tags only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: Copy-Item hoox-amalgamation.zip "hoox-${{ github.ref_name }}-amalgamation.zip"
+      - name: Upload to release (tags only)
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           files: hoox-${{ github.ref_name }}-amalgamation.zip
