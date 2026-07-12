@@ -284,11 +284,12 @@ jobs:
         if: ${{ matrix.supported && matrix.toolchain == 'ios' }}
         run: |
           set -e
-          # Boot an available iOS simulator (newest runtime, an iPhone type).
-          rt=$(xcrun simctl list runtimes -j | python3 -c "import json,sys; r=[x['identifier'] for x in json.load(sys.stdin)['runtimes'] if x['isAvailable'] and 'iOS' in x['name']]; print(r[-1])")
-          dt=$(xcrun simctl list devicetypes -j | python3 -c "import json,sys; d=[x['identifier'] for x in json.load(sys.stdin)['devicetypes'] if 'iPhone' in x['name']]; print(d[-1])")
-          udid=$(xcrun simctl create hoox-sim "$dt" "$rt")
-          xcrun simctl boot "$udid"
+          # Use a pre-created, available iPhone simulator (a guaranteed-valid
+          # device-type/runtime pairing) rather than creating one.
+          udid=$(xcrun simctl list devices available -j | python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; c=[x['udid'] for rt,l in d.items() if 'iOS' in rt for x in l if x.get('isAvailable') and 'iPhone' in x['name']]; print(c[0] if c else '')")
+          test -n "$udid"
+          echo "simulator udid: $udid"
+          xcrun simctl bootstatus "$udid" -b
           cmake -B build-ios-sim \
             -DCMAKE_SYSTEM_NAME=iOS \
             -DCMAKE_OSX_ARCHITECTURES=arm64 \
