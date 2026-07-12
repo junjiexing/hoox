@@ -53,7 +53,10 @@ behaviour suite green on both). **FreeBSD now covers x86 / x86_64** (an amd64
 FreeBSD VM, clang, including 32-bit via `-m32`) **and ARM64** (a `cross-platform-actions`
 FreeBSD/arm64 guest). **Android now covers all four ABIs** (NDK cross-build of
 arm64-v8a / armeabi-v7a / x86_64 / x86, statically linked and run through the full
-ctest suite under `qemu-user`). Horizontal roll-out to other platforms is next.
+ctest suite under `qemu-user`). **iOS (ARM64) is wired up**: the device SDK
+(`iphoneos`) cross-compiles and the iOS simulator (`iphonesimulator`) runs the
+full suite green; on-device validation (codesign enforcement + arm64e ptrauth)
+is deferred (see below). Horizontal roll-out to other platforms is next.
 
 ## Platform support
 
@@ -67,12 +70,14 @@ Legend: ✅ supported (builds & passes the full test suite) · 🧩 extracted
 | **Linux** | ✅ | ✅ | ✅ | ✅ |
 | **Android** | ✅ | ✅ | ✅ | ✅ |
 | **macOS** | ➖ | ✅ | ➖ | ✅ |
-| **iOS / tvOS** | ➖ | ➖ | ➖ | 📋 |
+| **iOS** | ➖ | ➖ | ➖ | ✅ |
+| **tvOS** | ➖ | ➖ | ➖ | 📋 |
 | **FreeBSD** | ✅ | ✅ | 🧩 | ✅ |
 
 Directly usable today: **Windows × (x86 / x86_64 / ARM64)**,
 **Linux × (x86 / x86_64 / ARM / ARM64)**, **macOS × (x86_64 / ARM64)**,
-**FreeBSD × (x86 / x86_64 / ARM64)** and **Android × (x86 / x86_64 / ARM / ARM64)**.
+**FreeBSD × (x86 / x86_64 / ARM64)**, **Android × (x86 / x86_64 / ARM / ARM64)**
+and **iOS × ARM64** (simulator-run + device-SDK build).
 Windows ARM64 is built and fully
 tested on the native `windows-11-arm` runner; it reuses the same
 `src/backend/windows` (TLS falls back to `TlsGetValue` off x86) and adds an
@@ -116,8 +121,22 @@ on API 29+ executable code pages may be unreadable, so the engine adds READ befo
 the decoder reads them). CI cross-builds all four ABIs with the NDK (statically
 linked); since bionic is a Linux ABI, the static test binaries run under
 `qemu-<arch>-static` just like the Linux ARM32 job — arm64-v8a / armeabi-v7a /
-x86_64 / x86 all run the full ctest suite green. Other OSes still need their own
-backend.
+x86_64 / x86 all run the full ctest suite green. **iOS (ARM64)** reuses
+`src/backend/darwin` + `arch/arm64` (only the `HAVE_IOS` branches differ). Since
+the public iOS SDK `#error`-gates `<mach/mach_vm.h>`, hoox declares the `mach_vm_*`
+it uses itself (see `hooxdarwin.h`), like frida. The darwin code segment's
+`HAVE_IOS` path is the old-jailbreak Substrate/Corellium signing mechanism
+(`is_supported()` is FALSE on modern iOS, and it is the jailbreak integration hoox
+does not provide — cf. DarwinGrafter), so iOS uses the generic stub code segment
+and is patched via the same `mprotect` + `VM_PROT_COPY` path as macOS arm64. CI
+(Apple Silicon runner): **device SDK (`iphoneos`) cross-compile** (build-only —
+needs signing/a device) + **simulator (`iphonesimulator`) full suite via
+`simctl spawn`** (the simulator runs on the macOS kernel, so its W^X behaviour
+mirrors macOS arm64: `test_memory` / `interceptor_smoke` self-skip, the interceptor
+suite runs). **On-device validation (codesign enforcement + arm64e ptrauth) is
+deferred**: it needs a jailbroken self-hosted runner or a Corellium subscription —
+a planned, skipped matrix entry is kept as the hook. Other OSes still need their
+own backend.
 
 > **⚠️ Apple Silicon limitation (self-hosting):** on Apple Silicon (16 KiB pages
 > + enforced W^X), patching a page briefly removes its execute permission. If the
