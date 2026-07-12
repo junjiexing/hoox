@@ -196,6 +196,29 @@ if(Python3_FOUND)
   else()
     add_test(NAME amalgam COMMAND test_amalgam)
   endif()
+
+  # Build the amalgamation example (hook_example) in-tree on every job so each
+  # artifact carries a compiled example alongside the tests. It consumes the
+  # generated single-file library exactly as a downstream user would — the
+  # amalgam's public hoox.h from HOOX_AMALGAM_DIR. Built (not run) as part of
+  # `all`.
+  add_executable(hook_example
+    "${CMAKE_CURRENT_SOURCE_DIR}/../example/hook_example.c"
+    "${HOOX_AMALGAM_C}")
+  target_include_directories(hook_example PRIVATE "${HOOX_AMALGAM_DIR}")
+  if(WIN32)
+    target_link_libraries(hook_example PRIVATE psapi)
+  else()
+    find_package(Threads REQUIRED)
+    target_link_libraries(hook_example PRIVATE Threads::Threads)
+  endif()
+  if(MSVC)
+    # The example is a demo, not written to satisfy the tree's strict
+    # /W3 /sdl /WX; don't fail its build on warnings, and silence the CRT
+    # "deprecated" (C4996) notices for printf-family calls.
+    target_compile_options(hook_example PRIVATE /WX- /wd4996)
+    target_compile_definitions(hook_example PRIVATE _CRT_SECURE_NO_WARNINGS)
+  endif()
 endif()
 
 # --- arch-x86 writer / relocator tests (M4) — x86-only ----------------------

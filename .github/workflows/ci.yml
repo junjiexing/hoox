@@ -43,7 +43,8 @@ jobs:
           - { name: 'macOS · x86_64 · Clang',         runner: macos-15-intel, supported: true, toolchain: macos-clang }
           - { name: 'macOS · ARM64 · Clang',          runner: macos-15, supported: true, toolchain: macos-clang }
 
-          - { name: 'Android · arm64/arm/x86_64/x86 · NDK', runner: ubuntu-latest, supported: true, toolchain: android-ndk }
+          # Name avoids '/' — it becomes an upload-artifact name, which forbids slashes.
+          - { name: 'Android · arm64+arm+x86_64+x86 · NDK', runner: ubuntu-latest, supported: true, toolchain: android-ndk }
           - { name: 'iOS · ARM64 · sim-run + device-build', runner: macos-15, supported: true, toolchain: ios }
           - { name: 'tvOS · ARM64 · sim-run + device-build', runner: macos-15, supported: true, toolchain: tvos }
 
@@ -73,7 +74,7 @@ jobs:
         if: ${{ matrix.supported && matrix.toolchain == 'msvc' }}
         shell: pwsh
         run: |
-          cmake -B build -G "Visual Studio 17 2022" -A ${{ matrix.arch }}
+          cmake -B build -A ${{ matrix.arch }}
           cmake --build build --config Debug
           ctest --test-dir build -C Debug --output-on-failure
 
@@ -332,14 +333,33 @@ jobs:
           cmake --build build-tvos-sim
           ctest --test-dir build-tvos-sim --output-on-failure
 
+      # ---- package this job's build output for download (Actions Artifacts) --
+      # Every run (tagged or not) publishes each supported job's compiled tests +
+      # example (hook_example) + debug symbols (.pdb on MSVC, DWARF embedded in
+      # the binaries elsewhere) + the generated amalgam, retained for the GitHub
+      # maximum (90 days; capped by the repo's retention setting). Uploading the
+      # whole build tree guarantees everything needed to run the binaries is
+      # present. success() || failure() so a failed run still yields artifacts
+      # for debugging; if-no-files-found: warn guards the VM jobs (FreeBSD) in
+      # case the build tree does not rsync back to the host.
+      - name: Package build artifacts
+        if: ${{ matrix.supported && (success() || failure()) }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-${{ matrix.name }}
+          path: build*/bin/**
+          retention-days: 90
+          if-no-files-found: warn
+
   # ==========================================================================
-  # On a version tag (vX.Y.Z): generate the single-file amalgamation and attach
-  # it to the GitHub Release as a zip. Generated on Windows so the Windows
-  # backend sources are included (the only currently-supported platform).
+  # Amalgamation package. Generated on Windows so the Windows backend sources
+  # are included. Uploaded as a downloadable artifact on EVERY run; on a version
+  # tag (vX.Y.Z) it is ALSO attached to the GitHub Release — and the Release
+  # carries ONLY this amalgam hoox.c/.h zip, nothing else (the per-job build
+  # artifacts above stay in the run's Artifacts panel, never on the Release).
   # ==========================================================================
-  release-amalgamation:
+  amalgamation:
     name: Package amalgamation
-    if: startsWith(github.ref, 'refs/tags/v')
     needs: build
     runs-on: windows-latest
     steps:
@@ -351,19 +371,32 @@ jobs:
       - name: Generate hoox.c / hoox.h
         shell: pwsh
         run: |
-          cmake -B build -G "Visual Studio 17 2022" -A x64
+          cmake -B build -A x64
           cmake --build build --target amalgam
 
       - name: Assemble package
         shell: pwsh
         run: |
-          $dir = "hoox-${{ github.ref_name }}-amalgamation"
-          New-Item -ItemType Directory -Force -Path $dir | Out-Null
-          Copy-Item build/amalgam/hoox.c, build/amalgam/hoox.h, COPYING, NOTICE $dir
-          Compress-Archive -Path "$dir/*" -DestinationPath "$dir.zip" -Force
+          New-Item -ItemType Directory -Force -Path hoox-amalgamation | Out-Null
+          Copy-Item build/amalgam/hoox.c, build/amalgam/hoox.h, COPYING, NOTICE hoox-amalgamation
+          Compress-Archive -Path "hoox-amalgamation/*" -DestinationPath hoox-amalgamation.zip -Force
 
-      - name: Upload to release
-        uses: softprops/action-gh-release@v2
+      # Downloadable on every run, in the run's Artifacts panel.
+      - name: Upload amalgamation artifact (every run)
+        uses: actions/upload-artifact@v7
+        with:
+          name: amalgamation
+          path: hoox-amalgamation.zip
+          retention-days: 90
+
+      # On a tag only: name it after the tag and attach it to the Release.
+      - name: Name package for release (tags only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: Copy-Item hoox-amalgamation.zip "hoox-${{ github.ref_name }}-amalgamation.zip"
+      - name: Upload to release (tags only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v3
         with:
           files: hoox-${{ github.ref_name }}-amalgamation.zip
           fail_on_unmatched_files: true
