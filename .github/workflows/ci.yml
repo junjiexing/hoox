@@ -50,6 +50,7 @@ jobs:
           - { name: 'iOS · ARM64 · (planned)',        runner: ubuntu-latest, supported: false }
           - { name: 'tvOS · ARM64 · (planned)',       runner: ubuntu-latest, supported: false }
           - { name: 'FreeBSD · x86_64 + x86 · Clang', runner: ubuntu-latest, supported: true, toolchain: freebsd-vm }
+          - { name: 'FreeBSD · ARM64 · Clang',        runner: ubuntu-latest, supported: true, toolchain: freebsd-arm64 }
           - { name: 'QNX · ARM64 · (planned)',        runner: ubuntu-latest, supported: false }
           # Windows-on-ARM is ARM64-only; 32-bit ARM is not a supported Windows
           # target (no hosted runner, deprecated by Microsoft), so it is N/A.
@@ -177,10 +178,10 @@ jobs:
       # No hosted FreeBSD runner exists, so boot a FreeBSD VM on the ubuntu
       # host (vmactions). The VM is amd64: x86_64 builds+tests natively, and
       # x86 (32-bit) builds+tests via clang -m32 against the base lib32
-      # (freebsd32 compat). arm / arm64 FreeBSD share this exact OS backend
-      # (validated here) plus the arch layers validated on the Linux/macOS
-      # ARM jobs — cross-running them needs a sysroot the VM lacks, so they
-      # are covered by construction rather than executed here.
+      # (freebsd32 compat). arm64 FreeBSD is exercised in its own step below;
+      # arm (32-bit) FreeBSD shares this same OS backend plus the A32/Thumb arch
+      # layer validated on the Linux qemu-arm job (FreeBSD armv7 is tier-2 with
+      # no ready CI image), so it is covered by construction rather than run.
       - name: Build & test (FreeBSD x86_64 + x86, clang)
         if: ${{ matrix.supported && matrix.toolchain == 'freebsd-vm' }}
         uses: vmactions/freebsd-vm@v1
@@ -201,6 +202,27 @@ jobs:
             cmake --build build32
             ctest --test-dir build32 --output-on-failure
             echo "::endgroup::"
+
+      # ---- FreeBSD ARM64 (arm64 guest emulated on the x86-64 host) ---------
+      # cross-platform-actions boots a real FreeBSD/arm64 guest under QEMU. Its
+      # own CI runs arm64 guests on x86-64 hosts (TCG emulation), so we do the
+      # same here: the whole suite is compiled and run natively inside the
+      # aarch64 FreeBSD guest — slower than KVM, but genuine arm64 execution
+      # (the same TCG path already exercises hoox's code-patching on Linux
+      # qemu-arm). This upgrades arm64 FreeBSD from "by construction" to tested.
+      - name: Build & test (FreeBSD ARM64, clang)
+        if: ${{ matrix.supported && matrix.toolchain == 'freebsd-arm64' }}
+        uses: cross-platform-actions/action@v1.3.0
+        with:
+          operating_system: freebsd
+          architecture: arm64
+          version: '15.1'
+          shell: bash
+          run: |
+            sudo pkg install -y cmake python3
+            cmake -B build -DCMAKE_C_COMPILER=clang
+            cmake --build build
+            ctest --test-dir build --output-on-failure
 
   # ==========================================================================
   # On a version tag (vX.Y.Z): generate the single-file amalgamation and attach
