@@ -66,8 +66,8 @@ replacement_add (int a, int b)
   return original_add (a, b) + 100;
 }
 
-int
-main (void)
+static void
+run_cycle (void)
 {
   /*
    * On Apple arm64 (16 KiB pages, W^X) this tiny statically-linked binary places
@@ -128,6 +128,13 @@ main (void)
   hoox_interceptor_unref (interceptor);
 
   hoox_deinit ();
+}
+
+int
+main (void)
+{
+  run_cycle ();
+  run_cycle ();
 
   if (hx_failures == 0)
   {

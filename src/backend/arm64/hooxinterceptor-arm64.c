@@ -13,6 +13,7 @@
 #include "hooxcloak.h"
 #include <string.h>
 #include "hooxmemory.h"
+#include "hooxmemory-priv.h"
 /*
  * hoox does not ship the Darwin grafter (Mach-O import-table hooking). It is
  * gated behind HOOX_HAVE_DARWIN_GRAFTER (never defined), so on macOS the plain
@@ -662,6 +663,12 @@ hoox_interceptor_backend_prepare_trampoline (HooxInterceptorBackend * self,
   hx_uint redirect_limit;
 
   *need_deflector = FALSE;
+
+#if defined (HAVE_DARWIN)
+  if (!_hoox_darwin_arm64_is_patchable (function_address,
+        HOOX_INTERCEPTOR_MAX_REDIRECT_SIZE))
+    return FALSE;
+#endif
 
   data->scratch_reg = ctx->scratch_register;
 

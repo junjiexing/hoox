@@ -47,7 +47,7 @@ typedef enum hx_mode
   HX_MODE_64 = 1 << 3,
   HX_MODE_THUMB = 1 << 4,
   HX_MODE_V8 = 1 << 6,
-  HX_MODE_BIG_ENDIAN = 1 << 31,
+  HX_MODE_BIG_ENDIAN = 1U << 31,
 } hx_mode;
 
 typedef enum hx_err
@@ -412,6 +412,7 @@ typedef enum hx_arm_insn
   HX_ARM_INS_TBB,
   HX_ARM_INS_TBH,
   HX_ARM_INS_VLDR,
+  HX_ARM_INS_UNSUPPORTED_PC_RELATIVE,
 
   HX_ARM_INS_ENDING
 } hx_arm_insn;

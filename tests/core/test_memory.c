@@ -90,6 +90,11 @@ main (void)
 
   page = hoox_alloc_n_pages (1, HOOX_PAGE_RWX);
   CHECK (page != NULL);
+  if (page == NULL)
+  {
+    hoox_internal_heap_unref ();
+    return 1;
+  }
 
   memcpy (page, code_42, sizeof (code_42));
   hoox_memory_mark_code (page, sizeof (code_42));

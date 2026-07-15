@@ -64,7 +64,9 @@ Legend: ✅ supported (builds & passes the full test suite) · 🧩 extracted
 
 ‡ iOS ARM64: the full interceptor, amalgam, and selfhost suites pass on an iPhone 6s (A9, arm64, non-arm64e) running iOS 15.8.2 with Dopamine.
 
-† tvOS ARM64: device-SDK cross-compile + simulator run are green; **a real tvOS device has not been tested**. iOS arm64e is likewise outside the current device coverage.
+† tvOS ARM64: device-SDK cross-compile + simulator run are green; **a real tvOS
+device has not been tested**. Apple Clang enables the arm64e ptrauth paths
+automatically, but iOS arm64e remains outside the current device coverage.
 
 ## Documentation
 

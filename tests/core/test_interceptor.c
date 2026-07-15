@@ -270,27 +270,33 @@ TESTCASE (replace_keep_original)
 
 TESTCASE (replace_then_attach)
 {
-  /* Attach a listener, then replace a different function; both must work. */
-  fixture_attach (fixture, 0, hoox_test_target_function, '>', '<');
+  hx_pointer ret;
 
-  hoox_interceptor_replace (fixture->interceptor, hoox_test_target_nop_function_b,
+  /* A regular replacement and listeners share the same instrumentation. */
+  fixture_attach (fixture, 0, hoox_test_target_nop_function_a, '>', '<');
+  hoox_interceptor_replace (fixture->interceptor, hoox_test_target_nop_function_a,
       replace_nop_a, NULL, NULL);
 
-  hoox_test_target_function (fixture->result);
-  hx_assert_cmpstr (fixture->result->str, ==, ">|<");
+  ret = hoox_test_target_nop_function_a (NULL);
+  hx_assert_cmphex (HX_POINTER_TO_SIZE (ret), ==, 0xbeef);
+  hx_assert_cmpstr (fixture->result->str, ==, "><");
 
-  hx_assert_cmphex (HX_POINTER_TO_SIZE (hoox_test_target_nop_function_b (NULL)), ==,
-      0xbeef);
+  /* revert removes only the replacement; the listener remains attached. */
+  hoox_interceptor_revert (fixture->interceptor, hoox_test_target_nop_function_a);
+  hx_string_truncate (fixture->result, 0);
 
-  hoox_interceptor_revert (fixture->interceptor, hoox_test_target_nop_function_b);
+  ret = hoox_test_target_nop_function_a (NULL);
+  hx_assert_cmphex (HX_POINTER_TO_SIZE (ret), ==, 0x1337);
+  hx_assert_cmpstr (fixture->result->str, ==, "><");
 }
 
 TESTCASE (function_data)
 {
+  static const hx_char function_data_a[] = "a";
   TestFunctionDataListener * fd = test_function_data_listener_new ();
   HooxAttachOptions options = { 0, };
 
-  options.listener_function_data = (hx_pointer) "a";
+  options.listener_function_data = (hx_pointer) function_data_a;
   hoox_interceptor_attach (fixture->interceptor, hoox_test_target_function,
       HOOX_INVOCATION_LISTENER (fd), &options);
 
@@ -299,7 +305,8 @@ TESTCASE (function_data)
   hx_assert_cmpuint (fd->on_enter_call_count, ==, 1);
   hx_assert_cmpuint (fd->on_leave_call_count, ==, 1);
   hx_assert_cmpstr (fd->last_on_enter_data.thread_data.name, ==, "a1");
-  hx_assert_true (fd->last_on_enter_data.function_data == (hx_pointer) "a");
+  hx_assert_true (fd->last_on_enter_data.function_data ==
+      (hx_pointer) function_data_a);
 
   hoox_interceptor_detach (fixture->interceptor, HOOX_INVOCATION_LISTENER (fd));
   hoox_invocation_listener_unref (HOOX_INVOCATION_LISTENER (fd));

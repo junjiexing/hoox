@@ -87,7 +87,7 @@ on_enter (HooxInvocationContext * ic, hx_pointer user_data)
       (hx_pointer) (intptr_t) (b * 10));
 
   printf ("  [listener] enter: compute(%d, %d) -> forcing b=%d  "
-      "thread=%u depth=%u ret_addr=%p\n",
+      "thread=%zu depth=%u ret_addr=%p\n",
       a, b, b * 10,
       hoox_invocation_context_get_thread_id (ic),
       hoox_invocation_context_get_depth (ic),

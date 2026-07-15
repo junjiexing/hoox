@@ -26,19 +26,21 @@
  * position-independent stub that does
  *
  *     mach_vm_protect(task, base, size, FALSE, RW|COPY)   // if it fails, bail
- *     memcpy(base, source, size)                          // write patched copy
+ *     copy(base, source, size)                            // inline word loop
  *     mach_vm_protect(task, base, size, FALSE, RX)
  *
  * and call it. Because the only instructions executing during the no-X window
- * are on the stub's page (plus libsystem's mach_vm_protect / memcpy, in the
- * shared cache), flipping the target page can't fault the running patcher —
- * regardless of the target's layout. Other threads are suspended by the caller
- * (they would fault if they ran on the target page).
+ * are on the stub's page (plus libsystem's mach_vm_protect), flipping the
+ * target page can't fault the running patcher. Targets sharing a page with
+ * mach_vm_protect itself are rejected before installation, as that dependency
+ * cannot safely remove execute permission from its own live page. Other threads
+ * are suspended by the caller (they would fault if they ran on the target page).
  *
  * The caller applies the patch into a private, page-granular copy of the target
- * lump; the stub copies that whole copy back via memcpy. Using memcpy (rather
- * than an unrolled per-word store sequence) keeps the stub a fixed handful of
- * instructions no matter how much changed, so it handles everything uniformly:
+ * lump; the stub copies that whole copy back with a fixed-size word loop. This
+ * keeps the stub a fixed handful of instructions no matter how much changed,
+ * while avoiding a dependency on memcpy (which is itself a valid hook target),
+ * so it handles everything uniformly:
  * a small redirect, several redirects installed on one page in a single
  * transaction, an edit straddling a page boundary, and a full page written for
  * the first time (e.g. materialising a freshly-allocated RW thunk page).
@@ -68,7 +70,6 @@ hoox_darwin_run_offpage_patch (hx_pointer base,
   HooxArm64Writer aw;
   HooxAddress task = (HooxAddress) (hx_uintptr) mach_task_self ();
   HooxAddress mvp = (HooxAddress) (hx_uintptr) &mach_vm_protect;
-  HooxAddress mcp = (HooxAddress) (hx_uintptr) &memcpy;
   HooxAddress rw = (HooxAddress)
       (VM_PROT_READ | VM_PROT_WRITE | VM_PROT_COPY);
   HooxAddress rx = (HooxAddress) (VM_PROT_READ | VM_PROT_EXECUTE);
@@ -98,11 +99,24 @@ hoox_darwin_run_offpage_patch (hx_pointer base,
    * left unspecified by the calling convention). */
   hoox_arm64_writer_put_cbnz_reg_label (&aw, HX_ARM64_REG_W0, "done");
 
-  /* memcpy(base, source, size) — write the whole patched copy back. */
-  hoox_arm64_writer_put_call_address_with_arguments (&aw, mcp, 3,
-      HOOX_ARG_ADDRESS, (HooxAddress) (hx_uintptr) base,
-      HOOX_ARG_ADDRESS, (HooxAddress) (hx_uintptr) source,
-      HOOX_ARG_ADDRESS, (HooxAddress) size);
+  /* Copy the patched page lump without calling libc: memcpy may itself be the
+   * hook target, or share the target's 16 KiB page. Page sizes are multiples of
+   * eight, so a compact post-incrementing word loop is sufficient. */
+  hx_assert ((size & 7) == 0);
+  hoox_arm64_writer_put_ldr_reg_address (&aw, HX_ARM64_REG_X1,
+      (HooxAddress) (hx_uintptr) base);
+  hoox_arm64_writer_put_ldr_reg_address (&aw, HX_ARM64_REG_X2,
+      (HooxAddress) (hx_uintptr) source);
+  hoox_arm64_writer_put_ldr_reg_u64 (&aw, HX_ARM64_REG_X3, (hx_uint64) size);
+  hoox_arm64_writer_put_label (&aw, "copy_next_word");
+  hoox_arm64_writer_put_ldr_reg_reg_offset_mode (&aw, HX_ARM64_REG_X4,
+      HX_ARM64_REG_X2, 8, HOOX_INDEX_POST_ADJUST);
+  hoox_arm64_writer_put_str_reg_reg_offset_mode (&aw, HX_ARM64_REG_X4,
+      HX_ARM64_REG_X1, 8, HOOX_INDEX_POST_ADJUST);
+  hoox_arm64_writer_put_sub_reg_reg_imm (&aw, HX_ARM64_REG_X3,
+      HX_ARM64_REG_X3, 8);
+  hoox_arm64_writer_put_cbnz_reg_label (&aw, HX_ARM64_REG_X3,
+      "copy_next_word");
 
   /* mach_vm_protect(task, base, size, FALSE, RX) */
   hoox_arm64_writer_put_call_address_with_arguments (&aw, mvp, 5,
@@ -134,6 +148,29 @@ hoox_darwin_run_offpage_patch (hx_pointer base,
 }
 
 hx_boolean
+_hoox_darwin_arm64_is_patchable (hx_constpointer address,
+                                 hx_size size)
+{
+  hx_size page_size = hoox_query_page_size ();
+  hx_uintptr address_value = (hx_uintptr) address;
+  hx_uintptr start;
+  hx_uintptr last;
+  hx_uintptr protect_page = (hx_uintptr) hoox_strip_code_pointer (
+      (hx_pointer) (hx_uintptr) &mach_vm_protect) &
+      ~((hx_uintptr) page_size - 1);
+
+  if (size == 0)
+    return TRUE;
+  if (size - 1 > HX_MAXSIZE - address_value)
+    return FALSE;
+
+  start = address_value & ~((hx_uintptr) page_size - 1);
+  last = (address_value + size - 1) & ~((hx_uintptr) page_size - 1);
+
+  return protect_page < start || protect_page > last;
+}
+
+hx_boolean
 _hoox_darwin_arm64_patch_pages (HxPtrArray * sorted_addresses,
                                hx_boolean coalesce,
                                HooxMemoryPatchPagesApplyFunc apply,
@@ -142,6 +179,14 @@ _hoox_darwin_arm64_patch_pages (HxPtrArray * sorted_addresses,
 {
   hx_uint i = 0;
   hx_boolean ok = TRUE;
+
+  for (i = 0; i != sorted_addresses->len; i++)
+  {
+    if (!_hoox_darwin_arm64_is_patchable (
+        hx_ptr_array_index (sorted_addresses, i), page_size))
+      return FALSE;
+  }
+  i = 0;
 
   /*
    * `coalesce` is the caller's hint, but off-page correctness *requires*

@@ -835,8 +835,13 @@ hx_disasm (hx_csh handle, const uint8_t * code, size_t code_size,
     n++;
     if (n == cap && count == 0)
     {
+      hx_insn * grown;
+
       cap *= 2;
-      arr = realloc (arr, cap * sizeof (hx_insn));
+      grown = realloc (arr, cap * sizeof (hx_insn));
+      if (grown == NULL)
+        break;
+      arr = grown;
     }
   }
 

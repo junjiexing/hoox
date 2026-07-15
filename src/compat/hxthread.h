@@ -35,8 +35,8 @@ struct _HxMutex
 struct _HxRecMutex
 {
   void * srw;         /* SRWLOCK */
-  hx_size owner;        /* owning thread id (0 = none) */
-  hx_uint32 count;      /* recursion depth */
+  volatile hx_size owner; /* atomically accessed thread id (0 = none) */
+  hx_uint32 count;        /* recursion depth; only touched by the owner */
 #if HX_SIZEOF_VOID_P == 4
   hx_uint32 pad;
 #endif
@@ -54,6 +54,7 @@ void hx_mutex_init (HxMutex * mutex);
 void hx_mutex_clear (HxMutex * mutex);
 void hx_mutex_lock (HxMutex * mutex);
 void hx_mutex_unlock (HxMutex * mutex);
+void hx_mutex_recover_from_fork_in_child (HxMutex * mutex);
 
 /* Named static lock, à la GLib's G_LOCK family. HxMutex is zero-initialisable
  * and lazily initialised on first lock, so no explicit init is needed. */
@@ -66,6 +67,7 @@ void hx_rec_mutex_clear (HxRecMutex * mutex);
 void hx_rec_mutex_lock (HxRecMutex * mutex);
 hx_boolean hx_rec_mutex_trylock (HxRecMutex * mutex);
 void hx_rec_mutex_unlock (HxRecMutex * mutex);
+void hx_rec_mutex_recover_from_fork_in_child (HxRecMutex * mutex);
 
 hx_pointer hx_private_get (HxPrivate * key);
 void hx_private_set (HxPrivate * key, hx_pointer value);

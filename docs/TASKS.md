@@ -264,7 +264,7 @@
   macOS/darwin backend 见 T8.2。
 - **T8.2** macOS x64/arm64：`gummemory-darwin.c`、`gumtls-darwin.c`、
   **真实** `gumcodesegment-darwin.c`、`hoox_process-darwin.c` shim；
-  ptrauth 相关（arm64e）按需。验收：macOS 测试全绿 + CI。
+  ptrauth 相关（arm64e）已按 Apple Clang target/feature 自动启用；真机覆盖仍待补充。验收：macOS 测试全绿 + CI。
 - **T8.3** Windows x86（32 位）路径打通。验收：Win x86 测试全绿。
 
 ## M9 · 横向架构铺开（每架构含自研解码器）

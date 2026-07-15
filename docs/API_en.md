@@ -77,6 +77,10 @@ Define a macro only to opt out of a default:
 | `HOOX_USE_DLMALLOC` | Use a bundled dlmalloc instead of the system allocator. You must supply `dlmalloc.c` on the include path. Default: system `malloc`. |
 | `HAVE_I386` / `HAVE_ARM` / `HAVE_ARM64`, `HAVE_WINDOWS` / `HAVE_LINUX` / `HAVE_DARWIN` | Force the target arch/OS. Normally auto-detected from compiler built-ins (`_M_X64`, `__aarch64__`, `_WIN32`, …); define only if detection cannot classify your target. |
 
+On Apple arm64e, the ptrauth paths are enabled automatically from Apple
+Clang's `__arm64e__` / `__has_feature(ptrauth_calls)` in both normal and
+amalgamated builds; no manual feature define is needed.
+
 On Windows, link `psapi`.
 
 ---
@@ -119,8 +123,12 @@ void hoox_recover_from_fork_in_child (void);
 - **`hoox_init_embedded`** / **`hoox_deinit_embedded`** — variant init for use
   when hoox is embedded into another runtime that manages process globals.
 - **`hoox_prepare_to_fork`** / **`hoox_recover_from_fork_in_parent`** /
-  **`..._in_child`** — bracket a `fork()` so internal locks/state are consistent
-  in both processes (POSIX).
+  **`..._in_child`** — in a multi-threaded POSIX process, call `prepare` on the
+  thread about to fork, then call `..._in_parent` or `..._in_child` immediately
+  after `fork()` returns in the corresponding process. This waits for active
+  hook mutations, freezes internal locks, and drops vanished threads' invocation
+  contexts in the child. Do not call another hoox API between `prepare` and the
+  matching recovery call.
 
 ---
 
@@ -194,10 +202,13 @@ void hoox_interceptor_revert (HooxInterceptor * self, hx_pointer target);
   no invocation-context bookkeeping. Same trampoline-out semantics via
   `original_function`. Use when you don't need `get_current_invocation` in the
   replacement.
-- **`hoox_interceptor_revert`** — undo an `attach`/`replace`/`replace_fast` on
-  `target`, restoring the original bytes.
+- **`hoox_interceptor_revert`** — undo a `replace` or `replace_fast` on
+  `target`. It does not remove listeners; remove those with `detach`.
 
-> A single target may be *attached* to (listeners) **or** *replaced*, not both.
+> Regular `replace` and listeners may coexist; the listeners wrap entry to and
+> exit from the replacement. `replace_fast` uses a different lightweight
+> instrumentation type and cannot coexist with listeners or regular `replace`
+> on the same target.
 
 ### Transactions
 
@@ -213,8 +224,10 @@ hx_boolean hoox_interceptor_flush (HooxInterceptor * self);
   target's point of view. Transactions nest (they are counted); the outermost
   `end` performs the commit. Outside a transaction each change commits
   immediately.
-- **`hoox_interceptor_flush`** — force any pending trampoline/code changes to
-  become visible immediately. Returns whether anything was flushed.
+- **`hoox_interceptor_flush`** — make a reclamation pass over trampolines still
+  pending after detach/revert. Returns `TRUE` when no teardown remains and the
+  associated resources are safe to release; returns `FALSE` while instrumented
+  code is still in use (and while a transaction is open).
 
 ### Current invocation & stack
 
@@ -261,9 +274,10 @@ void hoox_interceptor_with_lock_held (HooxInterceptor * self,
 hx_boolean hoox_interceptor_is_locked (HooxInterceptor * self);
 ```
 
-- **`hoox_interceptor_save` / `_restore`** — save and restore the per-thread
-  ignore state around a region (so you can temporarily change it and put it
-  back exactly).
+- **`hoox_interceptor_save` / `_restore`** — save the current thread's
+  interception-stack depth and unwind back to it on restore, releasing skipped
+  trampoline entries. Use this around non-local exits such as `longjmp()` that
+  bypass the normal on-leave path. These functions do not save ignore state.
 - **`hoox_interceptor_with_lock_held`** — run `func(user_data)` with the
   interceptor's internal lock held (advanced; for coordinating your own state
   with hook installation).
@@ -353,7 +367,7 @@ void       hoox_invocation_context_replace_nth_argument (HooxInvocationContext *
 hx_pointer hoox_invocation_context_get_return_value (HooxInvocationContext *);
 void       hoox_invocation_context_replace_return_value (HooxInvocationContext *, hx_pointer value);
 hx_pointer hoox_invocation_context_get_return_address (HooxInvocationContext *);
-hx_uint    hoox_invocation_context_get_thread_id (HooxInvocationContext *);
+hx_size    hoox_invocation_context_get_thread_id (HooxInvocationContext *);
 hx_uint    hoox_invocation_context_get_depth (HooxInvocationContext *);
 
 hx_pointer hoox_invocation_context_get_listener_thread_data (HooxInvocationContext *, hx_size size);

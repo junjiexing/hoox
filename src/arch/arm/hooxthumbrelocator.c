@@ -29,6 +29,8 @@ static void hoox_thumb_relocator_write_instruction (HooxThumbRelocator * self,
 static void hoox_stalker_relocator_write_it_branches (HooxThumbRelocator * self);
 
 static hx_boolean hoox_thumb_branch_is_unconditional (const hx_insn * insn);
+static hx_boolean hoox_thumb_relocator_insn_is_supported (
+    const hx_insn * insn);
 static hx_boolean hoox_thumb_reg_dest_is_pc (const hx_insn * insn);
 static hx_boolean hoox_thumb_reg_list_contains_pc (const hx_insn * insn,
     hx_uint8 start_index);
@@ -153,6 +155,7 @@ hoox_thumb_relocator_reset (HooxThumbRelocator * relocator,
 
   relocator->eob = FALSE;
   relocator->eoi = FALSE;
+  relocator->unsupported = FALSE;
 
   relocator->it_block.active = FALSE;
 }
@@ -216,6 +219,9 @@ hoox_thumb_relocator_read_one (HooxThumbRelocator * self,
 
   if (!hx_disasm_iter (self->capstone, &code, &size, &address, insn))
     return 0;
+
+  if (!hoox_thumb_relocator_insn_is_supported (insn))
+    self->unsupported = TRUE;
 
   if (!self->it_block.active)
   {
@@ -505,6 +511,8 @@ hoox_thumb_relocator_can_relocate (hx_pointer address,
     reloc_bytes = hoox_thumb_relocator_read_one (&rl, &insn);
     if (reloc_bytes == 0)
       break;
+    if (rl.unsupported)
+      break;
     last_insn = insn;
 
     n = reloc_bytes;
@@ -533,7 +541,11 @@ hoox_thumb_relocator_can_relocate (hx_pointer address,
   }
   while (reloc_bytes < min_bytes);
 
-  if (rl.eoi)
+  if (rl.unsupported)
+  {
+    /* `n` deliberately remains at the last safe instruction boundary. */
+  }
+  else if (rl.eoi)
   {
     if (n < min_bytes)
     {
@@ -652,6 +664,36 @@ hoox_thumb_branch_is_unconditional (const hx_insn * insn)
 }
 
 static hx_boolean
+hoox_thumb_relocator_insn_is_supported (const hx_insn * insn)
+{
+  const hx_arm * detail = &insn->detail->arm;
+
+  if (insn->id == HX_ARM_INS_UNSUPPORTED_PC_RELATIVE)
+    return FALSE;
+
+  if (insn->id == HX_ARM_INS_LDR && detail->op_count >= 2)
+  {
+    const hx_arm_op * source = &detail->operands[1];
+
+    if (source->type == HX_ARM_OP_MEM && source->mem.base == HX_ARM_REG_PC &&
+        source->mem.index != HX_ARM_REG_INVALID)
+      return FALSE;
+  }
+
+  if (insn->id == HX_ARM_INS_ADD && detail->op_count != 0 &&
+      detail->operands[0].type == HX_ARM_OP_REG &&
+      detail->operands[0].reg == HX_ARM_REG_PC)
+    return FALSE;
+
+  if (insn->id == HX_ARM_INS_MOV && detail->op_count >= 2 &&
+      detail->operands[1].type == HX_ARM_OP_REG &&
+      detail->operands[1].reg == HX_ARM_REG_PC)
+    return FALSE;
+
+  return TRUE;
+}
+
+static hx_boolean
 hoox_thumb_reg_dest_is_pc (const hx_insn * insn)
 {
   return insn->detail->arm.operands[0].reg == HX_ARM_REG_PC;
@@ -690,7 +732,6 @@ hoox_thumb_relocator_rewrite_ldr (HooxThumbRelocator * self,
   if (src->mem.index != HX_ARM_REG_INVALID)
   {
     /* FIXME: LDR with index register not yet supported. */
-    hx_assert_not_reached ();
     return FALSE;
   }
 
@@ -780,7 +821,6 @@ hoox_thumb_relocator_rewrite_add (HooxThumbRelocator * self,
   if (dst->reg == HX_ARM_REG_PC)
   {
     /* FIXME: ADD targeting PC not yet supported. */
-    hx_assert_not_reached ();
     return FALSE;
   }
 
@@ -1034,4 +1074,3 @@ hoox_parse_it_instruction_block_size (hx_uint16 insn)
 
   return 1;
 }
-

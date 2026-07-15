@@ -2390,6 +2390,7 @@ hoox_x86_writer_put_prefix_for_registers (HooxX86Writer * self,
                                          ...)
 {
   const HooxX86RegInfo * ra, * rb, * rc;
+  hx_boolean result = TRUE;
   va_list args;
 
   va_start (args, default_width);
@@ -2410,11 +2411,11 @@ hoox_x86_writer_put_prefix_for_registers (HooxX86Writer * self,
   if (self->target_cpu == HOOX_CPU_IA32)
   {
     if (ra->width != 32 || ra->index_is_extended)
-      return FALSE;
+      result = FALSE;
     if (rb != NULL && (rb->width != 32 || rb->index_is_extended))
-      return FALSE;
+      result = FALSE;
     if (rc != NULL && (rc->width != 32 || rc->index_is_extended))
-      return FALSE;
+      result = FALSE;
   }
   else
   {
@@ -2433,7 +2434,9 @@ hoox_x86_writer_put_prefix_for_registers (HooxX86Writer * self,
       hoox_x86_writer_put_u8 (self, 0x40 | nibble);
   }
 
-  return TRUE;
+  va_end (args);
+
+  return result;
 }
 
 static hx_uint8

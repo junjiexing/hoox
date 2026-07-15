@@ -61,6 +61,19 @@
 # endif
 #endif
 
+/* arm64e uses authenticated code pointers. Apple Clang exposes this through
+ * either the target macro or the ptrauth_calls feature; detect it here so both
+ * normal and amalgamated builds select the signing paths automatically. */
+#if defined (__APPLE__) && defined (HAVE_ARM64) && !defined (HAVE_PTRAUTH)
+# if defined (__arm64e__)
+#  define HAVE_PTRAUTH
+# elif defined (__has_feature)
+#  if __has_feature (ptrauth_calls)
+#   define HAVE_PTRAUTH
+#  endif
+# endif
+#endif
+
 #if HX_API_MAJOR >= 6
 # define HX_ARCH_ARM64 HX_ARCH_AARCH64
 #endif

@@ -23,6 +23,8 @@ HX_GNUC_INTERNAL void _hoox_memory_query_protections (HxPtrArray * sorted_pages,
 #if defined (HAVE_DARWIN) && defined (HAVE_ARM64)
 /* Apple arm64: patch code pages from an off-page stub so the target page losing
  * execute during the write can't fault a same-page patcher (self-hosting). */
+HX_GNUC_INTERNAL hx_boolean _hoox_darwin_arm64_is_patchable (
+    hx_constpointer address, hx_size size);
 HX_GNUC_INTERNAL hx_boolean _hoox_darwin_arm64_patch_pages (
     HxPtrArray * sorted_addresses, hx_boolean coalesce,
     HooxMemoryPatchPagesApplyFunc apply, hx_pointer apply_data,

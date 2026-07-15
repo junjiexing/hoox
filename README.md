@@ -60,7 +60,8 @@ iOS ARM64 另已通过真机验证，tvOS 真机尚未验证。
 
 ‡ iOS ARM64：iPhone 6s（A9、arm64、非 arm64e）/ iOS 15.8.2 / Dopamine 越狱真机上，interceptor 全套、amalgam 与 selfhost 回归全绿。
 
-† tvOS ARM64：设备 SDK 交叉编译 + 模拟器实跑全绿；**真机尚未测试**。iOS arm64e 同样不在当前真机覆盖范围内。
+† tvOS ARM64：设备 SDK 交叉编译 + 模拟器实跑全绿；**真机尚未测试**。arm64e 的
+ptrauth 路径会由 Apple Clang 自动启用，但 iOS arm64e 仍不在当前真机覆盖范围内。
 
 
 ## 文档

@@ -48,6 +48,7 @@ struct _HooxThumbRelocator
 
   hx_boolean eob;
   hx_boolean eoi;
+  hx_boolean unsupported;
 
   HooxITBlock it_block;
   HooxITBranchType it_branch_type;
