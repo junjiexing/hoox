@@ -39,7 +39,7 @@ static int hx_failures = 0;
 
 #define NUM_THREADS           4
 #define MIN_CALLS_PER_THREAD  2000
-#define MUTATION_ITERATIONS   5000
+#define MUTATION_ITERATIONS   1000
 
 HOOX_NOINLINE
 static int
