@@ -156,6 +156,7 @@ if(HOOX_AMALGAMATION_AVAILABLE)
     core/interceptor-callbacklistener.c
     core/interceptor-functiondatalistener.c
     core/hoox_targetfunctions.c)
+  add_dependencies(test_amalgam amalgam)
   target_include_directories(test_amalgam PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/harness"
     "${CMAKE_CURRENT_SOURCE_DIR}/../src/core"
@@ -194,6 +195,7 @@ if(HOOX_AMALGAMATION_AVAILABLE)
   add_executable(hook_example
     "${CMAKE_CURRENT_SOURCE_DIR}/../example/hook_example.c"
     "${HOOX_AMALGAM_C}")
+  add_dependencies(hook_example amalgam)
   target_include_directories(hook_example PRIVATE "${HOOX_AMALGAM_DIR}")
   if(WIN32)
     target_link_libraries(hook_example PRIVATE psapi)
