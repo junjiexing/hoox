@@ -155,8 +155,8 @@ _hoox_darwin_arm64_is_patchable (hx_constpointer address,
   hx_uintptr address_value = (hx_uintptr) address;
   hx_uintptr start;
   hx_uintptr last;
-  hx_uintptr protect_page = (hx_uintptr) hoox_strip_code_address (
-      (HooxAddress) (hx_uintptr) &mach_vm_protect) &
+  hx_uintptr protect_page = (hx_uintptr) hoox_strip_code_pointer (
+      (hx_pointer) (hx_uintptr) &mach_vm_protect) &
       ~((hx_uintptr) page_size - 1);
 
   if (size == 0)

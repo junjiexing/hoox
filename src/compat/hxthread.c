@@ -95,6 +95,12 @@ hx_mutex_unlock (HxMutex * mutex)
   ReleaseSRWLockExclusive ((PSRWLOCK) &mutex->p);
 }
 
+void
+hx_mutex_recover_from_fork_in_child (HxMutex * mutex)
+{
+  mutex->p = NULL;
+}
+
 /* ---- HxRecMutex (recursive over SRWLOCK) --------------------------------- */
 
 void
@@ -154,6 +160,14 @@ hx_rec_mutex_unlock (HxRecMutex * mutex)
     hx_atomic_size_set (&mutex->owner, 0);
     ReleaseSRWLockExclusive ((PSRWLOCK) &mutex->srw);
   }
+}
+
+void
+hx_rec_mutex_recover_from_fork_in_child (HxRecMutex * mutex)
+{
+  mutex->srw = NULL;
+  hx_atomic_size_set (&mutex->owner, 0);
+  mutex->count = 0;
 }
 
 /* ---- HxPrivate (FLS with per-thread destructor) -------------------------- */
@@ -307,6 +321,19 @@ hx_mutex_unlock (HxMutex * mutex)
   pthread_mutex_unlock (hx_mutex_get (mutex));
 }
 
+void
+hx_mutex_recover_from_fork_in_child (HxMutex * mutex)
+{
+  pthread_mutex_t * replacement;
+
+  /* A mutex locked before fork may retain an owner identity that is no longer
+   * valid when the caller was not the process's original thread. Do not try to
+   * unlock or destroy that inherited object; replace it with a fresh mutex. */
+  replacement = hx_new0 (pthread_mutex_t, 1);
+  pthread_mutex_init (replacement, NULL);
+  hx_atomic_pointer_set (&mutex->p, replacement);
+}
+
 static pthread_mutex_t *
 hx_rec_get (HxRecMutex * mutex)
 {
@@ -361,6 +388,20 @@ void
 hx_rec_mutex_unlock (HxRecMutex * mutex)
 {
   pthread_mutex_unlock (hx_rec_get (mutex));
+}
+
+void
+hx_rec_mutex_recover_from_fork_in_child (HxRecMutex * mutex)
+{
+  pthread_mutex_t * replacement;
+  pthread_mutexattr_t attr;
+
+  replacement = hx_new0 (pthread_mutex_t, 1);
+  pthread_mutexattr_init (&attr);
+  pthread_mutexattr_settype (&attr, PTHREAD_MUTEX_RECURSIVE);
+  pthread_mutex_init (replacement, &attr);
+  pthread_mutexattr_destroy (&attr);
+  hx_atomic_pointer_set (&mutex->srw, replacement);
 }
 
 typedef struct _HxPrivateKey HxPrivateKey;

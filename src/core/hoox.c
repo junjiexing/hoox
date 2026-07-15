@@ -95,5 +95,5 @@ void
 hoox_recover_from_fork_in_child (void)
 {
   _hoox_interceptor_recover_from_fork_in_child ();
-  hx_mutex_unlock (&hoox_lifecycle_lock);
+  hx_mutex_recover_from_fork_in_child (&hoox_lifecycle_lock);
 }

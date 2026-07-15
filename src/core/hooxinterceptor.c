@@ -477,12 +477,20 @@ hoox_interceptor_recover_from_fork (hx_boolean in_child)
   hoox_interceptor_fork_prepared = FALSE;
 
   hoox_spinlock_release (&hoox_interceptor_thread_context_lock);
-  hx_mutex_unlock (&_hoox_interceptor_lock);
-  if (interceptor != NULL)
+  if (in_child)
   {
-    HOOX_INTERCEPTOR_UNLOCK (interceptor);
-    hoox_interceptor_unref (interceptor);
+    hx_mutex_recover_from_fork_in_child (&_hoox_interceptor_lock);
+    if (interceptor != NULL)
+      hx_rec_mutex_recover_from_fork_in_child (&interceptor->mutex);
   }
+  else
+  {
+    hx_mutex_unlock (&_hoox_interceptor_lock);
+    if (interceptor != NULL)
+      HOOX_INTERCEPTOR_UNLOCK (interceptor);
+  }
+
+  hoox_interceptor_unref (interceptor);
 }
 
 static void
