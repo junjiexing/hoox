@@ -91,6 +91,17 @@ target_include_directories(test_interceptor_limits PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}/../src/disasm")
 add_test(NAME interceptor_limits COMMAND test_interceptor_limits)
 
+# --- x86 decoder address-size golden test (arch-neutral) --------------------
+add_executable(test_x86_decode
+  disasm/test_x86_decode.c
+  "${CMAKE_CURRENT_SOURCE_DIR}/../src/disasm/hx_disasm_x86.c")
+target_include_directories(test_x86_decode PRIVATE
+  "${CMAKE_CURRENT_SOURCE_DIR}/../src/disasm")
+if(WIN32)
+  target_compile_definitions(test_x86_decode PRIVATE _CRT_SECURE_NO_WARNINGS)
+endif()
+add_test(NAME x86_decode COMMAND test_x86_decode)
+
 # --- arm64 decoder golden test (arch-neutral: validates hx_disasm_arm64 on
 # every host, including x86 CI, since AArch64 decoding is host-independent) ---
 add_executable(test_arm64_decode
@@ -131,41 +142,9 @@ if(HOOX_ARCH_FAMILY STREQUAL "x86")
 endif()
 
 # --- amalgamation (single-file) build + test (M7) — every arch --------------
-# The amalgamator is arch-agnostic, but its only compile-time verification must
-# cover the arch actually being built: ARM/ARM64-only sources go through the
-# single-TU merge too, so a symbol collision or macro leak there would slip
-# past an x86-only check. This is therefore NOT gated on the x86 arch.
-find_package(Python3 COMPONENTS Interpreter)
-if(Python3_FOUND)
-  set(HOOX_AMALGAM_DIR "${CMAKE_BINARY_DIR}/amalgam")
-  set(HOOX_AMALGAM_C "${HOOX_AMALGAM_DIR}/hoox.c")
-  set(HOOX_AMALGAM_H "${HOOX_AMALGAM_DIR}/hoox.h")
-
-  set(_amalgam_inc_args "")
-  foreach(d ${HOOX_ALL_INCLUDE_DIRS})
-    list(APPEND _amalgam_inc_args --include-dir "${d}")
-  endforeach()
-
-  add_custom_command(
-    OUTPUT "${HOOX_AMALGAM_C}" "${HOOX_AMALGAM_H}"
-    COMMAND ${Python3_EXECUTABLE}
-      "${CMAKE_SOURCE_DIR}/tools/amalgamate.py"
-      --out-c "${HOOX_AMALGAM_C}" --out-h "${HOOX_AMALGAM_H}"
-      ${_amalgam_inc_args}
-      --header "${CMAKE_SOURCE_DIR}/src/core/hoox.h"
-      --public-header "${CMAKE_SOURCE_DIR}/include/hoox.h"
-      ${HOOX_ALL_SOURCES}
-    DEPENDS ${HOOX_ALL_SOURCES}
-      "${CMAKE_SOURCE_DIR}/tools/amalgamate.py"
-      "${CMAKE_SOURCE_DIR}/src/core/hoox.h"
-      "${CMAKE_SOURCE_DIR}/include/hoox.h"
-    COMMENT "Amalgamating hoox into a single .c/.h")
-
-  # A standalone target that only *generates* hoox.c / hoox.h (pure text
-  # merge, no compilation) — used by the release workflow to package the
-  # amalgamation on any runner that has Python.
-  add_custom_target(amalgam DEPENDS "${HOOX_AMALGAM_C}" "${HOOX_AMALGAM_H}")
-
+# Generation is defined at the top level so HOOX_BUILD_AMALGAMATION also works
+# with tests disabled. Here we compile and run the configured target's output.
+if(HOOX_AMALGAMATION_AVAILABLE)
   # Build the interceptor suite against the single-file library only (the
   # test files still use the normal headers for declarations; hoox.c
   # supplies every definition — proving the amalgamation is complete).

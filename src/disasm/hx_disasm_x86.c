@@ -179,6 +179,7 @@ decode_modrm (DecState * st,
   int rm = modrm & 7;
   int reg = (modrm >> 3) & 7;
   int disp_size = 0;
+  bool addr16 = !st->mode64 && st->addrsize;
   bool has_sib = false;
   uint8_t sib = 0;
 
@@ -197,7 +198,7 @@ decode_modrm (DecState * st,
   }
 
   /* memory operand */
-  if (rm == 4)
+  if (!addr16 && rm == 4)
   {
     has_sib = true;
     sib = *st->p;
@@ -205,7 +206,16 @@ decode_modrm (DecState * st,
     st->p++;
   }
 
-  if (mod == 0)
+  if (addr16)
+  {
+    if (mod == 0 && rm == 6)
+      disp_size = 2;
+    else if (mod == 1)
+      disp_size = 1;
+    else if (mod == 2)
+      disp_size = 2;
+  }
+  else if (mod == 0)
   {
     if (rm == 5)
     {
@@ -235,9 +245,27 @@ decode_modrm (DecState * st,
     op->mem.base = HX_REG_INVALID;
     op->mem.disp = 0;
 
-    if (mod == 0 && rm == 5)
+    if (addr16)
     {
-      op->mem.base = st->mode64 ? HX_REG_RIP : HX_REG_INVALID;
+      static const hx_x86_reg base[8] = {
+        HX_REG_RBX, HX_REG_RBX, HX_REG_RBP, HX_REG_RBP,
+        HX_REG_RSI, HX_REG_RDI, HX_REG_RBP, HX_REG_RBX
+      };
+      static const hx_x86_reg index[8] = {
+        HX_REG_RSI, HX_REG_RDI, HX_REG_RSI, HX_REG_RDI,
+        HX_REG_INVALID, HX_REG_INVALID, HX_REG_INVALID, HX_REG_INVALID
+      };
+
+      if (!(mod == 0 && rm == 6))
+      {
+        op->mem.base = base[rm];
+        op->mem.index = index[rm];
+      }
+    }
+    else if (mod == 0 && rm == 5)
+    {
+      if (st->mode64)
+        op->mem.base = st->addrsize ? HX_REG_EIP : HX_REG_RIP;
     }
     else if (has_sib)
     {
@@ -266,6 +294,14 @@ decode_modrm (DecState * st,
     x86->encoding.disp_size = (uint8_t) disp_size;
     if (disp_size == 1)
       disp = (int8_t) st->p[0];
+    else if (disp_size == 2)
+    {
+      uint16_t raw_disp = (uint16_t) st->p[0] |
+          ((uint16_t) st->p[1] << 8);
+      disp = (addr16 && mod == 0 && rm == 6)
+          ? (int64_t) raw_disp
+          : (int64_t) (int16_t) raw_disp;
+    }
     else
       disp = (int32_t) ((uint32_t) st->p[0] | ((uint32_t) st->p[1] << 8) |
           ((uint32_t) st->p[2] << 16) | ((uint32_t) st->p[3] << 24));
@@ -630,7 +666,9 @@ done:
       else if (primary >= 0x70 && primary <= 0x7F)
         insn->id = jcc_map[primary - 0x70];
       else if (primary == 0xE3)
-        insn->id = st.mode64 ? HX_INS_JRCXZ : HX_INS_JECXZ;
+        insn->id = st.mode64
+            ? (st.addrsize ? HX_INS_JECXZ : HX_INS_JRCXZ)
+            : (st.addrsize ? HX_INS_JCXZ : HX_INS_JECXZ);
       else if (primary == 0xE0) insn->id = HX_INS_LOOPNE;
       else if (primary == 0xE1) insn->id = HX_INS_LOOPE;
       else if (primary == 0xE2) insn->id = HX_INS_LOOP;

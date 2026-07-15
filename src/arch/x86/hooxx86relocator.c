@@ -539,6 +539,7 @@ hoox_x86_relocator_rewrite_if_rip_relative (HooxX86Relocator * self,
   HooxX86Writer * cw = ctx->code_writer;
   hx_uint mod, reg, rm;
   hx_boolean is_rip_relative;
+  const hx_x86_op * memory_operand;
   HooxAddress address;
   hx_ssize offset;
   HooxX86Reg cpu_regs[7] = {
@@ -561,7 +562,26 @@ hoox_x86_relocator_rewrite_if_rip_relative (HooxX86Relocator * self,
   reg = (x86->modrm & 0x38) >> 3;
   rm  = (x86->modrm & 0x07) >> 0;
 
-  is_rip_relative = (mod == 0 && rm == 5);
+  memory_operand = &x86->operands[0];
+  if (mod == 0 && rm == 5 &&
+      memory_operand->type == HX_OP_MEM &&
+      memory_operand->mem.base == HX_REG_EIP)
+  {
+    const hx_uint32 target = (hx_uint32) ctx->pc + (hx_uint32) x86->disp;
+    const hx_uint32 output_pc = (hx_uint32) (cw->pc + insn->size);
+    const hx_int32 raw_offset =
+        HX_INT32_TO_LE ((hx_int32) (target - output_pc));
+
+    memcpy (code, insn->bytes, insn->size);
+    memcpy (code + x86->encoding.disp_offset, &raw_offset,
+        sizeof (raw_offset));
+    hoox_x86_writer_put_bytes (cw, code, insn->size);
+    return TRUE;
+  }
+
+  is_rip_relative = (mod == 0 && rm == 5 &&
+      memory_operand->type == HX_OP_MEM &&
+      memory_operand->mem.base == HX_REG_RIP);
   if (!is_rip_relative)
     return FALSE;
 

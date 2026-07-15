@@ -1,10 +1,9 @@
 /*
- * Multi-threaded interceptor test: attach one listener, then hammer the hooked
- * function concurrently from several threads. This exercises the per-thread TLS
- * invocation stack and the lock-free listener dispatch — the exact machinery
- * that silently broke on FreeBSD (pthread stubs -> NULL TLS -> a fresh, empty
- * invocation context per call -> on-leave crash). A single-threaded test never
- * touches it; this one does.
+ * Multi-threaded interceptor test: keep one listener attached while worker
+ * threads hammer the hooked function and the main thread repeatedly attaches
+ * and detaches another listener. This exercises both the per-thread TLS
+ * invocation stack and copy-on-write listener dispatch. A single-threaded test
+ * cannot expose a listener array being reclaimed while another thread reads it.
  *
  * Licence: wxWindows Library Licence, Version 3.1
  */
@@ -19,6 +18,7 @@
 # include <windows.h>
 #else
 # include <pthread.h>
+# include <sched.h>
 #endif
 
 static int hx_failures = 0;
@@ -37,8 +37,9 @@ static int hx_failures = 0;
 # define HOOX_NOINLINE __attribute__ ((noinline))
 #endif
 
-#define NUM_THREADS       4
-#define CALLS_PER_THREAD  2000
+#define NUM_THREADS           4
+#define MIN_CALLS_PER_THREAD  2000
+#define MUTATION_ITERATIONS   5000
 
 HOOX_NOINLINE
 static int
@@ -47,13 +48,14 @@ target_add (int a, int b)
   return a + b;
 }
 
-/* enter/leave counters are bumped from every worker thread. */
+/* The persistent listener counts every hooked invocation. */
 static volatile hx_int enter_count = 0;
 static volatile hx_int leave_count = 0;
+static volatile hx_int temporary_enter_count = 0;
+static volatile hx_int workers_ready = 0;
+static volatile hx_int mutations_done = 0;
 
-/* Set to 0 (never anything else) if any thread sees a wrong result — a benign
- * race: all writers store the same value and it is read only after join. */
-static volatile int worker_ok = 1;
+static volatile hx_int worker_ok = 1;
 
 static void
 on_enter (HooxInvocationContext * ic, hx_pointer user_data)
@@ -72,14 +74,35 @@ on_leave (HooxInvocationContext * ic, hx_pointer user_data)
 }
 
 static void
+on_temporary_enter (HooxInvocationContext * ic, hx_pointer user_data)
+{
+  (void) ic;
+  (void) user_data;
+  hx_atomic_int_inc (&temporary_enter_count);
+}
+
+static void
+yield_thread (void)
+{
+#ifdef _WIN32
+  Sleep (0);
+#else
+  sched_yield ();
+#endif
+}
+
+static void
 worker (void)
 {
   int i;
 
-  for (i = 0; i != CALLS_PER_THREAD; i++)
+  hx_atomic_int_inc (&workers_ready);
+
+  for (i = 0; i < MIN_CALLS_PER_THREAD ||
+      !hx_atomic_int_get (&mutations_done); i++)
   {
     if (target_add (i, 1) != i + 1)
-      worker_ok = 0;
+      hx_atomic_int_set (&worker_ok, 0);
   }
 }
 
@@ -105,7 +128,7 @@ int
 main (void)
 {
   HooxInterceptor * interceptor;
-  HooxInvocationListener * listener;
+  HooxInvocationListener * listener, * temporary_listener;
   HooxAttachReturn ar;
   int i;
 #ifdef _WIN32
@@ -120,6 +143,8 @@ main (void)
   CHECK (interceptor != NULL);
 
   listener = hoox_make_call_listener (on_enter, on_leave, NULL, NULL);
+  temporary_listener = hoox_make_call_listener (on_temporary_enter, NULL,
+      NULL, NULL);
   ar = hoox_interceptor_attach (interceptor, (hx_pointer) target_add, listener,
       NULL);
   CHECK (ar == HOOX_ATTACH_OK);
@@ -134,6 +159,19 @@ main (void)
 #endif
   }
 
+  while (hx_atomic_int_get (&workers_ready) != NUM_THREADS)
+    yield_thread ();
+
+  for (i = 0; i != MUTATION_ITERATIONS; i++)
+  {
+    ar = hoox_interceptor_attach (interceptor, (hx_pointer) target_add,
+        temporary_listener, NULL);
+    CHECK (ar == HOOX_ATTACH_OK);
+    CHECK (target_add (i, 1) == i + 1);
+    hoox_interceptor_detach (interceptor, temporary_listener);
+  }
+  hx_atomic_int_set (&mutations_done, 1);
+
   for (i = 0; i != NUM_THREADS; i++)
   {
 #ifdef _WIN32
@@ -144,11 +182,15 @@ main (void)
 #endif
   }
 
-  CHECK (worker_ok);
-  CHECK (hx_atomic_int_get (&enter_count) == NUM_THREADS * CALLS_PER_THREAD);
-  CHECK (hx_atomic_int_get (&leave_count) == NUM_THREADS * CALLS_PER_THREAD);
+  CHECK (hx_atomic_int_get (&worker_ok));
+  CHECK (hx_atomic_int_get (&enter_count) >=
+      NUM_THREADS * MIN_CALLS_PER_THREAD);
+  CHECK (hx_atomic_int_get (&enter_count) == hx_atomic_int_get (&leave_count));
+  CHECK (hx_atomic_int_get (&temporary_enter_count) > 0);
+  CHECK (hoox_interceptor_flush (interceptor));
 
   hoox_interceptor_detach (interceptor, listener);
+  hoox_invocation_listener_unref (temporary_listener);
   hoox_invocation_listener_unref (listener);
 
   hoox_interceptor_unref (interceptor);

@@ -21,7 +21,7 @@ resolution, JS bindings, …).
 - **No third-party runtime dependencies.**
 - **Cross-platform** — Windows / Linux / Android / macOS / iOS / FreeBSD ×
   x86 / x86_64 / ARM / ARM64 (coverage staged).
-- **Amalgamatable** — a script merges the sources into a single `hoox.c` + `hoox.h`
+- **Amalgamatable** — a script merges the selected target sources into one `hoox.c` + `hoox.h`
   (SQLite-style); the public `hoox.h` exposes only the API.
 - **Zero-config to consume** — static linkage, the system allocator, and the
   target arch/OS are all defaults; drop `hoox.c`/`hoox.h` in and compile, no `-D`
@@ -43,8 +43,8 @@ utility layers (nano-glib, decoder) use `hx_`/`Hx`/`HX_`. No third-party prefix
 **Windows / Linux / Android / macOS / iOS / tvOS / FreeBSD** are all working and
 CI-tested (toolchains: MSVC / clang / gcc / MinGW / AppleClang / NDK; full chain
 extraction → build → hooks firing → test suite → amalgamation → example). See the
-coverage matrix below. iOS·tvOS are device-SDK cross-compiled + simulator-run;
-**real devices are not yet tested**. 
+coverage matrix below. CI cross-compiles the iOS/tvOS device SDKs and runs the
+simulators; iOS ARM64 has also passed on a real device, while tvOS has not.
 
 ## Platform support
 
@@ -58,11 +58,13 @@ Legend: ✅ supported (builds & passes the full test suite) · 🧩 extracted
 | **Linux** | ✅ | ✅ | ✅ | ✅ |
 | **Android** | ✅ | ✅ | ✅ | ✅ |
 | **macOS** | ➖ | ✅ | ➖ | ✅ |
-| **iOS** | ➖ | ➖ | ➖ | ✅ † |
+| **iOS** | ➖ | ➖ | ➖ | ✅ ‡ |
 | **tvOS** | ➖ | ➖ | ➖ | ✅ † |
 | **FreeBSD** | ✅ | ✅ | 🧩 | ✅ |
 
-† iOS / tvOS ARM64: device-SDK cross-compile + simulator run, green. **Real device (codesign enforcement + arm64e ptrauth on a jailbroken device) has not been tested yet** — to be validated locally.
+‡ iOS ARM64: the full interceptor, amalgam, and selfhost suites pass on an iPhone 6s (A9, arm64, non-arm64e) running iOS 15.8.2 with Dopamine.
+
+† tvOS ARM64: device-SDK cross-compile + simulator run are green; **a real tvOS device has not been tested**. iOS arm64e is likewise outside the current device coverage.
 
 ## Documentation
 
@@ -78,6 +80,10 @@ cmake -B build -G Ninja        # or -DCMAKE_C_COMPILER=clang / gcc, or the VS ge
 cmake --build build
 ctest --test-dir build --output-on-failure
 ```
+
+An amalgamation contains only the sources selected for the configured CMake
+platform/architecture; it is not a universal package. Generate it alone with
+`-DHOOX_ENABLE_TESTS=OFF -DHOOX_BUILD_AMALGAMATION=ON`; release names state the target.
 
 The default build targets the host arch (x64). For a 32-bit (x86) build, target
 i686 and point `LIB` at the 32-bit MSVC/SDK library directories:

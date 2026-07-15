@@ -66,7 +66,9 @@ A fully worked, runnable tour of every feature is in
 ## Build-time macros
 
 Consuming the amalgamated `hoox.c`/`hoox.h` needs **no** `-D` flags in the
-common case. Define a macro only to opt out of a default:
+common case. Each amalgamation contains the sources selected for its configured
+platform/architecture, so use one matching your target; it is not universal.
+Define a macro only to opt out of a default:
 
 | Macro | Effect |
 |---|---|

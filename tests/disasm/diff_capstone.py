@@ -90,11 +90,13 @@ CURATED_64 = [
     "cc",              # int3
     "0f05",            # syscall
     "488905" + "00000000",  # mov [rip+0], rax
+    "678b0578563412",  # mov eax, [eip+0x12345678] (not RIP-relative)
 ]
 
 CURATED_32 = [
     "55", "89e5", "83ec10", "e900000000", "e800000000", "eb10", "7405",
     "0f8400000000", "c3", "c20800", "6a00", "68000000", "90", "cc",
+    "6701b1d2c32275",  # addr16 ModRM + disp16; trailing bytes are next insn
 ]
 
 
