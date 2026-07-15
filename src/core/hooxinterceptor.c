@@ -69,7 +69,7 @@ struct _HooxInterceptor
 
   HooxInterceptorOptions options;
 
-  volatile hx_uint selected_thread_id;
+  volatile hx_size selected_thread_id;
 
   HooxInterceptorTransaction current_transaction;
 };
@@ -105,6 +105,8 @@ struct _ListenerEntry
 
 struct _InterceptorThreadContext
 {
+  hx_uint generation;
+
   HooxInvocationBackend listener_backend;
   HooxInvocationBackend replacement_backend;
 
@@ -122,6 +124,7 @@ struct _HooxInvocationStackEntry
   hx_pointer stack_address;
   HooxInvocationContext invocation_context;
   HooxCpuContext cpu_context;
+  HxPtrArray * listener_entries;
   hx_uint8 listener_invocation_data[HOOX_MAX_LISTENERS_PER_FUNCTION]
       [HOOX_MAX_LISTENER_DATA];
   hx_boolean calling_replacement;
@@ -204,6 +207,10 @@ static void hoox_function_context_fixup_cpu_context (
 static InterceptorThreadContext * get_interceptor_thread_context (void);
 static void release_interceptor_thread_context (
     InterceptorThreadContext * context);
+static void hoox_interceptor_recover_from_fork (hx_boolean in_child);
+static void hoox_interceptor_prune_thread_contexts_after_fork (void);
+static void hoox_interceptor_repair_usage_counters_after_fork (
+    HooxInterceptor * interceptor, InterceptorThreadContext * current_context);
 static InterceptorThreadContext * interceptor_thread_context_new (void);
 static void interceptor_thread_context_destroy (
     InterceptorThreadContext * context);
@@ -349,17 +356,28 @@ static HooxInterceptor * _the_interceptor = NULL;
 
 static HooxSpinlock hoox_interceptor_thread_context_lock = HOOX_SPINLOCK_INIT;
 static HxHashTable * hoox_interceptor_thread_contexts;
+static hx_uint hoox_interceptor_generation;
 static HxPrivate hoox_interceptor_context_private =
     HX_PRIVATE_INIT ((HxDestroyNotify) release_interceptor_thread_context);
 static HooxTlsKey hoox_interceptor_guard_key;
+static HooxInterceptor * hoox_interceptor_fork_interceptor;
+static hx_boolean hoox_interceptor_fork_prepared;
 
 static HooxInvocationStack _hoox_interceptor_empty_stack = { NULL, 0 };
 
 void
 _hoox_interceptor_init (void)
 {
-  hoox_interceptor_thread_contexts = hx_hash_table_new_full (NULL, NULL,
-      (HxDestroyNotify) interceptor_thread_context_destroy, NULL);
+  HxHashTable * contexts;
+
+  contexts = hx_hash_table_new (NULL, NULL);
+
+  hoox_spinlock_acquire (&hoox_interceptor_thread_context_lock);
+  hoox_interceptor_generation++;
+  if (hoox_interceptor_generation == 0)
+    hoox_interceptor_generation++;
+  hoox_interceptor_thread_contexts = contexts;
+  hoox_spinlock_release (&hoox_interceptor_thread_context_lock);
 
   hoox_interceptor_guard_key = hoox_tls_key_new ();
 }
@@ -367,10 +385,181 @@ _hoox_interceptor_init (void)
 void
 _hoox_interceptor_deinit (void)
 {
+  HxHashTable * contexts;
+  InterceptorThreadContext * current_context;
+
   hoox_tls_key_free (hoox_interceptor_guard_key);
 
-  hx_hash_table_unref (hoox_interceptor_thread_contexts);
+  hoox_spinlock_acquire (&hoox_interceptor_thread_context_lock);
+  contexts = hoox_interceptor_thread_contexts;
   hoox_interceptor_thread_contexts = NULL;
+  hoox_spinlock_release (&hoox_interceptor_thread_context_lock);
+
+  hx_hash_table_unref (contexts);
+
+  current_context = hx_private_get (&hoox_interceptor_context_private);
+  if (current_context != NULL)
+  {
+    hx_private_set (&hoox_interceptor_context_private, NULL);
+    interceptor_thread_context_destroy (current_context);
+  }
+}
+
+void
+_hoox_interceptor_prepare_to_fork (void)
+{
+  HooxInterceptor * interceptor;
+
+  hx_assert (!hoox_interceptor_fork_prepared);
+
+  for (;;)
+  {
+    /* Pin the singleton before waiting for its lock. Keeping the global lock
+     * while waiting would invert finalize's instance -> global lock order. */
+    hx_mutex_lock (&_hoox_interceptor_lock);
+    interceptor = hoox_interceptor_ref (_the_interceptor);
+    hx_mutex_unlock (&_hoox_interceptor_lock);
+
+    if (interceptor != NULL)
+      HOOX_INTERCEPTOR_LOCK (interceptor);
+
+    hx_mutex_lock (&_hoox_interceptor_lock);
+    if (_the_interceptor == interceptor)
+      break;
+
+    hx_mutex_unlock (&_hoox_interceptor_lock);
+    if (interceptor != NULL)
+    {
+      HOOX_INTERCEPTOR_UNLOCK (interceptor);
+      hoox_interceptor_unref (interceptor);
+    }
+  }
+
+  /* No thread-context mutation may cross the fork snapshot. */
+  hoox_spinlock_acquire (&hoox_interceptor_thread_context_lock);
+
+  hoox_interceptor_fork_interceptor = interceptor;
+  hoox_interceptor_fork_prepared = TRUE;
+}
+
+void
+_hoox_interceptor_recover_from_fork_in_parent (void)
+{
+  hoox_interceptor_recover_from_fork (FALSE);
+}
+
+void
+_hoox_interceptor_recover_from_fork_in_child (void)
+{
+  hoox_interceptor_recover_from_fork (TRUE);
+}
+
+static void
+hoox_interceptor_recover_from_fork (hx_boolean in_child)
+{
+  HooxInterceptor * interceptor;
+
+  hx_assert (hoox_interceptor_fork_prepared);
+
+  interceptor = hoox_interceptor_fork_interceptor;
+
+  if (in_child)
+  {
+    InterceptorThreadContext * current_context;
+
+    current_context = hx_private_get (&hoox_interceptor_context_private);
+    hoox_interceptor_prune_thread_contexts_after_fork ();
+    hoox_interceptor_repair_usage_counters_after_fork (interceptor,
+        current_context);
+  }
+
+  hoox_interceptor_fork_interceptor = NULL;
+  hoox_interceptor_fork_prepared = FALSE;
+
+  hoox_spinlock_release (&hoox_interceptor_thread_context_lock);
+  hx_mutex_unlock (&_hoox_interceptor_lock);
+  if (interceptor != NULL)
+  {
+    HOOX_INTERCEPTOR_UNLOCK (interceptor);
+    hoox_interceptor_unref (interceptor);
+  }
+}
+
+static void
+hoox_interceptor_prune_thread_contexts_after_fork (void)
+{
+  InterceptorThreadContext * current_context;
+  HxHashTableIter iter;
+  hx_pointer key;
+
+  if (hoox_interceptor_thread_contexts == NULL)
+    return;
+
+  current_context = hx_private_get (&hoox_interceptor_context_private);
+
+  hx_hash_table_iter_init (&iter, hoox_interceptor_thread_contexts);
+  while (hx_hash_table_iter_next (&iter, &key, NULL))
+  {
+    InterceptorThreadContext * context = key;
+
+    if (context == current_context)
+      continue;
+
+    hx_hash_table_iter_remove (&iter);
+    interceptor_thread_context_destroy (context);
+  }
+}
+
+static void
+hoox_interceptor_repair_usage_counters_after_fork (
+    HooxInterceptor * interceptor,
+    InterceptorThreadContext * current_context)
+{
+  HxHashTableIter iter;
+  hx_pointer value;
+  HxList * cur;
+  hx_uint i;
+
+  if (interceptor == NULL)
+    return;
+
+  /* Counts contributed by threads that disappeared at fork can otherwise keep
+   * detached trampolines alive forever. Rebuild them from the sole surviving
+   * invocation stack. */
+  hx_hash_table_iter_init (&iter, interceptor->function_by_address);
+  while (hx_hash_table_iter_next (&iter, NULL, &value))
+  {
+    HooxFunctionContext * function_ctx = value;
+
+    hx_atomic_int_set (&function_ctx->trampoline_usage_counter, 0);
+  }
+
+  for (cur = interceptor->current_transaction.pending_destroy_tasks->head;
+      cur != NULL;
+      cur = cur->next)
+  {
+    HooxDestroyTask * task = cur->data;
+
+    hx_atomic_int_set (&task->ctx->trampoline_usage_counter, 0);
+  }
+
+  if (current_context == NULL)
+    return;
+
+  for (i = 0; i != current_context->stack->len; i++)
+  {
+    HooxInvocationStackEntry * entry = &hx_array_index (
+        current_context->stack, HooxInvocationStackEntry, i);
+
+    hx_atomic_int_set (&entry->function_ctx->trampoline_usage_counter, 0);
+  }
+  for (i = 0; i != current_context->stack->len; i++)
+  {
+    HooxInvocationStackEntry * entry = &hx_array_index (
+        current_context->stack, HooxInvocationStackEntry, i);
+
+    hx_atomic_int_inc (&entry->function_ctx->trampoline_usage_counter);
+  }
 }
 
 static void
@@ -1152,7 +1341,8 @@ hoox_interceptor_maybe_unignore_current_thread (HooxInterceptor * self)
 void
 hoox_interceptor_ignore_other_threads (HooxInterceptor * self)
 {
-  self->selected_thread_id = (hx_uint) hoox_process_get_current_thread_id ();
+  hx_atomic_size_set (&self->selected_thread_id,
+      hoox_process_get_current_thread_id ());
 }
 
 /**
@@ -1166,8 +1356,9 @@ hoox_interceptor_ignore_other_threads (HooxInterceptor * self)
 void
 hoox_interceptor_unignore_other_threads (HooxInterceptor * self)
 {
-  hx_assert (self->selected_thread_id == hoox_process_get_current_thread_id ());
-  self->selected_thread_id = 0;
+  hx_assert (hx_atomic_size_get (&self->selected_thread_id) ==
+      hoox_process_get_current_thread_id ());
+  hx_atomic_size_set (&self->selected_thread_id, 0);
 }
 
 /**
@@ -1319,22 +1510,11 @@ fallback:
   return return_address;
 }
 
-/*
- * Guard against a self-hosting patch hazard on W^X platforms (Apple Silicon).
- *
- * There, patching a page temporarily strips execute permission from it (no RWX,
- * no writable remap of signed __TEXT, and the code segment is unavailable on
- * modern kernels). macOS also uses 16 KiB pages, so a single target page can
- * span a lot of unrelated __TEXT. If the target function shares its page with
- * hoox's own patch-time code, that code would fault the instant we make the
- * page writable — mid-patch. Detect the collision up front and refuse to
- * instrument (a graceful error) rather than crash.
- *
- * This only arises when hoox is statically linked into the same binary as the
- * target and the two land on the same page; hooking other modules/libraries is
- * unaffected. Removing the limitation needs the write-through-separate-mapping
- * mechanism (see docs) — until then this converts a silent crash into an error.
- */
+/* Apple arm64 performs the eventual code write from an off-page executable
+ * stub, so self-hosted targets may safely share a page with hoox. The backend's
+ * trampoline-preparation check rejects the one irreducible collision: a target
+ * page containing mach_vm_protect(), which the stub must execute while that
+ * target page is temporarily non-executable. */
 static HooxFunctionContext *
 hoox_interceptor_instrument (HooxInterceptor * self,
                             HooxInterceptorType type,
@@ -1963,10 +2143,15 @@ _hoox_function_context_begin_invocation (HooxFunctionContext * function_ctx,
   system_error = hoox_thread_get_system_error ();
 #endif
 
-  if (interceptor->selected_thread_id != 0)
   {
-    invoke_listeners =
-        hoox_process_get_current_thread_id () == interceptor->selected_thread_id;
+    HooxThreadId selected_thread_id;
+
+    selected_thread_id = hx_atomic_size_get (&interceptor->selected_thread_id);
+    if (selected_thread_id != 0)
+    {
+      invoke_listeners =
+          hoox_process_get_current_thread_id () == selected_thread_id;
+    }
   }
 
   if (invoke_listeners)
@@ -2000,7 +2185,11 @@ _hoox_function_context_begin_invocation (HooxFunctionContext * function_ctx,
   }
 
   if (invocation_ctx != NULL)
+  {
     invocation_ctx->system_error = system_error;
+    stack_entry->listener_entries = (HxPtrArray *) hx_atomic_pointer_get (
+        &function_ctx->listener_entries);
+  }
 
   hoox_function_context_fixup_cpu_context (function_ctx, cpu_context);
 
@@ -2012,8 +2201,7 @@ _hoox_function_context_begin_invocation (HooxFunctionContext * function_ctx,
     invocation_ctx->cpu_context = cpu_context;
     invocation_ctx->backend = &interceptor_ctx->listener_backend;
 
-    listener_entries =
-        (HxPtrArray *) hx_atomic_pointer_get (&function_ctx->listener_entries);
+    listener_entries = stack_entry->listener_entries;
     for (i = 0; i != listener_entries->len; i++)
     {
       ListenerEntry * listener_entry;
@@ -2127,8 +2315,7 @@ _hoox_function_context_end_invocation (HooxFunctionContext * function_ctx,
 
   hoox_function_context_fixup_cpu_context (function_ctx, cpu_context);
 
-  listener_entries =
-      (HxPtrArray *) hx_atomic_pointer_get (&function_ctx->listener_entries);
+  listener_entries = stack_entry->listener_entries;
   only_invoke_unignorable_listeners =
       stack_entry->only_invoke_unignorable_listeners;
   for (i = 0; i != listener_entries->len; i++)
@@ -2197,9 +2384,13 @@ get_interceptor_thread_context (void)
   InterceptorThreadContext * context;
 
   context = hx_private_get (&hoox_interceptor_context_private);
-  if (context == NULL)
+  if (context == NULL || context->generation != hoox_interceptor_generation)
   {
+    if (context != NULL)
+      interceptor_thread_context_destroy (context);
+
     context = interceptor_thread_context_new ();
+    context->generation = hoox_interceptor_generation;
 
     hoox_spinlock_acquire (&hoox_interceptor_thread_context_lock);
     hx_hash_table_add (hoox_interceptor_thread_contexts, context);
@@ -2214,12 +2405,12 @@ get_interceptor_thread_context (void)
 static void
 release_interceptor_thread_context (InterceptorThreadContext * context)
 {
-  if (hoox_interceptor_thread_contexts == NULL)
-    return;
-
   hoox_spinlock_acquire (&hoox_interceptor_thread_context_lock);
-  hx_hash_table_remove (hoox_interceptor_thread_contexts, context);
+  if (hoox_interceptor_thread_contexts != NULL)
+    hx_hash_table_remove (hoox_interceptor_thread_contexts, context);
   hoox_spinlock_release (&hoox_interceptor_thread_context_lock);
+
+  interceptor_thread_context_destroy (context);
 }
 
 static HooxPointCut

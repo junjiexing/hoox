@@ -116,15 +116,15 @@ hx_rec_mutex_lock (HxRecMutex * mutex)
 {
   hx_size self = (hx_size) GetCurrentThreadId ();
 
-  if (mutex->owner == self)
+  if (hx_atomic_size_get (&mutex->owner) == self)
   {
     mutex->count++;
     return;
   }
 
   AcquireSRWLockExclusive ((PSRWLOCK) &mutex->srw);
-  mutex->owner = self;
   mutex->count = 1;
+  hx_atomic_size_set (&mutex->owner, self);
 }
 
 hx_boolean
@@ -132,7 +132,7 @@ hx_rec_mutex_trylock (HxRecMutex * mutex)
 {
   hx_size self = (hx_size) GetCurrentThreadId ();
 
-  if (mutex->owner == self)
+  if (hx_atomic_size_get (&mutex->owner) == self)
   {
     mutex->count++;
     return TRUE;
@@ -141,8 +141,8 @@ hx_rec_mutex_trylock (HxRecMutex * mutex)
   if (!TryAcquireSRWLockExclusive ((PSRWLOCK) &mutex->srw))
     return FALSE;
 
-  mutex->owner = self;
   mutex->count = 1;
+  hx_atomic_size_set (&mutex->owner, self);
   return TRUE;
 }
 
@@ -151,7 +151,7 @@ hx_rec_mutex_unlock (HxRecMutex * mutex)
 {
   if (--mutex->count == 0)
   {
-    mutex->owner = 0;
+    hx_atomic_size_set (&mutex->owner, 0);
     ReleaseSRWLockExclusive ((PSRWLOCK) &mutex->srw);
   }
 }

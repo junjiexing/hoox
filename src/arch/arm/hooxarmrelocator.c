@@ -22,6 +22,7 @@ struct _HooxCodeGenCtx
 };
 
 static hx_boolean hoox_arm_branch_is_unconditional (const hx_insn * insn);
+static hx_boolean hoox_arm_relocator_insn_is_supported (const hx_insn * insn);
 static hx_boolean hoox_reg_dest_is_pc (const hx_insn * insn);
 static hx_boolean hoox_reg_list_contains_pc (const hx_insn * insn,
     hx_uint8 start_index);
@@ -348,8 +349,12 @@ hoox_arm_relocator_can_relocate (hx_pointer address,
 
   do
   {
-    reloc_bytes = hoox_arm_relocator_read_one (&rl, NULL);
+    const hx_insn * insn;
+
+    reloc_bytes = hoox_arm_relocator_read_one (&rl, &insn);
     if (reloc_bytes == 0)
+      break;
+    if (!hoox_arm_relocator_insn_is_supported (insn))
       break;
 
     n = reloc_bytes;
@@ -409,6 +414,27 @@ hoox_arm_branch_is_unconditional (const hx_insn * insn)
 }
 
 static hx_boolean
+hoox_arm_relocator_insn_is_supported (const hx_insn * insn)
+{
+  const hx_arm * detail = &insn->detail->arm;
+
+  if (insn->id == HX_ARM_INS_UNSUPPORTED_PC_RELATIVE)
+    return FALSE;
+
+  if (insn->id == HX_ARM_INS_LDR && detail->op_count >= 2)
+  {
+    const hx_arm_op * source = &detail->operands[1];
+
+    if (source->type == HX_ARM_OP_MEM && source->mem.base == HX_ARM_REG_PC &&
+        (detail->writeback ||
+         (source->mem.index != HX_ARM_REG_INVALID && source->subtracted)))
+      return FALSE;
+  }
+
+  return TRUE;
+}
+
+static hx_boolean
 hoox_reg_dest_is_pc (const hx_insn * insn)
 {
   return insn->detail->arm.operands[0].reg == HX_ARM_REG_PC;
@@ -443,7 +469,6 @@ hoox_arm_relocator_rewrite_ldr (HooxArmRelocator * self,
   if (ctx->detail->writeback)
   {
     /* FIXME: LDR with writeback not yet supported. */
-    hx_assert_not_reached ();
     return FALSE;
   }
 
@@ -476,8 +501,7 @@ hoox_arm_relocator_rewrite_ldr (HooxArmRelocator * self,
     if (src->subtracted)
     {
       /* FIXME: 'LDR Rt, [Rn, -Rm, #x]' not yet supported. */
-      hoox_arm_writer_put_breakpoint (ctx->output);
-      return TRUE;
+      return FALSE;
     }
 
     /* Handle 'LDR Rt, [Rn, Rm, lsl #x]' */

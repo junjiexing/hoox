@@ -79,6 +79,9 @@ struct _HooxFunctionContext
 
 HX_GNUC_INTERNAL void _hoox_interceptor_init (void);
 HX_GNUC_INTERNAL void _hoox_interceptor_deinit (void);
+HX_GNUC_INTERNAL void _hoox_interceptor_prepare_to_fork (void);
+HX_GNUC_INTERNAL void _hoox_interceptor_recover_from_fork_in_parent (void);
+HX_GNUC_INTERNAL void _hoox_interceptor_recover_from_fork_in_child (void);
 
 HX_GNUC_INTERNAL hx_boolean _hoox_function_context_begin_invocation (
     HooxFunctionContext * function_ctx, HooxCpuContext * cpu_context,

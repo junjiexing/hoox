@@ -42,6 +42,7 @@ static void
 test_atomic (void)
 {
   hx_int v = 0;
+  hx_size wide = 0;
   hx_atomic_int_inc (&v);
   hx_atomic_int_inc (&v);
   CHECK (hx_atomic_int_get (&v) == 2);
@@ -54,6 +55,9 @@ test_atomic (void)
   CHECK (hx_atomic_pointer_compare_and_exchange (&p, NULL, newp));
   CHECK (hx_atomic_pointer_get (&p) == newp);
   CHECK (!hx_atomic_pointer_compare_and_exchange (&p, NULL, NULL));
+
+  hx_atomic_size_set (&wide, HX_MAXSIZE);
+  CHECK (hx_atomic_size_get (&wide) == HX_MAXSIZE);
 }
 
 static void

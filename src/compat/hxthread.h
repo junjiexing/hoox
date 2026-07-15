@@ -35,8 +35,8 @@ struct _HxMutex
 struct _HxRecMutex
 {
   void * srw;         /* SRWLOCK */
-  hx_size owner;        /* owning thread id (0 = none) */
-  hx_uint32 count;      /* recursion depth */
+  volatile hx_size owner; /* atomically accessed thread id (0 = none) */
+  hx_uint32 count;        /* recursion depth; only touched by the owner */
 #if HX_SIZEOF_VOID_P == 4
   hx_uint32 pad;
 #endif

@@ -365,9 +365,9 @@ _库初始化/反初始化：启动堆、TLS 和 interceptor 全局状态。_
 | `hoox_init_embedded` | 嵌入模式初始化；转发到 `hoox_init` | 公共API |
 | `hoox_deinit_embedded` | 嵌入模式反初始化；转发到 `hoox_deinit` | 公共API |
 | `hoox_shutdown` | 空操作关闭钩子（frida ABI 兼容） | 公共API |
-| `hoox_prepare_to_fork` | 空操作 fork 准备钩子（frida ABI 兼容） | 公共API |
-| `hoox_recover_from_fork_in_parent` | 空操作 fork 后父进程钩子 | 公共API |
-| `hoox_recover_from_fork_in_child` | 空操作 fork 后子进程钩子 | 公共API |
+| `hoox_prepare_to_fork` | 冻结 interceptor 全局锁、实例锁与线程上下文表 | 公共API |
+| `hoox_recover_from_fork_in_parent` | fork 后在父进程释放准备阶段持有的锁 | 公共API |
+| `hoox_recover_from_fork_in_child` | 清理消失线程的上下文/使用计数并释放继承锁 | 公共API |
 
 ### `src/core/hooxcloak-stub.c` — 已编译 ✅ · 29 loc · 4 funcs
 _frida 线程/范围 cloak 的空操作桩（不隐藏内存分配）。_

@@ -215,7 +215,7 @@ HOOX_API void hoox_invocation_context_replace_return_value (
 HOOX_API hx_pointer hoox_invocation_context_get_return_address (
     HooxInvocationContext * context);
 
-HOOX_API hx_uint hoox_invocation_context_get_thread_id (
+HOOX_API hx_size hoox_invocation_context_get_thread_id (
     HooxInvocationContext * context);
 HOOX_API hx_uint hoox_invocation_context_get_depth (
     HooxInvocationContext * context);

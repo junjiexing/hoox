@@ -23,29 +23,41 @@ HX_GNUC_INTERNAL void _hoox_tls_init (void);
 HX_GNUC_INTERNAL void _hoox_tls_deinit (void);
 HX_GNUC_INTERNAL void _hoox_tls_realize (void);
 
-static hx_int hoox_initialized = 0;
+static HxMutex hoox_lifecycle_lock;
+static hx_uint hoox_ref_count;
 
 void
 hoox_init (void)
 {
-  if (hx_atomic_int_add (&hoox_initialized, 1) != 0)
-    return;
+  hx_mutex_lock (&hoox_lifecycle_lock);
+
+  if (hoox_ref_count++ != 0)
+    goto beach;
 
   hoox_internal_heap_ref ();
   _hoox_tls_init ();
   _hoox_interceptor_init ();
   _hoox_tls_realize ();
+
+beach:
+  hx_mutex_unlock (&hoox_lifecycle_lock);
 }
 
 void
 hoox_deinit (void)
 {
-  if (hx_atomic_int_add (&hoox_initialized, -1) != 1)
-    return;
+  hx_mutex_lock (&hoox_lifecycle_lock);
+
+  hx_assert (hoox_ref_count != 0);
+  if (--hoox_ref_count != 0)
+    goto beach;
 
   _hoox_interceptor_deinit ();
   _hoox_tls_deinit ();
   hoox_internal_heap_unref ();
+
+beach:
+  hx_mutex_unlock (&hoox_lifecycle_lock);
 }
 
 void
@@ -68,14 +80,20 @@ hoox_shutdown (void)
 void
 hoox_prepare_to_fork (void)
 {
+  hx_mutex_lock (&hoox_lifecycle_lock);
+  _hoox_interceptor_prepare_to_fork ();
 }
 
 void
 hoox_recover_from_fork_in_parent (void)
 {
+  _hoox_interceptor_recover_from_fork_in_parent ();
+  hx_mutex_unlock (&hoox_lifecycle_lock);
 }
 
 void
 hoox_recover_from_fork_in_child (void)
 {
+  _hoox_interceptor_recover_from_fork_in_child ();
+  hx_mutex_unlock (&hoox_lifecycle_lock);
 }

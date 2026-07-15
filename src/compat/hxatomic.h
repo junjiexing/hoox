@@ -60,6 +60,19 @@ hx_atomic_int_compare_and_exchange (volatile hx_int * atomic,
       __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
 }
 
+static inline hx_size
+hx_atomic_size_get (const volatile hx_size * atomic)
+{
+  return __atomic_load_n (atomic, __ATOMIC_SEQ_CST);
+}
+
+static inline void
+hx_atomic_size_set (volatile hx_size * atomic,
+                    hx_size newval)
+{
+  __atomic_store_n (atomic, newval, __ATOMIC_SEQ_CST);
+}
+
 #define hx_atomic_pointer_get(atomic) \
     __atomic_load_n ((atomic), __ATOMIC_SEQ_CST)
 #define hx_atomic_pointer_set(atomic, newval) \
@@ -137,6 +150,23 @@ hx_atomic_int_compare_and_exchange (volatile hx_int * atomic,
 {
   return _InterlockedCompareExchange ((volatile long *) atomic, newval,
       oldval) == oldval;
+}
+
+static inline hx_size
+hx_atomic_size_get (const volatile hx_size * atomic)
+{
+  hx_size v = *atomic;
+  HX_ATOMIC_FENCE ();
+  return v;
+}
+
+static inline void
+hx_atomic_size_set (volatile hx_size * atomic,
+                    hx_size newval)
+{
+  HX_ATOMIC_FENCE ();
+  *atomic = newval;
+  HX_ATOMIC_FENCE ();
 }
 
 static inline hx_pointer

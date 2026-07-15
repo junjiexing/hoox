@@ -76,6 +76,9 @@ int main (void) {
 | `HOOX_USE_DLMALLOC` | 使用内置 dlmalloc 而非系统分配器。你需要自行在 include 路径上提供 `dlmalloc.c`。默认：系统 `malloc`。 |
 | `HAVE_I386` / `HAVE_ARM` / `HAVE_ARM64`，`HAVE_WINDOWS` / `HAVE_LINUX` / `HAVE_DARWIN` | 强制指定目标架构/OS。通常会从编译器内置宏（`_M_X64`、`__aarch64__`、`_WIN32` 等）自动推导；仅当无法自动判断时才需要定义。 |
 
+Apple arm64e 的 ptrauth 路径会根据 Apple Clang 的 `__arm64e__` /
+`__has_feature(ptrauth_calls)` 自动启用，普通构建和合并构建都无需手工定义宏。
+
 Windows 上需链接 `psapi`。
 
 ---
@@ -118,8 +121,10 @@ void hoox_recover_from_fork_in_child (void);
 - **`hoox_init_embedded`** / **`hoox_deinit_embedded`** —— 当 hoox 被嵌入到另一个
   管理进程级全局状态的运行时中时使用的初始化变体。
 - **`hoox_prepare_to_fork`** / **`hoox_recover_from_fork_in_parent`** /
-  **`..._in_child`** —— 包住一次 `fork()`，使内部锁/状态在父子进程中都保持一致
-  （POSIX）。
+  **`..._in_child`** —— POSIX 多线程进程调用 `fork()` 时，先在执行 fork 的线程调用
+  `prepare`，`fork()` 返回后立即在父进程调用 `..._in_parent`、在子进程调用
+  `..._in_child`。它会等待正在进行的 hook 修改、冻结内部锁，并在子进程移除已消失
+  线程的调用上下文；`prepare` 与对应的 recover 之间不要调用其它 hoox API。
 
 ---
 
@@ -184,10 +189,12 @@ void hoox_interceptor_revert (HooxInterceptor * self, hx_pointer target);
   直接重定向到 `replacement_function`，且不做调用上下文簿记。经由
   `original_function` 拿到回原实现的 trampoline，语义相同。当你在替换函数里不需要
   `get_current_invocation` 时用它。
-- **`hoox_interceptor_revert`** —— 撤销对 `target` 的 `attach`/`replace`/
-  `replace_fast`，还原原始字节。
+- **`hoox_interceptor_revert`** —— 撤销对 `target` 的 `replace` 或
+  `replace_fast`。它不会移除 listener；listener 必须用 `detach` 移除。
 
-> 同一目标只能被 *attach*（挂 listener）**或** *replace*，两者不可兼得。
+> 普通 `replace` 与 listener 可以共存：listener 会包住 replacement 的进入/离开。
+> `replace_fast` 使用不同的轻量 instrumentation 类型，因此不能与同一目标上的
+> listener 或普通 `replace` 共存。
 
 ### 事务 Transaction
 
@@ -201,8 +208,9 @@ hx_boolean hoox_interceptor_flush (HooxInterceptor * self);
   attach/detach/replace/revert 归为一组。两者之间的改动会被*暂存*，在
   `end_transaction` 时一起提交 —— 更快，且从目标角度看是原子的。事务可嵌套
   （按层计数）；最外层的 `end` 执行提交。事务之外，每个改动立即生效。
-- **`hoox_interceptor_flush`** —— 强制把任何挂起的 trampoline/代码改动立即变为可见。
-  返回是否有内容被刷新。
+- **`hoox_interceptor_flush`** —— 对 detach/revert 后尚未释放的 trampoline 执行一次
+  回收；返回 `TRUE` 表示已无挂起 teardown、相关资源可安全释放，返回 `FALSE` 表示仍有
+  线程在使用 instrumentation（事务打开时也返回 `FALSE`）。
 
 ### 当前调用与调用栈
 
@@ -247,8 +255,9 @@ void hoox_interceptor_with_lock_held (HooxInterceptor * self,
 hx_boolean hoox_interceptor_is_locked (HooxInterceptor * self);
 ```
 
-- **`hoox_interceptor_save` / `_restore`** —— 在一段区域前后保存并恢复每线程的
-  ignore 状态（以便临时修改后精确还原）。
+- **`hoox_interceptor_save` / `_restore`** —— 保存当前线程的 interception 调用栈深度，
+  并在 `restore` 时回退到该深度、释放被跳过的 trampoline 项；用于 `longjmp()` 等
+  绕过正常 on-leave 路径的非局部退出。它们不保存或恢复 ignore 状态。
 - **`hoox_interceptor_with_lock_held`** —— 在持有拦截器内部锁的情况下运行
   `func(user_data)`（进阶用法；用于把你自己的状态与 hook 安装协调一致）。
 - **`hoox_interceptor_is_locked`** —— 当前是否持有拦截器锁。
@@ -335,7 +344,7 @@ void       hoox_invocation_context_replace_nth_argument (HooxInvocationContext *
 hx_pointer hoox_invocation_context_get_return_value (HooxInvocationContext *);
 void       hoox_invocation_context_replace_return_value (HooxInvocationContext *, hx_pointer value);
 hx_pointer hoox_invocation_context_get_return_address (HooxInvocationContext *);
-hx_uint    hoox_invocation_context_get_thread_id (HooxInvocationContext *);
+hx_size    hoox_invocation_context_get_thread_id (HooxInvocationContext *);
 hx_uint    hoox_invocation_context_get_depth (HooxInvocationContext *);
 
 hx_pointer hoox_invocation_context_get_listener_thread_data (HooxInvocationContext *, hx_size size);

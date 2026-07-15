@@ -48,10 +48,10 @@ hoox_invocation_context_get_return_address (HooxInvocationContext * context)
   return _hoox_interceptor_peek_top_caller_return_address ();
 }
 
-hx_uint
+HooxThreadId
 hoox_invocation_context_get_thread_id (HooxInvocationContext * context)
 {
-  return (hx_uint) context->backend->get_thread_id (context);
+  return context->backend->get_thread_id (context);
 }
 
 hx_uint

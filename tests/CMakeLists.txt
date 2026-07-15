@@ -82,6 +82,29 @@ if(NOT WIN32)
 endif()
 add_test(NAME interceptor_threads COMMAND test_interceptor_threads)
 
+# --- listener enter/leave snapshot consistency -----------------------------
+add_executable(test_interceptor_listener_snapshot
+  core/test_interceptor_listener_snapshot.c)
+target_link_libraries(test_interceptor_listener_snapshot PRIVATE hoox)
+target_include_directories(test_interceptor_listener_snapshot PRIVATE
+  "${CMAKE_CURRENT_SOURCE_DIR}/../src/core"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../src/compat"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../src/disasm")
+add_test(NAME interceptor_listener_snapshot
+  COMMAND test_interceptor_listener_snapshot)
+
+# --- POSIX fork lock/context recovery --------------------------------------
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" OR
+    CMAKE_SYSTEM_NAME STREQUAL "FreeBSD" OR
+    CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+  add_executable(test_fork core/test_fork.c)
+  target_link_libraries(test_fork PRIVATE hoox Threads::Threads)
+  target_include_directories(test_fork PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/../include")
+  add_test(NAME fork COMMAND test_fork)
+  set_tests_properties(fork PROPERTIES TIMEOUT 15)
+endif()
+
 # --- interceptor listener-count limit test ----------------------------------
 add_executable(test_interceptor_limits core/test_interceptor_limits.c)
 target_link_libraries(test_interceptor_limits PRIVATE hoox)

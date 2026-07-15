@@ -221,6 +221,11 @@ main (void)
   CHECK (insn->id == HX_ARM_INS_INVALID, "arm mul: verbatim");
   CHECK (d->op_count == 0, "arm mul: op_count 0");
 
+  /* vldr s0, [pc] must be rejected instead of copied at a new PC. */
+  decode_arm (0xED9F0A00, ha, insn);
+  CHECK (insn->id == HX_ARM_INS_UNSUPPORTED_PC_RELATIVE,
+      "arm vldr literal: unsupported PC-relative");
+
   /* --- Thumb (same insn allocation; the arm detail layout is shared) ---- */
 
   /* cbz r3, .  (0xB11B: i=0, imm5=3 -> imm 6, target = addr+4+6) */
@@ -318,6 +323,11 @@ main (void)
   CHECK (insn->id == HX_ARM_INS_B, "t b.w.eq: id");
   CHECK (d->cc == HX_ARM_CC_EQ, "t b.w.eq: cc");
   CHECK ((uint64_t) d->operands[0].imm == BASE + 4, "t b.w.eq: target");
+
+  /* ldrsb.w r4, [pc, #0x33f] must not be copied verbatim. */
+  decode_thumb (0xF99F, 0x433F, ht, insn);
+  CHECK (insn->id == HX_ARM_INS_UNSUPPORTED_PC_RELATIVE,
+      "t ldrsb literal: unsupported PC-relative");
 
   hx_insn_free (insn, 1);
   hx_close (&ha);

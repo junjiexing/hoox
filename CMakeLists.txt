@@ -28,10 +28,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # (it is an ARCHIVE target, not RUNTIME).
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
-# MSVC: /GF pools identical string literals so equal literals share one
-# address, matching gcc/clang (a couple of tests compare a stored user-data
-# pointer against a string literal for identity). /sdl enables the extra
-# security-development-lifecycle checks and /WX treats all warnings as errors.
+# MSVC: /GF pools identical string literals, /sdl enables the extra
+# security-development-lifecycle checks, and /WX treats all warnings as errors.
 if(MSVC)
   add_compile_options(/W3 /GF /sdl /WX)
 endif()

@@ -42,7 +42,7 @@ test_function_data_listener_init_thread_state (TestFunctionDataListener * self,
     (*thread_index)++;
   }
 
-  hx_snprintf (state->name, sizeof (state->name), "%s%d",
+  hx_snprintf (state->name, sizeof (state->name), "%s%u",
       (hx_char *) function_data, *thread_index);
 
   state->initialized = TRUE;

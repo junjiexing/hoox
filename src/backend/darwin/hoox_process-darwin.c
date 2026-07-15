@@ -254,7 +254,13 @@ hoox_process_get_code_signing_policy (void)
 HooxOS
 hoox_process_get_native_os (void)
 {
+#if defined (HAVE_TVOS)
+  return HOOX_OS_TVOS;
+#elif defined (HAVE_IOS)
+  return HOOX_OS_IOS;
+#else
   return HOOX_OS_MACOS;
+#endif
 }
 
 /* ---- module enumeration (via dyld) --------------------------------------

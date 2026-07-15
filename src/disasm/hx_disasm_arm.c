@@ -102,6 +102,13 @@ init_insn (const uint8_t * code, uint64_t address, uint16_t size,
   d->op_count = 0;
 }
 
+static void
+mark_unsupported_pc_relative (hx_insn * insn)
+{
+  insn->id = HX_ARM_INS_UNSUPPORTED_PC_RELATIVE;
+  strcpy (insn->mnemonic, "unsupported-pcrel");
+}
+
 /* ---- A32 decode --------------------------------------------------------- */
 
 static void
@@ -219,6 +226,22 @@ hx_decode_arm (const uint8_t * code, uint64_t address, hx_insn * insn)
     return;
   }
 
+  /* Other single-data-transfer forms using PC as the base (LDRB/STR/etc.)
+   * are PC-relative too, but the relocator cannot rewrite them yet. */
+  if (((w >> 26) & 0x3) == 0x1 && ((w >> 16) & 0xf) == 0xf)
+  {
+    mark_unsupported_pc_relative (insn);
+    return;
+  }
+
+  /* Halfword, signed-byte/halfword, and dual-register transfers occupy the
+   * extra-load/store space. Their Rn field is still the memory base. */
+  if ((w & 0x0e000090) == 0x00000090 && ((w >> 16) & 0xf) == 0xf)
+  {
+    mark_unsupported_pc_relative (insn);
+    return;
+  }
+
   /* Data-processing: bits[27:26] == 0b00 */
   if (((w >> 26) & 0x3) == 0x0)
   {
@@ -268,7 +291,26 @@ hx_decode_arm (const uint8_t * code, uint64_t address, hx_insn * insn)
       }
       return;
     }
+    /* Unknown data-processing instructions that read PC cannot be copied to a
+     * trampoline verbatim. Register-shifted forms may read both Rm and Rs. */
+    if ((opcode != 0xd && opcode != 0xf && rn == 0xf) ||
+        (i_bit == 0 && (w & 0xf) == 0xf) ||
+        (i_bit == 0 && (w & 0x10) != 0 && ((w >> 8) & 0xf) == 0xf))
+    {
+      mark_unsupported_pc_relative (insn);
+      return;
+    }
+
     /* other data-processing opcodes: verbatim */
+    return;
+  }
+
+  /* Coprocessor loads/stores include VFP literal loads such as
+   * `vldr s0, [pc]`. Keep them out of the relocatable prefix until an A32
+   * rewrite is available. */
+  if (((w >> 25) & 0x7) == 0x6 && ((w >> 16) & 0xf) == 0xf)
+  {
+    mark_unsupported_pc_relative (insn);
     return;
   }
 
@@ -531,6 +573,17 @@ hx_decode_thumb (const uint8_t * code, uint64_t address, hx_insn * insn)
         if ((list >> i) & 1)
           set_reg_op (&d->operands[d->op_count++], r_reg (i));
       }
+      return;
+    }
+
+    /* Remaining literal-load families (LDRB/LDRSB/LDRH/LDRSH/LDRD and
+     * coprocessor forms), plus ADR.W, all derive an address from PC. */
+    if ((((h0 & 0xfe00) == 0xf800) && (h0 & 0xf) == 0xf) ||
+        (h0 & 0xfb0f) == 0xf20f ||
+        (h0 & 0xff7f) == 0xe95f ||
+        (h0 & 0xec0f) == 0xec0f)
+    {
+      mark_unsupported_pc_relative (insn);
       return;
     }
 
