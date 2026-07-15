@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 
 project(hoox
-  VERSION 0.1.0
+  VERSION 0.1.1
   DESCRIPTION "Minimal inline-hooking library (extracted from frida-gum)"
   LANGUAGES C)
 
