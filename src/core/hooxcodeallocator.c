@@ -102,6 +102,8 @@ static HooxCodeSlice * hoox_code_allocator_try_alloc_batch_near (
     HooxCodeAllocator * self, const HooxAddressSpec * spec);
 
 static void hoox_code_pages_unref (HooxCodePages * self);
+static void hoox_code_pages_unref_adapter (hx_pointer data,
+    hx_pointer user_data);
 
 static hx_boolean hoox_code_slice_is_near (const HooxCodeSlice * self,
     const HooxAddressSpec * spec);
@@ -113,6 +115,10 @@ static HooxCodeDeflectorDispatcher * hoox_code_deflector_dispatcher_new (
     hx_pointer dedicated_target);
 static void hoox_code_deflector_dispatcher_free (
     HooxCodeDeflectorDispatcher * dispatcher);
+static void hoox_code_deflector_dispatcher_free_adapter (hx_pointer data,
+    hx_pointer user_data);
+static void hoox_code_deflector_unref_adapter (hx_pointer data,
+    hx_pointer user_data);
 static void hoox_insert_deflector (hx_pointer cave,
     HooxInsertDeflectorContext * ctx);
 static void hoox_write_thunk (hx_pointer thunk,
@@ -126,6 +132,31 @@ static hx_boolean hoox_probe_module_for_code_cave (HooxModule * module,
     hx_pointer user_data);
 
 /* GObject boxed-type registrations dropped (no GLib type system). */
+
+static void
+hoox_code_pages_unref_adapter (hx_pointer data,
+                               hx_pointer user_data)
+{
+  (void) user_data;
+  hoox_code_pages_unref ((HooxCodePages *) data);
+}
+
+static void
+hoox_code_deflector_dispatcher_free_adapter (hx_pointer data,
+                                             hx_pointer user_data)
+{
+  (void) user_data;
+  hoox_code_deflector_dispatcher_free (
+      (HooxCodeDeflectorDispatcher *) data);
+}
+
+static void
+hoox_code_deflector_unref_adapter (hx_pointer data,
+                                   hx_pointer user_data)
+{
+  (void) user_data;
+  hoox_code_deflector_unref ((HooxCodeDeflector *) data);
+}
 
 void
 hoox_code_allocator_init (HooxCodeAllocator * allocator,
@@ -149,11 +180,11 @@ void
 hoox_code_allocator_free (HooxCodeAllocator * allocator)
 {
   hx_slist_foreach (allocator->dispatchers,
-      (HxFunc) hoox_code_deflector_dispatcher_free, NULL);
+      hoox_code_deflector_dispatcher_free_adapter, NULL);
   hx_slist_free (allocator->dispatchers);
   allocator->dispatchers = NULL;
 
-  hx_list_foreach (allocator->free_slices, (HxFunc) hoox_code_pages_unref, NULL);
+  hx_list_foreach (allocator->free_slices, hoox_code_pages_unref_adapter, NULL);
   hx_hash_table_unref (allocator->dirty_pages);
   hx_slist_free (allocator->uncommitted_pages);
   allocator->uncommitted_pages = NULL;
@@ -237,7 +268,7 @@ hoox_code_allocator_commit (HooxCodeAllocator * self)
 
   if (!rwx_supported)
   {
-    hx_list_foreach (self->free_slices, (HxFunc) hoox_code_pages_unref, NULL);
+    hx_list_foreach (self->free_slices, hoox_code_pages_unref_adapter, NULL);
     self->free_slices = NULL;
   }
 }
@@ -632,7 +663,8 @@ hoox_code_deflector_dispatcher_free (HooxCodeDeflectorDispatcher * dispatcher)
 
   hx_free (dispatcher->original_data);
 
-  hx_slist_foreach (dispatcher->callers, (HxFunc) hoox_code_deflector_unref, NULL);
+  hx_slist_foreach (dispatcher->callers, hoox_code_deflector_unref_adapter,
+      NULL);
   hx_slist_free (dispatcher->callers);
 
   hx_slice_free (HooxCodeDeflectorDispatcher, dispatcher);

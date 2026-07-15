@@ -20,7 +20,7 @@ JS 绑定等）。
 - **无任何第三方运行时依赖。**
 - **跨平台** —— Windows / Linux / Android / macOS / iOS / FreeBSD ×
   x86 / x86_64 / ARM / ARM64（分阶段覆盖）。
-- **可合并为单文件** —— 一个脚本把所有源码合并成单一的 `hoox.c` + `hoox.h`
+- **可合并为单文件** —— 一个脚本把当前目标所需源码合并成单一的 `hoox.c` + `hoox.h`
   （SQLite 风格）；公共头 `hoox.h` 只暴露 API。
 - **零配置即可使用** —— 静态链接、系统分配器、目标架构/OS 均为默认值；直接把
   `hoox.c`/`hoox.h` 放进项目编译即可，无需任何 `-D`。需要动态库时定义
@@ -40,8 +40,8 @@ JS 绑定等）。
 
 **Windows / Linux / Android / macOS / iOS / tvOS / FreeBSD** 均已打通并由 CI 实测（工具链
 覆盖 MSVC / clang / gcc / MinGW / AppleClang / NDK；提取 → 构建 → hook 生效 → 完整测试套件 →
-单文件合并 → example 全链路）。覆盖矩阵见下表。iOS·tvOS 目前为设备 SDK 交叉编译 + 模拟器实跑，
-**真机尚未验证**。
+单文件合并 → example 全链路）。覆盖矩阵见下表。iOS·tvOS 的 CI 覆盖设备 SDK 交叉编译 + 模拟器实跑；
+iOS ARM64 另已通过真机验证，tvOS 真机尚未验证。
 
 ## 平台支持
 
@@ -54,11 +54,13 @@ JS 绑定等）。
 | **Linux** | ✅ | ✅ | ✅ | ✅ |
 | **Android** | ✅ | ✅ | ✅ | ✅ |
 | **macOS** | ➖ | ✅ | ➖ | ✅ |
-| **iOS** | ➖ | ➖ | ➖ | ✅ |
+| **iOS** | ➖ | ➖ | ➖ | ✅ ‡ |
 | **tvOS** | ➖ | ➖ | ➖ | ✅ † |
 | **FreeBSD** | ✅ | ✅ | 🧩 | ✅ |
 
-† tvOS ARM64：设备 SDK 交叉编译 + 模拟器实跑全绿；**真机（越狱设备上的签名强制 + arm64e ptrauth）尚未测试**，后续本地验证。
+‡ iOS ARM64：iPhone 6s（A9、arm64、非 arm64e）/ iOS 15.8.2 / Dopamine 越狱真机上，interceptor 全套、amalgam 与 selfhost 回归全绿。
+
+† tvOS ARM64：设备 SDK 交叉编译 + 模拟器实跑全绿；**真机尚未测试**。iOS arm64e 同样不在当前真机覆盖范围内。
 
 
 ## 文档
@@ -75,6 +77,9 @@ cmake -B build -G Ninja        # 或 -DCMAKE_C_COMPILER=clang / gcc；MSVC 用 V
 cmake --build build
 ctest --test-dir build --output-on-failure
 ```
+
+单文件产物只包含当前 CMake 目标所选的平台/架构源码，并非跨平台通用包。可用
+`-DHOOX_ENABLE_TESTS=OFF -DHOOX_BUILD_AMALGAMATION=ON` 单独生成；发布包名会标明目标。
 
 默认构建面向主机架构（x64）。要做 32 位（x86）构建，目标设为 i686 并把 `LIB`
 指向 32 位的 MSVC/SDK 库目录：

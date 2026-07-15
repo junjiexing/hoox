@@ -361,8 +361,9 @@ hoox/
   （`backend/darwin/hooxdarwin.h`）；darwin code-segment 的 iOS 路径是老越狱签名机制（hoox 不提供，同
   DarwinGrafter），故 iOS/tvOS 用通用 stub code-segment，走与 macOS arm64 相同的 `VM_PROT_COPY` 路径。
   CI（Apple Silicon runner）：设备 SDK（`iphoneos`/`appletvos`）交叉编译（仅编译，需签名/真机才能运行）
-  + 模拟器（`iphonesimulator`/`appletvsimulator`）`simctl spawn` 跑完整套件。**真机（设备端签名强制 +
-  arm64e ptrauth）尚未测试**——需越狱设备，由作者本地验证，不在 CI 内。
+  + 模拟器（`iphonesimulator`/`appletvsimulator`）`simctl spawn` 跑完整套件。iOS ARM64 另已在
+  **iPhone 6s（A9、arm64、非 arm64e）/ iOS 15.8.2 / Dopamine 越狱真机**通过完整回归；tvOS 真机与
+  iOS arm64e 尚未覆盖，且真机验证不在 CI 内。
 - **FreeBSD**（x86 / x86_64 / ARM64；clang）：复用 `backend/posix`，新增 `backend/freebsd`，RWX 路径
   （`mprotect`，无需 `VM_PROT_COPY`）；页保护/near 分配用 `sysctl KERN_PROC_VMMAP`（非 `/proc`），线程 id
   用 `pthread_getthreadid_np`，挂起/枚举用 `thr_kill` + `sysctl KERN_PROC`，模块枚举用 `dl_iterate_phdr`。

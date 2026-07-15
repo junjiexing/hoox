@@ -111,8 +111,7 @@ hoox_darwin_run_offpage_patch (hx_pointer base,
       HOOX_ARG_ADDRESS, (HooxAddress) size,
       HOOX_ARG_ADDRESS, (HooxAddress) 0,
       HOOX_ARG_ADDRESS, rx);
-
-  hoox_arm64_writer_put_ldr_reg_u32 (&aw, HX_ARM64_REG_W0, 0);  /* success */
+  /* Return this kern_return_t in w0 instead of masking an RX restore failure. */
 
   hoox_arm64_writer_put_label (&aw, "done");
   hoox_arm64_writer_put_pop_reg_reg (&aw, HX_ARM64_REG_FP, HX_ARM64_REG_LR);

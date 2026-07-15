@@ -40,6 +40,7 @@ TESTLIST_BEGIN (x86relocator)
   TESTENTRY (rip_relative_cmpxchg)
   TESTENTRY (rip_relative_call)
   TESTENTRY (rip_relative_adjust_offset)
+  TESTENTRY (eip_relative_adjust_offset)
 #endif
 TESTLIST_END ()
 
@@ -836,6 +837,33 @@ TESTCASE (rip_relative_adjust_offset)
   fixture->rl.output->pc = HX_UINT64_CONSTANT (0x103214e75);
 
   hoox_x86_relocator_read_one (&fixture->rl, NULL);
+  hoox_x86_relocator_write_one (&fixture->rl);
+  assert_output_equals (expected_output);
+}
+
+TESTCASE (eip_relative_adjust_offset)
+{
+  hx_uint8 input[] = {
+    0x67, 0x8b, 0x05,             /* mov eax, dword ptr [eip + 0x12345678] */
+          0x78, 0x56, 0x34, 0x12,
+  };
+  hx_uint8 expected_output[sizeof (input)];
+  const HooxAddress input_pc = HX_UINT64_CONSTANT (0x12340000);
+  const HooxAddress output_pc = HX_UINT64_CONSTANT (0x56780000);
+  const hx_uint32 target = (hx_uint32) (input_pc + sizeof (input) +
+      HX_UINT64_CONSTANT (0x12345678));
+  const hx_int32 expected_disp = HX_INT32_TO_LE ((hx_int32)
+      (target - (hx_uint32) (output_pc + sizeof (input))));
+
+  memcpy (expected_output, input, sizeof (input));
+  memcpy (expected_output + 3, &expected_disp, sizeof (expected_disp));
+
+  SETUP_RELOCATOR_WITH (input);
+  fixture->rl.input_pc = input_pc;
+  fixture->cw.pc = output_pc;
+
+  hx_assert_cmpuint (hoox_x86_relocator_read_one (&fixture->rl, NULL), ==,
+      sizeof (input));
   hoox_x86_relocator_write_one (&fixture->rl);
   assert_output_equals (expected_output);
 }

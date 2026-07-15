@@ -74,8 +74,55 @@ message(STATUS "  target arch : ${HOOX_TARGET_ARCH} (family ${HOOX_ARCH_FAMILY})
 message(STATUS "  system      : ${CMAKE_SYSTEM_NAME}")
 message(STATUS "  compiler    : ${CMAKE_C_COMPILER_ID} ${CMAKE_C_COMPILER_VERSION}")
 message(STATUS "  tests       : ${HOOX_ENABLE_TESTS}")
+message(STATUS "  amalgamation: ${HOOX_BUILD_AMALGAMATION}")
 
 add_subdirectory(src)
+
+# The amalgamation contains the sources selected for this configured target;
+# it is therefore platform/architecture-specific, just like libhoox itself.
+# Tests consume it even when the standalone build option is off.
+set(HOOX_AMALGAMATION_AVAILABLE FALSE)
+if(HOOX_BUILD_AMALGAMATION OR HOOX_ENABLE_TESTS)
+  find_package(Python3 COMPONENTS Interpreter)
+  if(Python3_FOUND)
+    set(HOOX_AMALGAM_DIR "${CMAKE_BINARY_DIR}/amalgam")
+    set(HOOX_AMALGAM_C "${HOOX_AMALGAM_DIR}/hoox.c")
+    set(HOOX_AMALGAM_H "${HOOX_AMALGAM_DIR}/hoox.h")
+
+    set(_hoox_amalgam_inc_args "")
+    foreach(d ${HOOX_ALL_INCLUDE_DIRS})
+      list(APPEND _hoox_amalgam_inc_args --include-dir "${d}")
+    endforeach()
+
+    file(GLOB_RECURSE _hoox_amalgam_headers CONFIGURE_DEPENDS
+      "${CMAKE_SOURCE_DIR}/include/*.h"
+      "${CMAKE_SOURCE_DIR}/src/*.h")
+    add_custom_command(
+      OUTPUT "${HOOX_AMALGAM_C}" "${HOOX_AMALGAM_H}"
+      COMMAND ${Python3_EXECUTABLE}
+        "${CMAKE_SOURCE_DIR}/tools/amalgamate.py"
+        --out-c "${HOOX_AMALGAM_C}" --out-h "${HOOX_AMALGAM_H}"
+        ${_hoox_amalgam_inc_args}
+        --header "${CMAKE_SOURCE_DIR}/src/core/hoox.h"
+        --public-header "${CMAKE_SOURCE_DIR}/include/hoox.h"
+        ${HOOX_ALL_SOURCES}
+      DEPENDS ${HOOX_ALL_SOURCES} ${_hoox_amalgam_headers}
+        "${CMAKE_SOURCE_DIR}/tools/amalgamate.py"
+      COMMENT "Amalgamating hoox for ${CMAKE_SYSTEM_NAME}/${HOOX_TARGET_ARCH}")
+
+    if(HOOX_BUILD_AMALGAMATION)
+      add_custom_target(amalgam ALL
+        DEPENDS "${HOOX_AMALGAM_C}" "${HOOX_AMALGAM_H}")
+    else()
+      add_custom_target(amalgam
+        DEPENDS "${HOOX_AMALGAM_C}" "${HOOX_AMALGAM_H}")
+    endif()
+    set(HOOX_AMALGAMATION_AVAILABLE TRUE)
+  elseif(HOOX_BUILD_AMALGAMATION)
+    message(FATAL_ERROR
+      "HOOX_BUILD_AMALGAMATION requires a Python 3 interpreter")
+  endif()
+endif()
 
 if(HOOX_ENABLE_TESTS)
   enable_testing()

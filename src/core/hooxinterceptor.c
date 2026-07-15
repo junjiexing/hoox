@@ -1796,33 +1796,46 @@ static void
 hoox_function_context_remove_listener (HooxFunctionContext * function_ctx,
                                       HooxInvocationListener * listener)
 {
-  ListenerEntry ** slot;
+  hx_boolean removed = FALSE;
   hx_boolean has_on_leave_listener, has_unignorable_listener;
-  HxPtrArray * listener_entries;
+  HxPtrArray * old_entries, * new_entries;
   hx_uint i;
-
-  slot = hoox_function_context_find_listener (function_ctx, listener);
-  hx_assert (slot != NULL);
-  listener_entry_free (*slot);
-  *slot = NULL;
 
   has_on_leave_listener = FALSE;
   has_unignorable_listener = FALSE;
-  listener_entries =
+  old_entries =
       (HxPtrArray *) hx_atomic_pointer_get (&function_ctx->listener_entries);
-  for (i = 0; i != listener_entries->len; i++)
+  new_entries = hx_ptr_array_new_full (old_entries->len,
+      (HxDestroyNotify) listener_entry_free);
+  for (i = 0; i != old_entries->len; i++)
   {
-    ListenerEntry * entry = hx_ptr_array_index (listener_entries, i);
+    ListenerEntry * old_entry = hx_ptr_array_index (old_entries, i);
+    ListenerEntry * new_entry;
 
-    if (entry == NULL)
+    if (old_entry == NULL || old_entry->listener_instance == listener)
+    {
+      if (old_entry != NULL)
+        removed = TRUE;
+      hx_ptr_array_add (new_entries, NULL);
       continue;
+    }
 
-    if (entry->listener_interface->on_leave != NULL)
+    new_entry = hx_slice_dup (ListenerEntry, old_entry);
+    hx_ptr_array_add (new_entries, new_entry);
+
+    if (new_entry->listener_interface->on_leave != NULL)
       has_on_leave_listener = TRUE;
 
-    if (entry->unignorable)
+    if (new_entry->unignorable)
       has_unignorable_listener = TRUE;
   }
+  hx_assert (removed);
+
+  hx_atomic_pointer_set (&function_ctx->listener_entries, new_entries);
+  hoox_interceptor_transaction_schedule_destroy (
+      &function_ctx->interceptor->current_transaction, function_ctx,
+      (HxDestroyNotify) hx_ptr_array_unref, old_entries);
+
   function_ctx->has_on_leave_listener = has_on_leave_listener;
   function_ctx->has_unignorable_listener = has_unignorable_listener;
 }
@@ -1837,8 +1850,9 @@ hoox_function_context_has_listener (HooxFunctionContext * function_ctx,
 /*
  * Count the live (non-NULL) listener entries. add_listener compacts holes on
  * every insert, so the array after an insert holds count + 1 entries; a detach
- * only NULLs a slot in place. The attach path uses this to keep the entry
- * count within HOOX_MAX_LISTENERS_PER_FUNCTION, which bounds the fixed
+ * publishes a copy with the removed slot set to NULL. The attach path uses
+ * this to keep the entry count within HOOX_MAX_LISTENERS_PER_FUNCTION, which
+ * bounds the fixed
  * per-invocation listener_invocation_data[] array.
  */
 static hx_uint
