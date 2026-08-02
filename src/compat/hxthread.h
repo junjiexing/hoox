@@ -71,7 +71,12 @@ void hx_rec_mutex_recover_from_fork_in_child (HxRecMutex * mutex);
 
 hx_pointer hx_private_get (HxPrivate * key);
 void hx_private_set (HxPrivate * key, hx_pointer value);
+#ifdef HX_OS_WIN32
+/* FlsFree invokes the destroy notify for every non-NULL fiber slot. POSIX's
+ * pthread_key_delete has no equivalent semantics, so key teardown is only
+ * exposed on Windows. */
 void hx_private_clear (HxPrivate * key);
+#endif
 
 /* one-time initialisation (bracketing enter/leave). Simple global-lock
  * implementation: correct for non-nesting inits (cpu features, etc.). */
