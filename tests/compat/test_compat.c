@@ -9,6 +9,13 @@
 #include <stdio.h>
 #include <string.h>
 
+#ifdef _WIN32
+# ifndef WIN32_LEAN_AND_MEAN
+#  define WIN32_LEAN_AND_MEAN
+# endif
+# include <windows.h>
+#endif
+
 static int hx_failures = 0;
 
 #define CHECK(expr) \
@@ -77,6 +84,75 @@ test_mutex (void)
   hx_rec_mutex_unlock (&r);
   hx_rec_mutex_clear (&r);
 }
+
+#ifdef _WIN32
+
+typedef struct _PrivateClearTest PrivateClearTest;
+
+struct _PrivateClearTest
+{
+  HxPrivate key;
+  volatile hx_int ready;
+  volatile hx_int stop;
+};
+
+static volatile hx_int private_destroy_count;
+
+static void
+count_private_destroy (hx_pointer value)
+{
+  hx_atomic_int_inc (&private_destroy_count);
+  hx_free (value);
+}
+
+static DWORD WINAPI
+private_clear_worker (LPVOID data)
+{
+  PrivateClearTest * test = data;
+
+  hx_private_set (&test->key, hx_new (hx_int, 1));
+  hx_atomic_int_set (&test->ready, 1);
+  while (!hx_atomic_int_get (&test->stop))
+    Sleep (0);
+
+  return 0;
+}
+
+static void
+test_private_clear (void)
+{
+  PrivateClearTest test = {
+    HX_PRIVATE_INIT (count_private_destroy),
+    0,
+    0
+  };
+  HANDLE worker;
+
+  hx_atomic_int_set (&private_destroy_count, 0);
+
+  worker = CreateThread (NULL, 0, private_clear_worker, &test, 0, NULL);
+  CHECK (worker != NULL);
+  if (worker == NULL)
+    return;
+
+  while (!hx_atomic_int_get (&test.ready))
+    Sleep (0);
+
+  hx_private_clear (&test.key);
+  CHECK (hx_atomic_int_get (&private_destroy_count) == 1);
+  CHECK (test.key.impl == NULL);
+
+  hx_private_set (&test.key, hx_new (hx_int, 1));
+  hx_private_clear (&test.key);
+  CHECK (hx_atomic_int_get (&private_destroy_count) == 2);
+  CHECK (test.key.impl == NULL);
+
+  hx_atomic_int_set (&test.stop, 1);
+  CHECK (WaitForSingleObject (worker, INFINITE) == WAIT_OBJECT_0);
+  CloseHandle (worker);
+}
+
+#endif
 
 static void
 test_array (void)
@@ -207,6 +283,9 @@ main (void)
   test_mem ();
   test_atomic ();
   test_mutex ();
+#ifdef _WIN32
+  test_private_clear ();
+#endif
   test_array ();
   test_ptrarray ();
   test_hash ();

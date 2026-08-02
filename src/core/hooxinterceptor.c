@@ -403,6 +403,15 @@ _hoox_interceptor_deinit (void)
     hx_private_set (&hoox_interceptor_context_private, NULL);
     interceptor_thread_context_destroy (current_context);
   }
+
+#ifdef HAVE_WINDOWS
+  /* FlsFree runs the destroy callback for every non-NULL fiber slot, so this
+   * also reclaims contexts owned by other, quiescent threads. POSIX's
+   * pthread_key_delete does not run destructors; retain that process-lifetime
+   * key so stale contexts are reclaimed on thread exit or by the generation
+   * check after the next init. */
+  hx_private_clear (&hoox_interceptor_context_private);
+#endif
 }
 
 void
