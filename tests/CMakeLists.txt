@@ -191,6 +191,10 @@ if(HOOX_AMALGAMATION_AVAILABLE)
   if(WIN32)
     target_link_libraries(test_amalgam PRIVATE psapi)
     target_compile_definitions(test_amalgam PRIVATE _CRT_SECURE_NO_WARNINGS)
+    if(HOOX_WINDOWS_PATCH_PC_GUARD)
+      target_compile_definitions(test_amalgam PRIVATE
+        HOOX_WINDOWS_PATCH_PC_GUARD)
+    endif()
   else()
     # A real amalgam consumer on POSIX must link the threads library, exactly
     # as it would link the platform's pthread: hoox uses pthread keys for TLS.
@@ -222,6 +226,10 @@ if(HOOX_AMALGAMATION_AVAILABLE)
   target_include_directories(hook_example PRIVATE "${HOOX_AMALGAM_DIR}")
   if(WIN32)
     target_link_libraries(hook_example PRIVATE psapi)
+    if(HOOX_WINDOWS_PATCH_PC_GUARD)
+      target_compile_definitions(hook_example PRIVATE
+        HOOX_WINDOWS_PATCH_PC_GUARD)
+    endif()
   else()
     find_package(Threads REQUIRED)
     target_link_libraries(hook_example PRIVATE Threads::Threads)

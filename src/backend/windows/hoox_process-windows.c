@@ -79,38 +79,77 @@ hoox_thread_resume (HooxThreadId thread_id,
   return previous_count != (DWORD) -1;
 }
 
-#ifdef HOOX_WINDOWS_PATCH_PC_GUARD
-
 hx_boolean
-_hoox_windows_query_thread_ip (HooxThreadId thread_id,
-                              hx_pointer * instruction_pointer)
+_hoox_windows_suspend_thread (HooxThreadId thread_id,
+                              hx_pointer * thread_handle)
 {
+  DWORD desired_access;
   HANDLE thread;
-  CONTEXT context;
+  DWORD previous_count;
 
-  thread = OpenThread (THREAD_GET_CONTEXT | THREAD_SUSPEND_RESUME, FALSE,
-      (DWORD) thread_id);
+  desired_access = THREAD_SUSPEND_RESUME;
+#ifdef HOOX_WINDOWS_PATCH_PC_GUARD
+  desired_access |= THREAD_GET_CONTEXT;
+#endif
+
+  thread = OpenThread (desired_access, FALSE, (DWORD) thread_id);
   if (thread == NULL)
     return FALSE;
 
-  memset (&context, 0, sizeof (context));
-  context.ContextFlags = CONTEXT_CONTROL;
-  if (!GetThreadContext (thread, &context))
+  previous_count = SuspendThread (thread);
+  if (previous_count == (DWORD) -1)
   {
     CloseHandle (thread);
     return FALSE;
   }
 
-#if defined (_M_X64) || defined (_M_AMD64) || defined (__x86_64__)
-  *instruction_pointer = (hx_pointer) context.Rip;
-#else
-  *instruction_pointer = (hx_pointer) (hx_size) context.Eip;
-#endif
-
-  CloseHandle (thread);
+  *thread_handle = thread;
 
   return TRUE;
 }
+
+hx_boolean
+_hoox_windows_resume_thread (hx_pointer thread_handle)
+{
+  return ResumeThread ((HANDLE) thread_handle) != (DWORD) -1;
+}
+
+void
+_hoox_windows_close_thread (hx_pointer thread_handle)
+{
+  CloseHandle ((HANDLE) thread_handle);
+}
+
+#ifdef HOOX_WINDOWS_PATCH_PC_GUARD
+
+hx_boolean
+_hoox_windows_query_thread_ip (hx_pointer thread_handle,
+                              hx_pointer * instruction_pointer)
+{
+  HANDLE thread = (HANDLE) thread_handle;
+  CONTEXT context;
+
+  memset (&context, 0, sizeof (context));
+  context.ContextFlags = CONTEXT_CONTROL;
+  if (!GetThreadContext (thread, &context))
+    return FALSE;
+
+#if defined (_M_X64) || defined (_M_AMD64) || defined (__x86_64__)
+  *instruction_pointer = (hx_pointer) context.Rip;
+#elif defined (_M_ARM64) || defined (__aarch64__)
+  *instruction_pointer = (hx_pointer) context.Pc;
+#elif defined (_M_ARM) || defined (__arm__)
+  *instruction_pointer = (hx_pointer) (hx_size) context.Pc;
+#elif defined (_M_IX86) || defined (__i386__)
+  *instruction_pointer = (hx_pointer) (hx_size) context.Eip;
+#else
+# error Unsupported Windows architecture
+#endif
+
+  return TRUE;
+}
+
+#endif
 
 void
 _hoox_windows_sleep_ms (hx_uint milliseconds)
@@ -118,43 +157,65 @@ _hoox_windows_sleep_ms (hx_uint milliseconds)
   Sleep ((DWORD) milliseconds);
 }
 
-#endif
-
-void
-_hoox_process_enumerate_threads (HooxFoundThreadFunc func,
+hx_boolean
+_hoox_windows_enumerate_threads (HooxFoundThreadFunc func,
                                 hx_pointer user_data,
                                 HooxThreadFlags flags)
 {
   DWORD pid = GetCurrentProcessId ();
   HANDLE snapshot;
   THREADENTRY32 entry;
+  hx_boolean success = TRUE;
 
   snapshot = CreateToolhelp32Snapshot (TH32CS_SNAPTHREAD, 0);
   if (snapshot == INVALID_HANDLE_VALUE)
-    return;
+    return FALSE;
 
   entry.dwSize = sizeof (entry);
-  if (Thread32First (snapshot, &entry))
+  if (!Thread32First (snapshot, &entry))
   {
-    do
+    CloseHandle (snapshot);
+    return FALSE;
+  }
+
+  while (TRUE)
+  {
+    if (entry.th32OwnerProcessID == pid)
     {
       HooxThreadDetails details;
-
-      if (entry.th32OwnerProcessID != pid)
-        continue;
 
       memset (&details, 0, sizeof (details));
       details.flags = HOOX_THREAD_FLAGS_NONE;
       details.id = (HooxThreadId) entry.th32ThreadID;
 
       if (!func (&details, user_data))
+      {
+        success = FALSE;
         break;
+      }
     }
-    while (Thread32Next (snapshot, &entry));
+
+    SetLastError (ERROR_SUCCESS);
+    if (!Thread32Next (snapshot, &entry))
+    {
+      if (GetLastError () != ERROR_NO_MORE_FILES)
+        success = FALSE;
+      break;
+    }
   }
 
   CloseHandle (snapshot);
   (void) flags;
+
+  return success;
+}
+
+void
+_hoox_process_enumerate_threads (HooxFoundThreadFunc func,
+                                hx_pointer user_data,
+                                HooxThreadFlags flags)
+{
+  (void) _hoox_windows_enumerate_threads (func, user_data, flags);
 }
 
 HooxOS

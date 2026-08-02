@@ -54,8 +54,11 @@
 # include <mach/mach.h>
 #endif
 
+#define HOOX_WINDOWS_THREAD_SUSPEND_MAX_RETRIES 100
+
 typedef struct _HooxPatchCodeContext HooxPatchCodeContext;
 typedef struct _HooxPageLump HooxPageLump;
+typedef struct _HooxSuspendedThread HooxSuspendedThread;
 typedef struct _HooxSuspendOperation HooxSuspendOperation;
 
 
@@ -72,6 +75,14 @@ struct _HooxPageLump
   hx_pointer end;
   hx_pointer writable_start;
   hx_uint n_pages;
+};
+
+struct _HooxSuspendedThread
+{
+  HooxThreadId id;
+#ifdef HAVE_WINDOWS
+  hx_pointer handle;
+#endif
 };
 
 struct _HooxSuspendOperation
@@ -91,10 +102,13 @@ static void hoox_apply_patch_code (hx_pointer mem, hx_pointer target_page,
     hx_uint n_pages, hx_pointer user_data);
 static hx_boolean hoox_maybe_suspend_thread (const HooxThreadDetails * details,
     hx_pointer user_data);
+#ifdef HAVE_WINDOWS
+static hx_boolean hoox_suspend_all_peer_threads (HooxSuspendOperation * op);
+#endif
+static hx_boolean hoox_resume_suspended_threads (HooxSuspendOperation * op);
 #if defined (HAVE_WINDOWS) && defined (HOOX_WINDOWS_PATCH_PC_GUARD)
 static hx_boolean hoox_suspended_threads_clear_of_ranges (
     HooxSuspendOperation * op);
-static void hoox_resume_suspended_threads (HooxSuspendOperation * op);
 #endif
 
 
@@ -507,17 +521,15 @@ cleanup:
 #endif
 
       hoox_metal_array_init (&suspend_op.suspended_threads,
-          sizeof (HooxThreadId));
+          sizeof (HooxSuspendedThread));
 
       suspend_op.current_thread_id = hoox_process_get_current_thread_id ();
 #ifdef HAVE_WINDOWS
-      do
+      if (!hoox_suspend_all_peer_threads (&suspend_op))
       {
-        suspend_op.newly_suspended = 0;
-        _hoox_process_enumerate_threads (hoox_maybe_suspend_thread, &suspend_op,
-            HOOX_THREAD_FLAGS_NONE);
+        result = FALSE;
+        goto resume_threads;
       }
-      while (suspend_op.newly_suspended != 0);
 
 #ifdef HOOX_WINDOWS_PATCH_PC_GUARD
       /*
@@ -536,16 +548,18 @@ cleanup:
         }
         suspend_op.guard_attempts_left--;
 
-        hoox_resume_suspended_threads (&suspend_op);
+        if (!hoox_resume_suspended_threads (&suspend_op))
+        {
+          result = FALSE;
+          goto resume_threads;
+        }
         _hoox_windows_sleep_ms (1);
 
-        do
+        if (!hoox_suspend_all_peer_threads (&suspend_op))
         {
-          suspend_op.newly_suspended = 0;
-          _hoox_process_enumerate_threads (hoox_maybe_suspend_thread,
-              &suspend_op, HOOX_THREAD_FLAGS_NONE);
+          result = FALSE;
+          goto resume_threads;
         }
-        while (suspend_op.newly_suspended != 0);
       }
 #endif
 #else
@@ -660,21 +674,8 @@ cleanup:
 resume_threads:
     if (suspend_threads)
     {
-      hx_uint num_suspended, i;
-
-      num_suspended = suspend_op.suspended_threads.length;
-
-      for (i = 0; i != num_suspended; i++)
-      {
-        HooxThreadId * raw_id = hoox_metal_array_element_at (
-            &suspend_op.suspended_threads, i);
-
-        hoox_thread_resume (*raw_id, NULL);
-#ifdef HAVE_DARWIN
-        mach_port_mod_refs (mach_task_self (), *raw_id,
-            MACH_PORT_RIGHT_SEND, -1);
-#endif
-      }
+      if (!hoox_resume_suspended_threads (&suspend_op))
+        result = FALSE;
 
       hoox_metal_array_free (&suspend_op.suspended_threads);
     }
@@ -764,7 +765,7 @@ hoox_maybe_suspend_thread (const HooxThreadDetails * details,
                           hx_pointer user_data)
 {
   HooxSuspendOperation * op = user_data;
-  HooxThreadId * suspended_id;
+  HooxSuspendedThread * suspended;
   hx_uint i;
 
   if (details->id == op->current_thread_id)
@@ -772,23 +773,102 @@ hoox_maybe_suspend_thread (const HooxThreadDetails * details,
 
   for (i = 0; i != op->suspended_threads.length; i++)
   {
-    HooxThreadId * existing_id =
+    HooxSuspendedThread * existing =
         hoox_metal_array_element_at (&op->suspended_threads, i);
-    if (*existing_id == details->id)
+    if (existing->id == details->id)
       goto skip;
   }
 
+#ifdef HAVE_WINDOWS
+  {
+    hx_pointer thread_handle;
+
+    if (!_hoox_windows_suspend_thread (details->id, &thread_handle))
+      return FALSE;
+
+    suspended = hoox_metal_array_append (&op->suspended_threads);
+    suspended->id = details->id;
+    suspended->handle = thread_handle;
+  }
+#else
   if (!hoox_thread_suspend (details->id, NULL))
     goto skip;
 
 #ifdef HAVE_DARWIN
   mach_port_mod_refs (mach_task_self (), details->id, MACH_PORT_RIGHT_SEND, 1);
 #endif
-  suspended_id = hoox_metal_array_append (&op->suspended_threads);
-  *suspended_id = details->id;
+  suspended = hoox_metal_array_append (&op->suspended_threads);
+  suspended->id = details->id;
+#endif
+  op->newly_suspended++;
 
 skip:
   return TRUE;
+}
+
+#ifdef HAVE_WINDOWS
+static hx_boolean
+hoox_suspend_all_peer_threads (HooxSuspendOperation * op)
+{
+  hx_uint attempts_left = HOOX_WINDOWS_THREAD_SUSPEND_MAX_RETRIES;
+
+  while (TRUE)
+  {
+    hx_boolean success;
+
+    do
+    {
+      op->newly_suspended = 0;
+      success = _hoox_windows_enumerate_threads (hoox_maybe_suspend_thread, op,
+          HOOX_THREAD_FLAGS_NONE);
+    }
+    while (success && op->newly_suspended != 0);
+
+    if (success)
+      return TRUE;
+
+    /* A thread may exit between the snapshot and SuspendThread. Restart the
+     * whole operation so no successfully suspended peer is left behind. */
+    if (!hoox_resume_suspended_threads (op))
+      return FALSE;
+
+    if (attempts_left == 0)
+      return FALSE;
+    attempts_left--;
+
+    _hoox_windows_sleep_ms (1);
+  }
+}
+#endif
+
+static hx_boolean
+hoox_resume_suspended_threads (HooxSuspendOperation * op)
+{
+  hx_boolean success = TRUE;
+  hx_uint i;
+
+  for (i = 0; i != op->suspended_threads.length; i++)
+  {
+    HooxSuspendedThread * suspended =
+        hoox_metal_array_element_at (&op->suspended_threads, i);
+
+#ifdef HAVE_WINDOWS
+    if (!_hoox_windows_resume_thread (suspended->handle))
+      success = FALSE;
+    _hoox_windows_close_thread (suspended->handle);
+#else
+    if (!hoox_thread_resume (suspended->id, NULL))
+      success = FALSE;
+#ifdef HAVE_DARWIN
+    mach_port_mod_refs (mach_task_self (), suspended->id,
+        MACH_PORT_RIGHT_SEND, -1);
+#endif
+#endif
+  }
+
+  hoox_metal_array_remove_all (&op->suspended_threads);
+
+  return success;
 }
 
 #if defined (HAVE_WINDOWS) && defined (HOOX_WINDOWS_PATCH_PC_GUARD)
@@ -802,13 +882,13 @@ hoox_suspended_threads_clear_of_ranges (HooxSuspendOperation * op)
 
   for (i = 0; i != op->suspended_threads.length; i++)
   {
-    HooxThreadId * raw_id;
+    HooxSuspendedThread * suspended;
     hx_pointer ip;
     hx_uint r;
 
-    raw_id = hoox_metal_array_element_at (&op->suspended_threads, i);
+    suspended = hoox_metal_array_element_at (&op->suspended_threads, i);
 
-    if (!_hoox_windows_query_thread_ip (*raw_id, &ip))
+    if (!_hoox_windows_query_thread_ip (suspended->handle, &ip))
       return FALSE;
 
     for (r = 0; r != op->num_guard_ranges; r++)
@@ -820,22 +900,6 @@ hoox_suspended_threads_clear_of_ranges (HooxSuspendOperation * op)
   }
 
   return TRUE;
-}
-
-static void
-hoox_resume_suspended_threads (HooxSuspendOperation * op)
-{
-  hx_uint i;
-
-  for (i = 0; i != op->suspended_threads.length; i++)
-  {
-    HooxThreadId * raw_id =
-        hoox_metal_array_element_at (&op->suspended_threads, i);
-
-    hoox_thread_resume (*raw_id, NULL);
-  }
-
-  hoox_metal_array_remove_all (&op->suspended_threads);
 }
 #endif
 
