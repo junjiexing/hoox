@@ -79,6 +79,47 @@ hoox_thread_resume (HooxThreadId thread_id,
   return previous_count != (DWORD) -1;
 }
 
+#ifdef HOOX_WINDOWS_PATCH_PC_GUARD
+
+hx_boolean
+_hoox_windows_query_thread_ip (HooxThreadId thread_id,
+                              hx_pointer * instruction_pointer)
+{
+  HANDLE thread;
+  CONTEXT context;
+
+  thread = OpenThread (THREAD_GET_CONTEXT | THREAD_SUSPEND_RESUME, FALSE,
+      (DWORD) thread_id);
+  if (thread == NULL)
+    return FALSE;
+
+  memset (&context, 0, sizeof (context));
+  context.ContextFlags = CONTEXT_CONTROL;
+  if (!GetThreadContext (thread, &context))
+  {
+    CloseHandle (thread);
+    return FALSE;
+  }
+
+#if defined (_M_X64) || defined (_M_AMD64) || defined (__x86_64__)
+  *instruction_pointer = (hx_pointer) context.Rip;
+#else
+  *instruction_pointer = (hx_pointer) (hx_size) context.Eip;
+#endif
+
+  CloseHandle (thread);
+
+  return TRUE;
+}
+
+void
+_hoox_windows_sleep_ms (hx_uint milliseconds)
+{
+  Sleep ((DWORD) milliseconds);
+}
+
+#endif
+
 void
 _hoox_process_enumerate_threads (HooxFoundThreadFunc func,
                                 hx_pointer user_data,

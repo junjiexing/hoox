@@ -1688,6 +1688,9 @@ hoox_interceptor_transaction_end (HooxInterceptorTransaction * self)
   HooxInterceptor * interceptor = self->interceptor;
   HooxInterceptorTransaction transaction_copy;
   HxPtrArray * addresses;
+#ifdef HOOX_WINDOWS_PATCH_PC_GUARD
+  HxArray * guard_ranges;
+#endif
   HxHashTableIter iter;
   hx_pointer address;
 
@@ -1717,8 +1720,44 @@ hoox_interceptor_transaction_end (HooxInterceptorTransaction * self)
   addresses =
       hx_ptr_array_sized_new (hx_hash_table_size (self->pending_update_tasks));
   hx_hash_table_iter_init (&iter, self->pending_update_tasks);
+#ifdef HOOX_WINDOWS_PATCH_PC_GUARD
+  guard_ranges = hx_array_new (FALSE, FALSE, sizeof (HooxPcGuardRange));
+  {
+    hx_pointer value;
+
+    while (hx_hash_table_iter_next (&iter, &address, &value))
+    {
+      HxArray * pending = value;
+      hx_uint i;
+
+      hx_ptr_array_add (addresses, address);
+
+      /*
+       * A peer thread parked inside the overwritten prologue bytes (past the
+       * first byte, which is safe in both patch directions) must not stay
+       * suspended while the patch is written, so guard each such range.
+       */
+      for (i = 0; i != pending->len; i++)
+      {
+        HooxUpdateTask * update;
+        HooxPcGuardRange range;
+        hx_uint8 * function_address;
+
+        update = &hx_array_index (pending, HooxUpdateTask, i);
+
+        function_address =
+            _hoox_interceptor_backend_get_function_address (update->ctx);
+        range.begin = function_address + 1;
+        range.end = function_address + update->ctx->overwritten_prologue_len;
+
+        hx_array_append_val (guard_ranges, range);
+      }
+    }
+  }
+#else
   while (hx_hash_table_iter_next (&iter, &address, NULL))
     hx_ptr_array_add (addresses, address);
+#endif
   hx_ptr_array_sort (addresses, (HxCompareFunc) hoox_page_address_compare);
 
   if (hoox_process_get_code_signing_policy () == HOOX_CODE_SIGNING_REQUIRED)
@@ -1747,10 +1786,23 @@ hoox_interceptor_transaction_end (HooxInterceptorTransaction * self)
       }
     }
   }
-  else if (!hoox_memory_patch_code_pages (addresses, FALSE, hoox_apply_updates,
-        self))
+  else
   {
-    hx_abort ();
+#ifdef HOOX_WINDOWS_PATCH_PC_GUARD
+    const hx_boolean patched = hoox_memory_patch_code_pages_guarded (addresses,
+        FALSE, hoox_apply_updates, self,
+        (guard_ranges->len != 0)
+            ? (const HooxPcGuardRange *) guard_ranges->data
+            : NULL,
+        guard_ranges->len, 100);
+    hx_array_unref (guard_ranges);
+#else
+    const hx_boolean patched = hoox_memory_patch_code_pages (addresses, FALSE,
+        hoox_apply_updates, self);
+#endif
+
+    if (!patched)
+      hx_abort ();
   }
 
   hx_ptr_array_unref (addresses);

@@ -79,12 +79,23 @@ struct _HooxSuspendOperation
   HooxThreadId current_thread_id;
   HooxMetalArray suspended_threads;
   hx_uint newly_suspended;
+
+#ifdef HOOX_WINDOWS_PATCH_PC_GUARD
+  const HooxPcGuardRange * guard_ranges;
+  hx_uint num_guard_ranges;
+  hx_uint guard_attempts_left;
+#endif
 };
 
 static void hoox_apply_patch_code (hx_pointer mem, hx_pointer target_page,
     hx_uint n_pages, hx_pointer user_data);
 static hx_boolean hoox_maybe_suspend_thread (const HooxThreadDetails * details,
     hx_pointer user_data);
+#if defined (HAVE_WINDOWS) && defined (HOOX_WINDOWS_PATCH_PC_GUARD)
+static hx_boolean hoox_suspended_threads_clear_of_ranges (
+    HooxSuspendOperation * op);
+static void hoox_resume_suspended_threads (HooxSuspendOperation * op);
+#endif
 
 
 static hx_uint hoox_heap_ref_count = 0;
@@ -294,6 +305,31 @@ hoox_memory_patch_code_pages (HxPtrArray * sorted_addresses,
                              HooxMemoryPatchPagesApplyFunc apply,
                              hx_pointer apply_data)
 {
+  return hoox_memory_patch_code_pages_guarded (sorted_addresses, coalesce,
+      apply, apply_data, NULL, 0, 0);
+}
+
+/**
+ * hoox_memory_patch_code_pages_guarded: (skip)
+ *
+ * Safely modifies code pages at the given addresses. When built with
+ * HOOX_WINDOWS_PATCH_PC_GUARD, additionally ensures (on Windows, where peer
+ * threads are suspended while the patch bytes are written) that no suspended
+ * thread's instruction pointer sits inside any of the given guard ranges.
+ * Threads parked inside a range would resume executing from the middle of the
+ * patched bytes and crash, so they are resumed, given a moment to move on, and
+ * the suspend-and-scan is retried up to @max_guard_attempts times before
+ * giving up. Without HOOX_WINDOWS_PATCH_PC_GUARD the guard ranges are ignored.
+ */
+hx_boolean
+hoox_memory_patch_code_pages_guarded (HxPtrArray * sorted_addresses,
+                             hx_boolean coalesce,
+                             HooxMemoryPatchPagesApplyFunc apply,
+                             hx_pointer apply_data,
+                             const HooxPcGuardRange * guard_ranges,
+                             hx_uint num_guard_ranges,
+                             hx_uint max_guard_attempts)
+{
   hx_boolean result = TRUE;
   hx_size page_size;
   hx_uint i;
@@ -301,6 +337,12 @@ hoox_memory_patch_code_pages (HxPtrArray * sorted_addresses,
   hx_uint apply_num_pages;
   hx_boolean rwx_supported;
   hx_boolean suspend_threads;
+
+#if !defined (HAVE_WINDOWS) || !defined (HOOX_WINDOWS_PATCH_PC_GUARD)
+  (void) guard_ranges;
+  (void) num_guard_ranges;
+  (void) max_guard_attempts;
+#endif
 
   rwx_supported = hoox_query_is_rwx_supported ();
   suspend_threads = !rwx_supported;
@@ -458,6 +500,12 @@ cleanup:
 
     if (suspend_threads)
     {
+#ifdef HOOX_WINDOWS_PATCH_PC_GUARD
+      suspend_op.guard_ranges = guard_ranges;
+      suspend_op.num_guard_ranges = num_guard_ranges;
+      suspend_op.guard_attempts_left = max_guard_attempts;
+#endif
+
       hoox_metal_array_init (&suspend_op.suspended_threads,
           sizeof (HooxThreadId));
 
@@ -470,6 +518,36 @@ cleanup:
             HOOX_THREAD_FLAGS_NONE);
       }
       while (suspend_op.newly_suspended != 0);
+
+#ifdef HOOX_WINDOWS_PATCH_PC_GUARD
+      /*
+       * A suspended peer thread whose instruction pointer sits inside a range
+       * we are about to overwrite would resume executing from the middle of
+       * the patched bytes and crash. Resume all threads, give them a moment
+       * to move past the ranges, then suspend and scan again, with a bounded
+       * number of attempts before giving up.
+       */
+      while (!hoox_suspended_threads_clear_of_ranges (&suspend_op))
+      {
+        if (suspend_op.guard_attempts_left == 0)
+        {
+          result = FALSE;
+          goto resume_threads;
+        }
+        suspend_op.guard_attempts_left--;
+
+        hoox_resume_suspended_threads (&suspend_op);
+        _hoox_windows_sleep_ms (1);
+
+        do
+        {
+          suspend_op.newly_suspended = 0;
+          _hoox_process_enumerate_threads (hoox_maybe_suspend_thread,
+              &suspend_op, HOOX_THREAD_FLAGS_NONE);
+        }
+        while (suspend_op.newly_suspended != 0);
+      }
+#endif
 #else
       suspend_op.newly_suspended = 0;
       _hoox_process_enumerate_threads (hoox_maybe_suspend_thread, &suspend_op,
@@ -712,6 +790,54 @@ hoox_maybe_suspend_thread (const HooxThreadDetails * details,
 skip:
   return TRUE;
 }
+
+#if defined (HAVE_WINDOWS) && defined (HOOX_WINDOWS_PATCH_PC_GUARD)
+static hx_boolean
+hoox_suspended_threads_clear_of_ranges (HooxSuspendOperation * op)
+{
+  hx_uint i;
+
+  if (op->num_guard_ranges == 0)
+    return TRUE;
+
+  for (i = 0; i != op->suspended_threads.length; i++)
+  {
+    HooxThreadId * raw_id;
+    hx_pointer ip;
+    hx_uint r;
+
+    raw_id = hoox_metal_array_element_at (&op->suspended_threads, i);
+
+    if (!_hoox_windows_query_thread_ip (*raw_id, &ip))
+      return FALSE;
+
+    for (r = 0; r != op->num_guard_ranges; r++)
+    {
+      if ((const hx_uint8 *) ip >= (const hx_uint8 *) op->guard_ranges[r].begin &&
+          (const hx_uint8 *) ip < (const hx_uint8 *) op->guard_ranges[r].end)
+        return FALSE;
+    }
+  }
+
+  return TRUE;
+}
+
+static void
+hoox_resume_suspended_threads (HooxSuspendOperation * op)
+{
+  hx_uint i;
+
+  for (i = 0; i != op->suspended_threads.length; i++)
+  {
+    HooxThreadId * raw_id =
+        hoox_metal_array_element_at (&op->suspended_threads, i);
+
+    hoox_thread_resume (*raw_id, NULL);
+  }
+
+  hoox_metal_array_remove_all (&op->suspended_threads);
+}
+#endif
 
 /* hoox:test-only-begin */
 hx_boolean
