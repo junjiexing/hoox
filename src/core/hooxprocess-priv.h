@@ -22,6 +22,18 @@ HX_GNUC_INTERNAL void _hoox_process_enumerate_ranges (HooxPageProtection prot,
 
 #ifdef HAVE_WINDOWS
 HX_GNUC_INTERNAL hx_boolean _hoox_windows_is_win7_wow64 (void);
+HX_GNUC_INTERNAL hx_boolean _hoox_windows_enumerate_threads (
+    HooxFoundThreadFunc func, hx_pointer user_data, HooxThreadFlags flags);
+HX_GNUC_INTERNAL hx_boolean _hoox_windows_suspend_thread (
+    HooxThreadId thread_id, hx_pointer * thread_handle);
+HX_GNUC_INTERNAL hx_boolean _hoox_windows_resume_thread (
+    hx_pointer thread_handle);
+HX_GNUC_INTERNAL void _hoox_windows_close_thread (hx_pointer thread_handle);
+#ifdef HOOX_WINDOWS_PATCH_PC_GUARD
+HX_GNUC_INTERNAL hx_boolean _hoox_windows_query_thread_ip (
+    hx_pointer thread_handle, hx_pointer * instruction_pointer);
+#endif
+HX_GNUC_INTERNAL void _hoox_windows_sleep_ms (hx_uint milliseconds);
 #else
 # define _hoox_windows_is_win7_wow64() FALSE
 #endif

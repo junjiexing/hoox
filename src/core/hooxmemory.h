@@ -27,6 +27,7 @@ typedef hx_uint HooxRwxSupport;
 typedef hx_uint HooxMemoryOperation;
 typedef hx_uint HooxPageProtection;
 typedef struct _HooxAddressSpec HooxAddressSpec;
+typedef struct _HooxPcGuardRange HooxPcGuardRange;
 typedef struct _HooxRangeDetails HooxRangeDetails;
 typedef struct _HooxMemoryRange HooxMemoryRange;
 typedef struct _HooxFileMapping HooxFileMapping;
@@ -65,6 +66,12 @@ struct _HooxAddressSpec
 {
   hx_pointer near_address;
   hx_size max_distance;
+};
+
+struct _HooxPcGuardRange
+{
+  hx_pointer begin;
+  hx_pointer end;
 };
 
 struct _HooxRangeDetails
@@ -110,6 +117,13 @@ HOOX_API hx_boolean hoox_memory_patch_code (hx_pointer address, hx_size size,
 HOOX_API hx_boolean hoox_memory_patch_code_pages (HxPtrArray * sorted_addresses,
     hx_boolean coalesce, HooxMemoryPatchPagesApplyFunc apply,
     hx_pointer apply_data);
+/* Guard ranges are honored only when built with HOOX_WINDOWS_PATCH_PC_GUARD;
+ * otherwise they are ignored and this behaves like hoox_memory_patch_code_pages. */
+HOOX_API hx_boolean hoox_memory_patch_code_pages_guarded (
+    HxPtrArray * sorted_addresses, hx_boolean coalesce,
+    HooxMemoryPatchPagesApplyFunc apply, hx_pointer apply_data,
+    const HooxPcGuardRange * guard_ranges, hx_uint num_guard_ranges,
+    hx_uint max_guard_attempts);
 HOOX_API hx_boolean hoox_memory_can_remap_writable (void);
 HOOX_API hx_pointer hoox_memory_try_remap_writable_pages (hx_pointer first_page,
     hx_uint n_pages);

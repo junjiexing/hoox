@@ -66,6 +66,8 @@ endif()
 # ---------------------------------------------------------------------------
 option(HOOX_ENABLE_TESTS "Build tests" ON)
 option(HOOX_BUILD_AMALGAMATION "Build the amalgamated single-file library" OFF)
+option(HOOX_WINDOWS_PATCH_PC_GUARD
+  "On Windows, scan suspended thread instruction pointers against patched byte ranges" OFF)
 
 message(STATUS "hoox ${PROJECT_VERSION}")
 message(STATUS "  target arch : ${HOOX_TARGET_ARCH} (family ${HOOX_ARCH_FAMILY})")
@@ -73,6 +75,7 @@ message(STATUS "  system      : ${CMAKE_SYSTEM_NAME}")
 message(STATUS "  compiler    : ${CMAKE_C_COMPILER_ID} ${CMAKE_C_COMPILER_VERSION}")
 message(STATUS "  tests       : ${HOOX_ENABLE_TESTS}")
 message(STATUS "  amalgamation: ${HOOX_BUILD_AMALGAMATION}")
+message(STATUS "  pc guard    : ${HOOX_WINDOWS_PATCH_PC_GUARD}")
 
 add_subdirectory(src)
 
