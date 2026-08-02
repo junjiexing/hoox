@@ -46,6 +46,7 @@ hoox_thread_suspend (HooxThreadId thread_id,
                     HxError ** error)
 {
   HANDLE thread;
+  DWORD previous_count;
 
   (void) error;
 
@@ -53,10 +54,10 @@ hoox_thread_suspend (HooxThreadId thread_id,
   if (thread == NULL)
     return FALSE;
 
-  SuspendThread (thread);
+  previous_count = SuspendThread (thread);
   CloseHandle (thread);
 
-  return TRUE;
+  return previous_count != (DWORD) -1;
 }
 
 hx_boolean
@@ -64,6 +65,7 @@ hoox_thread_resume (HooxThreadId thread_id,
                    HxError ** error)
 {
   HANDLE thread;
+  DWORD previous_count;
 
   (void) error;
 
@@ -71,10 +73,10 @@ hoox_thread_resume (HooxThreadId thread_id,
   if (thread == NULL)
     return FALSE;
 
-  ResumeThread (thread);
+  previous_count = ResumeThread (thread);
   CloseHandle (thread);
 
-  return TRUE;
+  return previous_count != (DWORD) -1;
 }
 
 void

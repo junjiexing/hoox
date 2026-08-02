@@ -78,6 +78,7 @@ struct _HooxSuspendOperation
 {
   HooxThreadId current_thread_id;
   HooxMetalArray suspended_threads;
+  hx_uint newly_suspended;
 };
 
 static void hoox_apply_patch_code (hx_pointer mem, hx_pointer target_page,
@@ -299,8 +300,15 @@ hoox_memory_patch_code_pages (HxPtrArray * sorted_addresses,
   hx_uint8 * apply_start = NULL, * apply_target_start = NULL;
   hx_uint apply_num_pages;
   hx_boolean rwx_supported;
+  hx_boolean suspend_threads;
 
   rwx_supported = hoox_query_is_rwx_supported ();
+  suspend_threads = !rwx_supported;
+#ifdef HAVE_WINDOWS
+  /* Windows normally takes the RWX path, but multi-byte x86/x64 patches are
+   * not atomic. Keep peer threads out of the target bytes while they change. */
+  suspend_threads = TRUE;
+#endif
   page_size = hoox_query_page_size ();
 
   if (hoox_memory_can_remap_writable ())
@@ -447,14 +455,26 @@ cleanup:
       }
 #endif
     }
-    else
+
+    if (suspend_threads)
     {
       hoox_metal_array_init (&suspend_op.suspended_threads,
           sizeof (HooxThreadId));
 
       suspend_op.current_thread_id = hoox_process_get_current_thread_id ();
+#ifdef HAVE_WINDOWS
+      do
+      {
+        suspend_op.newly_suspended = 0;
+        _hoox_process_enumerate_threads (hoox_maybe_suspend_thread, &suspend_op,
+            HOOX_THREAD_FLAGS_NONE);
+      }
+      while (suspend_op.newly_suspended != 0);
+#else
+      suspend_op.newly_suspended = 0;
       _hoox_process_enumerate_threads (hoox_maybe_suspend_thread, &suspend_op,
           HOOX_THREAD_FLAGS_NONE);
+#endif
     }
 
 #if defined (HAVE_DARWIN) && defined (HAVE_ARM64)
@@ -560,7 +580,7 @@ cleanup:
     }
 
 resume_threads:
-    if (!rwx_supported)
+    if (suspend_threads)
     {
       hx_uint num_suspended, i;
 
@@ -667,9 +687,18 @@ hoox_maybe_suspend_thread (const HooxThreadDetails * details,
 {
   HooxSuspendOperation * op = user_data;
   HooxThreadId * suspended_id;
+  hx_uint i;
 
   if (details->id == op->current_thread_id)
     goto skip;
+
+  for (i = 0; i != op->suspended_threads.length; i++)
+  {
+    HooxThreadId * existing_id =
+        hoox_metal_array_element_at (&op->suspended_threads, i);
+    if (*existing_id == details->id)
+      goto skip;
+  }
 
   if (!hoox_thread_suspend (details->id, NULL))
     goto skip;
