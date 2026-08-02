@@ -166,7 +166,8 @@ endif()
 
 # --- amalgamation (single-file) build + test (M7) — every arch --------------
 # Generation is defined at the top level so HOOX_BUILD_AMALGAMATION also works
-# with tests disabled. Here we compile and run the configured target's output.
+# with tests disabled. Here each target compiles and runs the same universal
+# output, exercising the branch selected by that target's compiler built-ins.
 if(HOOX_AMALGAMATION_AVAILABLE)
   # Build the interceptor suite against the single-file library only (the
   # test files still use the normal headers for declarations; hoox.c

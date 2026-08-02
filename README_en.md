@@ -21,8 +21,10 @@ resolution, JS bindings, …).
 - **No third-party runtime dependencies.**
 - **Cross-platform** — Windows / Linux / Android / macOS / iOS / FreeBSD ×
   x86 / x86_64 / ARM / ARM64 (coverage staged).
-- **Amalgamatable** — a script merges the selected target sources into one `hoox.c` + `hoox.h`
-  (SQLite-style); the public `hoox.h` exposes only the API.
+- **Universal amalgamation** — a script merges every supported target into one
+  portable `hoox.c` + `hoox.h` pair (SQLite-style); compiler built-ins select
+  the architecture and OS at compile time, and the public `hoox.h` exposes only
+  the API.
 - **Zero-config to consume** — static linkage, the system allocator, and the
   target arch/OS are all defaults; drop `hoox.c`/`hoox.h` in and compile, no `-D`
   flags. Opt into a DLL with `HOOX_SHARED`, or dlmalloc with `HOOX_USE_DLMALLOC`.
@@ -83,9 +85,10 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-An amalgamation contains only the sources selected for the configured CMake
-platform/architecture; it is not a universal package. Generate it alone with
-`-DHOOX_ENABLE_TESTS=OFF -DHOOX_BUILD_AMALGAMATION=ON`; release names state the target.
+The amalgamation is universal: every supported CMake target generates the same
+`hoox.c`/`hoox.h`, and that pair can be compiled unchanged on any supported
+platform/architecture. Generate it alone with
+`-DHOOX_ENABLE_TESTS=OFF -DHOOX_BUILD_AMALGAMATION=ON`.
 
 The default build targets the host arch (x64). For a 32-bit (x86) build, target
 i686 and point `LIB` at the 32-bit MSVC/SDK library directories:

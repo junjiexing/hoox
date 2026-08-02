@@ -20,8 +20,9 @@ JS 绑定等）。
 - **无任何第三方运行时依赖。**
 - **跨平台** —— Windows / Linux / Android / macOS / iOS / FreeBSD ×
   x86 / x86_64 / ARM / ARM64（分阶段覆盖）。
-- **可合并为单文件** —— 一个脚本把当前目标所需源码合并成单一的 `hoox.c` + `hoox.h`
-  （SQLite 风格）；公共头 `hoox.h` 只暴露 API。
+- **全平台单文件合并** —— 一个脚本把所有已支持目标合并成一套通用的
+  `hoox.c` + `hoox.h`（SQLite 风格）；编译时由编译器内置宏选择架构与 OS，
+  公共头 `hoox.h` 只暴露 API。
 - **零配置即可使用** —— 静态链接、系统分配器、目标架构/OS 均为默认值；直接把
   `hoox.c`/`hoox.h` 放进项目编译即可，无需任何 `-D`。需要动态库时定义
   `HOOX_SHARED`，需要 dlmalloc 时定义 `HOOX_USE_DLMALLOC`。
@@ -79,8 +80,9 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-单文件产物只包含当前 CMake 目标所选的平台/架构源码，并非跨平台通用包。可用
-`-DHOOX_ENABLE_TESTS=OFF -DHOOX_BUILD_AMALGAMATION=ON` 单独生成；发布包名会标明目标。
+单文件产物是全平台通用的：所有已支持的 CMake 目标都会生成完全相同的
+`hoox.c`/`hoox.h`，同一套文件无需修改即可在任一已支持的平台/架构上编译。
+可用 `-DHOOX_ENABLE_TESTS=OFF -DHOOX_BUILD_AMALGAMATION=ON` 单独生成。
 
 默认构建面向主机架构（x64）。要做 32 位（x86）构建，目标设为 i686 并把 `LIB`
 指向 32 位的 MSVC/SDK 库目录：

@@ -66,16 +66,16 @@ A fully worked, runnable tour of every feature is in
 ## Build-time macros
 
 Consuming the amalgamated `hoox.c`/`hoox.h` needs **no** `-D` flags in the
-common case. Each amalgamation contains the sources selected for its configured
-platform/architecture, so use one matching your target; it is not universal.
-Define a macro only to opt out of a default:
+common case. The same universal pair contains every supported target; compiler
+built-ins select the matching architecture and OS when `hoox.c` is compiled.
+Define a macro only to opt out of a default or override target detection:
 
 | Macro | Effect |
 |---|---|
 | `HOOX_SHARED` | Consume hoox as a Windows DLL — `HOOX_API` becomes `__declspec(dllimport)`. Default is static linkage (`HOOX_API` empty). |
 | `HOOX_EXPORTS` | Set **while building** a hoox DLL (with `HOOX_SHARED`) → `__declspec(dllexport)`. |
 | `HOOX_USE_DLMALLOC` | Use a bundled dlmalloc instead of the system allocator. You must supply `dlmalloc.c` on the include path. Default: system `malloc`. |
-| `HAVE_I386` / `HAVE_ARM` / `HAVE_ARM64`, `HAVE_WINDOWS` / `HAVE_LINUX` / `HAVE_DARWIN` | Force the target arch/OS. Normally auto-detected from compiler built-ins (`_M_X64`, `__aarch64__`, `_WIN32`, …); define only if detection cannot classify your target. |
+| `HAVE_I386` / `HAVE_ARM` / `HAVE_ARM64`, `HAVE_WINDOWS` / `HAVE_LINUX` / `HAVE_ANDROID` / `HAVE_DARWIN` / `HAVE_IOS` / `HAVE_TVOS` / `HAVE_FREEBSD` | Force the target arch/OS. Normally auto-detected from compiler built-ins (`_M_X64`, `__aarch64__`, `_WIN32`, `__ANDROID__`, …); define only if detection cannot classify your target. |
 
 On Apple arm64e, the ptrauth paths are enabled automatically from Apple
 Clang's `__arm64e__` / `__has_feature(ptrauth_calls)` in both normal and

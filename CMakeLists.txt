@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 
 project(hoox
-  VERSION 0.1.2
+  VERSION 0.2.0
   DESCRIPTION "Minimal inline-hooking library (extracted from frida-gum)"
   LANGUAGES C)
 
@@ -65,7 +65,7 @@ endif()
 # Options
 # ---------------------------------------------------------------------------
 option(HOOX_ENABLE_TESTS "Build tests" ON)
-option(HOOX_BUILD_AMALGAMATION "Build the amalgamated single-file library" OFF)
+option(HOOX_BUILD_AMALGAMATION "Build the universal single-file library" OFF)
 option(HOOX_WINDOWS_PATCH_PC_GUARD
   "On Windows, scan suspended thread instruction pointers against patched byte ranges" OFF)
 
@@ -79,9 +79,10 @@ message(STATUS "  pc guard    : ${HOOX_WINDOWS_PATCH_PC_GUARD}")
 
 add_subdirectory(src)
 
-# The amalgamation contains the sources selected for this configured target;
-# it is therefore platform/architecture-specific, just like libhoox itself.
-# Tests consume it even when the standalone build option is off.
+# The amalgamation is universal: every supported architecture and OS backend
+# is present behind the same compiler-macro detection used by hooxdefs.h. Every
+# CI target compiles and runs this exact output, while the normal static library
+# remains target-selected by src/CMakeLists.txt.
 set(HOOX_AMALGAMATION_AVAILABLE FALSE)
 if(HOOX_BUILD_AMALGAMATION OR HOOX_ENABLE_TESTS)
   find_package(Python3 COMPONENTS Interpreter)
@@ -90,26 +91,76 @@ if(HOOX_BUILD_AMALGAMATION OR HOOX_ENABLE_TESTS)
     set(HOOX_AMALGAM_C "${HOOX_AMALGAM_DIR}/hoox.c")
     set(HOOX_AMALGAM_H "${HOOX_AMALGAM_DIR}/hoox.h")
 
-    set(_hoox_amalgam_inc_args "")
-    foreach(d ${HOOX_ALL_INCLUDE_DIRS})
-      list(APPEND _hoox_amalgam_inc_args --include-dir "${d}")
-    endforeach()
-
     file(GLOB_RECURSE _hoox_amalgam_headers CONFIGURE_DEPENDS
       "${CMAKE_SOURCE_DIR}/include/*.h"
       "${CMAKE_SOURCE_DIR}/src/*.h")
+    set(_hoox_amalgam_include_dirs
+      "${CMAKE_SOURCE_DIR}/include"
+      "${CMAKE_SOURCE_DIR}/src")
+    foreach(h ${_hoox_amalgam_headers})
+      get_filename_component(d "${h}" DIRECTORY)
+      list(APPEND _hoox_amalgam_include_dirs "${d}")
+    endforeach()
+    list(REMOVE_DUPLICATES _hoox_amalgam_include_dirs)
+
+    set(_hoox_amalgam_inc_args "")
+    foreach(d ${_hoox_amalgam_include_dirs})
+      list(APPEND _hoox_amalgam_inc_args --include-dir "${d}")
+    endforeach()
+
+    # Preserve the proven target-amalgamation layer order while including every
+    # implementation. tools/amalgamate.py supplies the mutually-exclusive
+    # architecture/OS guards.
+    file(GLOB _hoox_amalgam_compat CONFIGURE_DEPENDS
+      "${CMAKE_SOURCE_DIR}/src/compat/*.c")
+    file(GLOB _hoox_amalgam_disasm CONFIGURE_DEPENDS
+      "${CMAKE_SOURCE_DIR}/src/disasm/*.c")
+    file(GLOB_RECURSE _hoox_amalgam_arch CONFIGURE_DEPENDS
+      "${CMAKE_SOURCE_DIR}/src/arch/*.c")
+    file(GLOB _hoox_amalgam_core CONFIGURE_DEPENDS
+      "${CMAKE_SOURCE_DIR}/src/core/*.c")
+    file(GLOB _hoox_amalgam_backend_posix CONFIGURE_DEPENDS
+      "${CMAKE_SOURCE_DIR}/src/backend/posix/*.c")
+    file(GLOB _hoox_amalgam_backend_windows CONFIGURE_DEPENDS
+      "${CMAKE_SOURCE_DIR}/src/backend/windows/*.c")
+    file(GLOB _hoox_amalgam_backend_linux CONFIGURE_DEPENDS
+      "${CMAKE_SOURCE_DIR}/src/backend/linux/*.c")
+    file(GLOB _hoox_amalgam_backend_android CONFIGURE_DEPENDS
+      "${CMAKE_SOURCE_DIR}/src/backend/android/*.c")
+    file(GLOB _hoox_amalgam_backend_darwin CONFIGURE_DEPENDS
+      "${CMAKE_SOURCE_DIR}/src/backend/darwin/*.c")
+    file(GLOB _hoox_amalgam_backend_freebsd CONFIGURE_DEPENDS
+      "${CMAKE_SOURCE_DIR}/src/backend/freebsd/*.c")
+    file(GLOB _hoox_amalgam_backend_arch CONFIGURE_DEPENDS
+      "${CMAKE_SOURCE_DIR}/src/backend/x86/*.c"
+      "${CMAKE_SOURCE_DIR}/src/backend/arm/*.c"
+      "${CMAKE_SOURCE_DIR}/src/backend/arm64/*.c")
+    set(_hoox_amalgam_sources
+      ${_hoox_amalgam_compat}
+      ${_hoox_amalgam_disasm}
+      ${_hoox_amalgam_arch}
+      ${_hoox_amalgam_core}
+      ${_hoox_amalgam_backend_posix}
+      ${_hoox_amalgam_backend_windows}
+      ${_hoox_amalgam_backend_linux}
+      ${_hoox_amalgam_backend_android}
+      ${_hoox_amalgam_backend_darwin}
+      ${_hoox_amalgam_backend_freebsd}
+      ${_hoox_amalgam_backend_arch})
+
     add_custom_command(
       OUTPUT "${HOOX_AMALGAM_C}" "${HOOX_AMALGAM_H}"
       COMMAND ${Python3_EXECUTABLE}
         "${CMAKE_SOURCE_DIR}/tools/amalgamate.py"
         --out-c "${HOOX_AMALGAM_C}" --out-h "${HOOX_AMALGAM_H}"
         ${_hoox_amalgam_inc_args}
+        --universal
         --header "${CMAKE_SOURCE_DIR}/src/core/hoox.h"
         --public-header "${CMAKE_SOURCE_DIR}/include/hoox.h"
-        ${HOOX_ALL_SOURCES}
-      DEPENDS ${HOOX_ALL_SOURCES} ${_hoox_amalgam_headers}
+        ${_hoox_amalgam_sources}
+      DEPENDS ${_hoox_amalgam_sources} ${_hoox_amalgam_headers}
         "${CMAKE_SOURCE_DIR}/tools/amalgamate.py"
-      COMMENT "Amalgamating hoox for ${CMAKE_SYSTEM_NAME}/${HOOX_TARGET_ARCH}")
+      COMMENT "Amalgamating universal hoox.c / hoox.h")
 
     if(HOOX_BUILD_AMALGAMATION)
       add_custom_target(amalgam ALL

@@ -65,16 +65,16 @@ int main (void) {
 
 ## 构建期宏
 
-在常见场景下，消费合并后的 `hoox.c`/`hoox.h` **不需要**任何 `-D`。只有在你想
-偏离某个默认行为时才定义相应的宏。合并产物按生成时配置的平台/架构选取源码，
-必须使用与目标匹配的产物，并不是跨平台通用文件：
+在常见场景下，消费合并后的 `hoox.c`/`hoox.h` **不需要**任何 `-D`。同一套全平台
+通用文件包含所有已支持目标，编译 `hoox.c` 时会由编译器内置宏选择对应架构与 OS。
+只有在你想偏离默认行为或覆盖目标检测时才定义相应的宏：
 
 | 宏 | 作用 |
 |---|---|
 | `HOOX_SHARED` | 以 Windows DLL 方式消费 hoox —— `HOOX_API` 变为 `__declspec(dllimport)`。默认是静态链接（`HOOX_API` 为空）。 |
 | `HOOX_EXPORTS` | 在**构建** hoox DLL 时（配合 `HOOX_SHARED`）定义 → `__declspec(dllexport)`。 |
 | `HOOX_USE_DLMALLOC` | 使用内置 dlmalloc 而非系统分配器。你需要自行在 include 路径上提供 `dlmalloc.c`。默认：系统 `malloc`。 |
-| `HAVE_I386` / `HAVE_ARM` / `HAVE_ARM64`，`HAVE_WINDOWS` / `HAVE_LINUX` / `HAVE_DARWIN` | 强制指定目标架构/OS。通常会从编译器内置宏（`_M_X64`、`__aarch64__`、`_WIN32` 等）自动推导；仅当无法自动判断时才需要定义。 |
+| `HAVE_I386` / `HAVE_ARM` / `HAVE_ARM64`，`HAVE_WINDOWS` / `HAVE_LINUX` / `HAVE_ANDROID` / `HAVE_DARWIN` / `HAVE_IOS` / `HAVE_TVOS` / `HAVE_FREEBSD` | 强制指定目标架构/OS。通常会从编译器内置宏（`_M_X64`、`__aarch64__`、`_WIN32`、`__ANDROID__` 等）自动推导；仅当无法自动判断时才需要定义。 |
 
 Apple arm64e 的 ptrauth 路径会根据 Apple Clang 的 `__arm64e__` /
 `__has_feature(ptrauth_calls)` 自动启用，普通构建和合并构建都无需手工定义宏。

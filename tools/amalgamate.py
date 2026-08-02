@@ -4,14 +4,14 @@ hoox amalgamation tool.
 
 Merges a set of C sources + headers into a single translation unit (and a
 single public header), SQLite-style. Project-local includes (#include "x.h")
-are inlined exactly once; system includes (#include <x>) are hoisted and
-de-duplicated at the top.
+are inlined exactly once per conditional source group. System includes are
+left at their original location so platform headers stay behind their guards.
 
 Usage:
     amalgamate.py --out-c hoox.c [--out-h hoox.h] \
         --include-dir DIR [--include-dir DIR ...] \
         --header PUBLIC.h [...] \
-        SOURCE.c [SOURCE.c ...]
+        [--universal] SOURCE.c [SOURCE.c ...]
 
 The engine sources (extracted from frida-gum, not written amalgamation-
 friendly) merge into one TU without static-symbol / macro collisions. out-c
@@ -36,6 +36,64 @@ TESTONLY_BEGIN = re.compile(r'^\s*/\*\s*hoox:test-only-begin\s*\*/\s*$')
 TESTONLY_END = re.compile(r'^\s*/\*\s*hoox:test-only-end\s*\*/\s*$')
 
 
+def universal_source_condition(path):
+    """Return the compile-time guard for a target-specific source.
+
+    hoox's public/internal definitions auto-detect HAVE_<arch> and HAVE_<os>
+    from compiler built-ins. The universal amalgamation uses those same macros
+    to retain every implementation while compiling exactly the source set that
+    the normal CMake target would select.
+    """
+    path = os.path.abspath(path).replace("\\", "/")
+
+    arch_conditions = {
+        "/arch/x86/": "defined (HAVE_I386)",
+        "/arch/arm64/": "defined (HAVE_ARM64)",
+        "/arch/arm/": "defined (HAVE_ARM)",
+        "/backend/x86/": "defined (HAVE_I386)",
+        "/backend/arm64/": "defined (HAVE_ARM64)",
+        "/backend/arm/": "defined (HAVE_ARM)",
+    }
+    for marker, condition in arch_conditions.items():
+        if marker in path:
+            return condition
+
+    basename = os.path.basename(path)
+    if basename == "hx_disasm_x86.c":
+        return "defined (HAVE_I386)"
+    if basename == "hx_disasm_arm64.c":
+        return "defined (HAVE_ARM64)"
+    if basename == "hx_disasm_arm.c":
+        return "defined (HAVE_ARM)"
+
+    if "/backend/windows/" in path:
+        return "defined (HAVE_WINDOWS)"
+    if "/backend/posix/" in path:
+        return ("defined (HAVE_LINUX) || defined (HAVE_DARWIN) || "
+                "defined (HAVE_FREEBSD)")
+    if "/backend/linux/" in path:
+        return "defined (HAVE_LINUX)"
+    if "/backend/android/" in path:
+        return "defined (HAVE_ANDROID)"
+    if "/backend/freebsd/" in path:
+        return "defined (HAVE_FREEBSD)"
+    if "/backend/darwin/" in path:
+        if basename == "hooxcodesegment-darwin.c":
+            # The normal build uses this implementation on macOS. iOS/tvOS
+            # deliberately retain the generic code-segment stub.
+            return ("defined (HAVE_DARWIN) && !defined (HAVE_IOS) && "
+                    "!defined (HAVE_TVOS)")
+        if basename == "hooxpatch-darwin.c":
+            return "defined (HAVE_DARWIN) && defined (HAVE_ARM64)"
+        return "defined (HAVE_DARWIN)"
+
+    if path.endswith("/core/hooxcodesegment.c"):
+        return ("!defined (HAVE_DARWIN) || defined (HAVE_IOS) || "
+                "defined (HAVE_TVOS)")
+
+    return None
+
+
 def find_header(name, include_dirs, current_dir):
     bases = ([current_dir] if current_dir is not None else []) + include_dirs
     for base in bases:
@@ -48,19 +106,25 @@ def find_header(name, include_dirs, current_dir):
 class Amalgamator:
     def __init__(self, include_dirs):
         self.include_dirs = include_dirs
-        self.header_inlined = set()        # absolute paths already inlined
+        # A header emitted in an inactive #if branch must still be emitted in
+        # other branches that may be active. Conventional include guards keep
+        # duplicates harmless when conditions overlap (POSIX + Linux, etc.).
+        self.header_inlined = set()        # (absolute path, condition scope)
+        self.header_paths = set()          # unique paths, for diagnostics
         self.out = []
 
-    def inline_header(self, path):
+    def inline_header(self, path, condition=None):
         path = os.path.normpath(path)
-        if path in self.header_inlined:
+        key = (path, condition)
+        if key in self.header_inlined:
             return
-        self.header_inlined.add(path)
+        self.header_inlined.add(key)
+        self.header_paths.add(path)
         self.out.append("/* ==== inlined header: %s ==== */" %
                         os.path.basename(path))
-        self._emit_file(path)
+        self._emit_file(path, condition)
 
-    def _emit_file(self, path):
+    def _emit_file(self, path, condition=None):
         current_dir = os.path.dirname(path)
         skipping = False
         with open(path, "r", encoding="utf-8") as f:
@@ -88,7 +152,7 @@ class Amalgamator:
                     # keeps includes inside #ifdef platform blocks intact).
                     hdr = find_header(m.group(1), self.include_dirs, None)
                     if hdr is not None:
-                        self.inline_header(hdr)
+                        self.inline_header(hdr, condition)
                     else:
                         self.out.append(stripped)
                     continue
@@ -98,7 +162,7 @@ class Amalgamator:
                     hdr = find_header(m.group(1), self.include_dirs,
                                       current_dir)
                     if hdr is not None:
-                        self.inline_header(hdr)
+                        self.inline_header(hdr, condition)
                     else:
                         # Unknown local header: keep as-is (will fail loudly).
                         self.out.append(stripped)
@@ -106,10 +170,14 @@ class Amalgamator:
 
                 self.out.append(stripped)
 
-    def emit_source(self, path):
+    def emit_source(self, path, condition=None):
         self.out.append("")
         self.out.append("/* ==== source: %s ==== */" % os.path.basename(path))
-        self._emit_file(path)
+        if condition is not None:
+            self.out.append("#if %s" % condition)
+        self._emit_file(path, condition)
+        if condition is not None:
+            self.out.append("#endif /* %s */" % condition)
 
     def render(self, banner):
         parts = [banner, ""]
@@ -120,9 +188,11 @@ class Amalgamator:
 
 BANNER = """\
 /*
- * hoox — amalgamated single-file build.
+ * hoox — universal amalgamated single-file build.
  *
  * Generated by tools/amalgamate.py. Do not edit by hand.
+ * This generated pair supports every hoox target; compiler predefined macros
+ * select the matching architecture and OS when hoox.c is compiled.
  *
  * Licence: wxWindows Library Licence, Version 3.1 (see COPYING).
  * Portions of the instruction decoder derive from Microsoft Detours (MIT);
@@ -141,6 +211,9 @@ def main():
                     help="curated public headers to emit as out-h (the clean "
                          "API surface). If omitted, out-h falls back to "
                          "--header.")
+    ap.add_argument("--universal", action="store_true",
+                    help="include all target sources behind compile-time "
+                         "architecture/OS guards")
     ap.add_argument("sources", nargs="+")
     args = ap.parse_args()
 
@@ -151,12 +224,14 @@ def main():
     for h in args.header:
         a.inline_header(os.path.abspath(h))
     for s in args.sources:
-        a.emit_source(os.path.abspath(s))
+        source = os.path.abspath(s)
+        condition = universal_source_condition(source) if args.universal else None
+        a.emit_source(source, condition)
     os.makedirs(os.path.dirname(os.path.abspath(args.out_c)), exist_ok=True)
     with open(args.out_c, "w", encoding="utf-8") as f:
         f.write(a.render(BANNER))
     print("wrote %s (%d headers inlined)" %
-          (args.out_c, len(a.header_inlined)))
+          (args.out_c, len(a.header_paths)))
 
     # Public header: prefer the curated --public-header set; fall back to the
     # internal umbrella only if none was given.
