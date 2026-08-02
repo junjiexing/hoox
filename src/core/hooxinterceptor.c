@@ -403,6 +403,8 @@ _hoox_interceptor_deinit (void)
     hx_private_set (&hoox_interceptor_context_private, NULL);
     interceptor_thread_context_destroy (current_context);
   }
+
+  hx_private_clear (&hoox_interceptor_context_private);
 }
 
 void

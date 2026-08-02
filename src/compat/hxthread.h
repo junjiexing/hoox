@@ -71,6 +71,7 @@ void hx_rec_mutex_recover_from_fork_in_child (HxRecMutex * mutex);
 
 hx_pointer hx_private_get (HxPrivate * key);
 void hx_private_set (HxPrivate * key, hx_pointer value);
+void hx_private_clear (HxPrivate * key);
 
 /* one-time initialisation (bracketing enter/leave). Simple global-lock
  * implementation: correct for non-nesting inits (cpu features, etc.). */

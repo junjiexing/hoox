@@ -249,6 +249,21 @@ hx_private_get (HxPrivate * key)
 }
 
 void
+hx_private_clear (HxPrivate * key)
+{
+  hx_size stored;
+
+  stored = (hx_size) hx_atomic_pointer_get (&key->impl);
+  if (stored == 0)
+    return;
+
+  hx_atomic_pointer_set (&key->impl, NULL);
+
+  if (!FlsFree ((DWORD) (stored - 1)))
+    hx_abort ();
+}
+
+void
 hx_private_set (HxPrivate * key,
                hx_pointer value)
 {
@@ -437,6 +452,23 @@ hx_pointer
 hx_private_get (HxPrivate * key)
 {
   return pthread_getspecific (hx_private_key (key));
+}
+
+void
+hx_private_clear (HxPrivate * key)
+{
+  HxPrivateKey * pk;
+
+  pk = hx_atomic_pointer_get (&key->impl);
+  if (pk == NULL)
+    return;
+
+  hx_atomic_pointer_set (&key->impl, NULL);
+
+  if (pthread_key_delete (pk->key) != 0)
+    hx_abort ();
+
+  hx_free (pk);
 }
 
 void
