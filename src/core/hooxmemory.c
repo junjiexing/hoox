@@ -61,6 +61,10 @@ typedef struct _HooxPageLump HooxPageLump;
 typedef struct _HooxSuspendedThread HooxSuspendedThread;
 typedef struct _HooxSuspendOperation HooxSuspendOperation;
 
+#if defined (HAVE_LINUX) && defined (HOOX_POSIX_PATCH_PC_GUARD)
+typedef struct _HooxPeerPark HooxPeerPark;
+#endif
+
 
 struct _HooxPatchCodeContext
 {
@@ -95,6 +99,9 @@ struct _HooxSuspendOperation
   const HooxPcGuardRange * guard_ranges;
   hx_uint num_guard_ranges;
   hx_uint guard_attempts_left;
+#endif
+#if defined (HAVE_LINUX) && defined (HOOX_POSIX_PATCH_PC_GUARD)
+  HooxPeerPark * park;
 #endif
 };
 
@@ -352,7 +359,8 @@ hoox_memory_patch_code_pages_guarded (HxPtrArray * sorted_addresses,
   hx_boolean rwx_supported;
   hx_boolean suspend_threads;
 
-#if !defined (HAVE_WINDOWS) || !defined (HOOX_WINDOWS_PATCH_PC_GUARD)
+#if (!defined (HAVE_WINDOWS) || !defined (HOOX_WINDOWS_PATCH_PC_GUARD)) && \
+    !(defined (HAVE_LINUX) && defined (HOOX_POSIX_PATCH_PC_GUARD))
   (void) guard_ranges;
   (void) num_guard_ranges;
   (void) max_guard_attempts;
@@ -363,6 +371,11 @@ hoox_memory_patch_code_pages_guarded (HxPtrArray * sorted_addresses,
 #ifdef HAVE_WINDOWS
   /* Windows normally takes the RWX path, but multi-byte x86/x64 patches are
    * not atomic. Keep peer threads out of the target bytes while they change. */
+  suspend_threads = TRUE;
+#endif
+#if defined (HAVE_LINUX) && defined (HOOX_POSIX_PATCH_PC_GUARD)
+  /* Same on Linux: patch writes are plain multi-byte stores, so park every
+   * peer thread in the park signal handler for the duration of the write. */
   suspend_threads = TRUE;
 #endif
   page_size = hoox_query_page_size ();
@@ -562,6 +575,32 @@ cleanup:
         }
       }
 #endif
+#elif defined (HAVE_LINUX) && defined (HOOX_POSIX_PATCH_PC_GUARD)
+      suspend_op.park = NULL;
+      for (;;)
+      {
+        suspend_op.park = hoox_peer_park_begin ();
+        if (suspend_op.park == NULL)
+        {
+          result = FALSE;
+          goto resume_threads;
+        }
+        if (hoox_peer_park_all_clear_of (suspend_op.park,
+              (const HooxPeerParkRange *) guard_ranges, num_guard_ranges))
+          break;
+
+        /* A parked peer still sits inside the bytes we are about to write;
+         * release, let it move on, and park again, with a bounded budget. */
+        hoox_peer_park_end (suspend_op.park);
+        suspend_op.park = NULL;
+        if (max_guard_attempts == 0)
+        {
+          result = FALSE;
+          goto resume_threads;
+        }
+        max_guard_attempts--;
+        hx_usleep (1000);
+      }
 #else
       suspend_op.newly_suspended = 0;
       _hoox_process_enumerate_threads (hoox_maybe_suspend_thread, &suspend_op,
@@ -674,8 +713,13 @@ cleanup:
 resume_threads:
     if (suspend_threads)
     {
+#if defined (HAVE_LINUX) && defined (HOOX_POSIX_PATCH_PC_GUARD)
+      if (suspend_op.park != NULL)
+        hoox_peer_park_end (suspend_op.park);
+#else
       if (!hoox_resume_suspended_threads (&suspend_op))
         result = FALSE;
+#endif
 
       hoox_metal_array_free (&suspend_op.suspended_threads);
     }

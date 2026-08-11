@@ -84,6 +84,7 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     "${CMAKE_CURRENT_SOURCE_DIR}/backend/posix/hooxmemory-posix.c"
     "${CMAKE_CURRENT_SOURCE_DIR}/backend/posix/hooxtls-posix.c"
     "${CMAKE_CURRENT_SOURCE_DIR}/backend/linux/hooxmemory-linux.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/backend/linux/hooxpark-linux.c"
     "${CMAKE_CURRENT_SOURCE_DIR}/backend/linux/hoox_process-linux.c")
   set(HOOX_PRIVATE_INCLUDE_DIRS ${HOOX_PRIVATE_INCLUDE_DIRS}
     "${CMAKE_CURRENT_SOURCE_DIR}/backend/posix"
@@ -177,6 +178,9 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   find_package(Threads REQUIRED)
   target_link_libraries(hoox PUBLIC Threads::Threads)
   target_compile_definitions(hoox PRIVATE HAVE_LINUX)
+  if(HOOX_POSIX_PATCH_PC_GUARD)
+    target_compile_definitions(hoox PRIVATE HOOX_POSIX_PATCH_PC_GUARD)
+  endif()
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin" OR CMAKE_SYSTEM_NAME STREQUAL "iOS"
     OR CMAKE_SYSTEM_NAME STREQUAL "tvOS")
   find_package(Threads REQUIRED)

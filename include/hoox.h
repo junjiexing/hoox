@@ -409,6 +409,29 @@ HOOX_API void hoox_interceptor_with_lock_held (HooxInterceptor * self,
 HOOX_API hx_boolean hoox_interceptor_is_locked (HooxInterceptor * self);
 
 /* ======================================================================== *
+ * Peer parking (Linux only; returns NULL elsewhere).
+ *
+ * Signal-driven stop-the-world: parks every peer thread of the process in a
+ * dedicated signal handler so that multi-byte code patches can be written
+ * without a peer executing the bytes being changed. Fail-closed: any thread
+ * that cannot be parked within the wait budget fails the operation.
+ * ======================================================================== */
+
+typedef struct _HooxPeerPark HooxPeerPark;
+
+typedef struct _HooxPeerParkRange
+{
+  hx_pointer begin;
+  hx_pointer end;
+} HooxPeerParkRange;
+
+HOOX_API HooxPeerPark * hoox_peer_park_begin (void);
+HOOX_API hx_boolean hoox_peer_park_all_clear_of (HooxPeerPark * self,
+                                                 const HooxPeerParkRange * ranges,
+                                                 hx_uint n_ranges);
+HOOX_API void hoox_peer_park_end (HooxPeerPark * self);
+
+/* ======================================================================== *
  * Library lifecycle.
  * ======================================================================== */
 

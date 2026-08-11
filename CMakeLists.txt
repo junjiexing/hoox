@@ -68,6 +68,8 @@ option(HOOX_ENABLE_TESTS "Build tests" ON)
 option(HOOX_BUILD_AMALGAMATION "Build the universal single-file library" OFF)
 option(HOOX_WINDOWS_PATCH_PC_GUARD
   "On Windows, scan suspended thread instruction pointers against patched byte ranges" OFF)
+option(HOOX_POSIX_PATCH_PC_GUARD
+  "On Linux, park peer threads in a signal handler while patched bytes are written" OFF)
 
 message(STATUS "hoox ${PROJECT_VERSION}")
 message(STATUS "  target arch : ${HOOX_TARGET_ARCH} (family ${HOOX_ARCH_FAMILY})")
@@ -75,7 +77,7 @@ message(STATUS "  system      : ${CMAKE_SYSTEM_NAME}")
 message(STATUS "  compiler    : ${CMAKE_C_COMPILER_ID} ${CMAKE_C_COMPILER_VERSION}")
 message(STATUS "  tests       : ${HOOX_ENABLE_TESTS}")
 message(STATUS "  amalgamation: ${HOOX_BUILD_AMALGAMATION}")
-message(STATUS "  pc guard    : ${HOOX_WINDOWS_PATCH_PC_GUARD}")
+message(STATUS "  pc guard    : ${HOOX_WINDOWS_PATCH_PC_GUARD} (Windows) / ${HOOX_POSIX_PATCH_PC_GUARD} (Linux)")
 
 add_subdirectory(src)
 

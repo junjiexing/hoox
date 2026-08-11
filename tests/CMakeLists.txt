@@ -204,6 +204,10 @@ if(HOOX_AMALGAMATION_AVAILABLE)
     # (setspecific/getspecific silently do nothing -> per-call thread context).
     find_package(Threads REQUIRED)
     target_link_libraries(test_amalgam PRIVATE Threads::Threads)
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND HOOX_POSIX_PATCH_PC_GUARD)
+      target_compile_definitions(test_amalgam PRIVATE
+        HOOX_POSIX_PATCH_PC_GUARD)
+    endif()
   endif()
 
   # test_amalgam links the full interceptor suite into one binary and patches
@@ -234,6 +238,10 @@ if(HOOX_AMALGAMATION_AVAILABLE)
   else()
     find_package(Threads REQUIRED)
     target_link_libraries(hook_example PRIVATE Threads::Threads)
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND HOOX_POSIX_PATCH_PC_GUARD)
+      target_compile_definitions(hook_example PRIVATE
+        HOOX_POSIX_PATCH_PC_GUARD)
+    endif()
   endif()
   if(MSVC)
     # The example is a demo, not written to satisfy the tree's strict
