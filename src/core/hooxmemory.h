@@ -74,6 +74,23 @@ struct _HooxPcGuardRange
   hx_pointer end;
 };
 
+/* Linux peer parking (HOOX_POSIX_PATCH_PC_GUARD): signal-driven stop-the-world
+ * so patch writes get the Windows PC guard's no-thread-in-transit guarantee.
+ * Declared here for hooxmemory.c; the public spelling lives in include/hoox.h. */
+typedef struct _HooxPeerPark HooxPeerPark;
+
+typedef struct _HooxPeerParkRange
+{
+  hx_pointer begin;
+  hx_pointer end;
+} HooxPeerParkRange;
+
+HOOX_API HooxPeerPark * hoox_peer_park_begin (void);
+HOOX_API hx_boolean hoox_peer_park_all_clear_of (HooxPeerPark * self,
+                                                 const HooxPeerParkRange * ranges,
+                                                 hx_uint n_ranges);
+HOOX_API void hoox_peer_park_end (HooxPeerPark * self);
+
 struct _HooxRangeDetails
 {
   const HooxMemoryRange * range;
