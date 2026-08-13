@@ -91,6 +91,10 @@ HOOX_API hx_boolean hoox_peer_park_all_clear_of (HooxPeerPark * self,
                                                  hx_uint n_ranges);
 HOOX_API void hoox_peer_park_end (HooxPeerPark * self);
 
+/* Mirrored from include/hoox.h (the internal and public headers cannot be
+ * included together). */
+HOOX_API void hoox_memory_set_external_thread_suspension (hx_boolean enabled);
+
 struct _HooxRangeDetails
 {
   const HooxMemoryRange * range;
