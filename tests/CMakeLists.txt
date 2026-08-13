@@ -27,6 +27,24 @@ target_include_directories(test_memory PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}/../src/disasm")
 add_test(NAME memory COMMAND test_memory)
 
+# --- external thread suspension (public API only) ----------------------------
+add_executable(test_external_suspension core/test_external_suspension.c)
+target_link_libraries(test_external_suspension PRIVATE hoox)
+target_include_directories(test_external_suspension PRIVATE
+  "${CMAKE_CURRENT_SOURCE_DIR}/../include"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../src/core"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../src/compat"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../src/disasm")
+if(NOT WIN32)
+  find_package(Threads REQUIRED)
+  target_link_libraries(test_external_suspension PRIVATE Threads::Threads)
+endif()
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND HOOX_POSIX_PATCH_PC_GUARD)
+  target_compile_definitions(test_external_suspension PRIVATE
+    HOOX_TEST_POSIX_PATCH_PC_GUARD)
+endif()
+add_test(NAME external_suspension COMMAND test_external_suspension)
+
 # --- interceptor smoke test (M5) --------------------------------------------
 add_executable(test_interceptor_smoke core/test_interceptor_smoke.c)
 target_link_libraries(test_interceptor_smoke PRIVATE hoox)
